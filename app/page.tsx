@@ -1,256 +1,158 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Navigation from '@/components/Navigation'
-import BeforeAfter from '@/components/BeforeAfter'
-import HeroSlider from '@/components/HeroSlider'
-import FeatureCard from '@/components/FeatureCard'
 import AuthModal from '@/components/AuthModal'
-import { Sparkles, Image, Palette, Focus, Video, Wand2 } from 'lucide-react'
-
-type PhotoType = 'portrait' | 'landscape' | 'old'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<PhotoType>('portrait')
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false)
 
   useEffect(() => {
     const handleOpenAuth = () => setIsAuthModalOpen(true)
+    const handleOpenWaitlist = () => setIsWaitlistOpen(true)
     window.addEventListener('openAuthModal', handleOpenAuth)
-    return () => window.removeEventListener('openAuthModal', handleOpenAuth)
+    window.addEventListener('openWaitlistModal', handleOpenWaitlist)
+    return () => {
+      window.removeEventListener('openAuthModal', handleOpenAuth)
+      window.removeEventListener('openWaitlistModal', handleOpenWaitlist)
+    }
   }, [])
 
-  const photoData = {
-    portrait: {
-      before: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=1000&fit=crop&blur=50',
-      after: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=1000&fit=crop'
-    },
-    landscape: {
-      before: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1000&h=800&fit=crop&blur=50',
-      after: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1000&h=800&fit=crop'
-    },
-    old: {
-      before: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&h=1000&fit=crop&blur=40&grayscale',
-      after: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&h=1000&fit=crop'
-    }
-  }
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <main className="min-h-screen bg-white text-gray-900">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            The only photo and video
-            <br />
-            <span className="gradient-text">enhancer you'll ever need</span>
+      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight">
+            <span className="block">
+              Lemon Law{' '}
+              <a href="#cases" className="underline underline-offset-4 decoration-gray-400 hover:decoration-gray-900">
+                Cases
+              </a>
+            </span>
+            <span className="block mt-2">
+              Done{' '}
+              <a href="#right" className="underline underline-offset-4 decoration-gray-400 hover:decoration-gray-900">
+                Right
+              </a>
+            </span>
+            <span className="block mt-1">
+              Done{' '}
+              <a href="#fast" className="underline underline-offset-4 decoration-gray-400 hover:decoration-gray-900">
+                Fast
+              </a>
+            </span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Transformative technology gives your low-quality visuals a stunning HD upgrade. 
-            Restore old photos to incredible detail and elevate your content to a professional level.
+          <p className="mt-6 text-base sm:text-lg md:text-xl text-gray-600">
+            From tracking your vehicle’s repair history to collecting receipts, photos, and service records, we handle the entire process end-to-end. We prepare fully ready-to-file Lemon Law cases, maximizing your chances for refund or replacement with expert-backed strategies.
           </p>
-          <button 
-            onClick={() => setIsAuthModalOpen(true)}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-2xl transition-all hover:scale-105"
-          >
-            Try Aporto Now
-          </button>
-        </div>
 
-        {/* Hero Image Tabs */}
-        <div className="max-w-5xl mx-auto mt-16">
-          <div className="flex justify-center space-x-4 mb-6">
-            <button 
-              onClick={() => setActiveTab('portrait')}
-              className={`px-6 py-2 rounded-full font-medium transition-all ${
-                activeTab === 'portrait' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+          {/* Mobile-only info blocks, styled as iOS-like cards */}
+          <div className="mt-8 md:hidden text-left space-y-4">
+            <div className="rounded-2xl border border-black/5 bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_4px_12px_-2px_rgba(0,0,0,0.06)] p-4">
+              <h3 className="text-base font-semibold text-gray-900">Vehicle Types We Handle</h3>
+              <ul className="mt-2 space-y-1 text-gray-700 text-sm">
+                <li>New Cars – Any make or model</li>
+                <li>Luxury &amp; Import Vehicles – Including high-value cars</li>
+                <li>SUVs &amp; Trucks – All brands</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-black/5 bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_4px_12px_-2px_rgba(0,0,0,0.06)] p-4">
+              <p className="text-gray-700 text-sm">
+                We customize our process and case strategy to your vehicle’s history, ensuring the strongest possible claim under Lemon Law.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-black/5 bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_4px_12px_-2px_rgba(0,0,0,0.06)] p-4">
+              <p className="text-gray-700 text-sm">
+                Most traditional legal processes take months; we streamline it. Once your vehicle profile and documentation are ready, we can file and manage your case in just weeks.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => setIsWaitlistOpen(true)}
+              className="inline-flex items-center rounded-full bg-white text-gray-900 px-6 py-3 text-sm sm:text-base font-medium shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
             >
-              Portrait
+              Join waitlist
             </button>
-            <button 
-              onClick={() => setActiveTab('landscape')}
-              className={`px-6 py-2 rounded-full font-medium transition-all ${
-                activeTab === 'landscape' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="inline-flex items-center rounded-full bg-gray-900 px-6 py-3 text-sm sm:text-base font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900"
             >
-              Landscape
-            </button>
-            <button 
-              onClick={() => setActiveTab('old')}
-              className={`px-6 py-2 rounded-full font-medium transition-all ${
-                activeTab === 'old' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Old Photo
+              Register via invite code
             </button>
           </div>
-
-          <HeroSlider
-            key={activeTab}
-            beforeImage={photoData[activeTab].before}
-            afterImage={photoData[activeTab].after}
-          />
-
-          {/* Feature Tags */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="bg-white rounded-lg p-4 shadow-md text-center">
-              <p className="text-xs text-indigo-600 font-semibold mb-1">Face Enhance</p>
-              <p className="text-xs text-gray-600">Increase quality of faces</p>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-md text-center">
-              <p className="text-xs text-indigo-600 font-semibold mb-1">Face Glow</p>
-              <p className="text-xs text-gray-600">Give people a new look and feel</p>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-md text-center">
-              <p className="text-xs text-indigo-600 font-semibold mb-1">Auto Color</p>
-              <p className="text-xs text-gray-600">Adjust and improve colors</p>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-md text-center">
-              <p className="text-xs text-indigo-600 font-semibold mb-1">Background Enhance</p>
-              <p className="text-xs text-gray-600">Increase quality of every detail</p>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Industries Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-sm text-indigo-600 font-semibold mb-2 uppercase tracking-wide">Industries</p>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              One product, endless business possibilities
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Cutting-edge AI revolutionizes the process of enhancing visuals, making it more efficient than ever before.
-            </p>
-          </div>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeatureCard
-              icon={<Sparkles className="w-6 h-6 text-white" />}
-              title="Face Enhance"
-              description="Increase quality of faces with advanced AI technology"
-            />
-            <FeatureCard
-              icon={<Wand2 className="w-6 h-6 text-white" />}
-              title="Face Glow"
-              description="Give people a new look and feel with natural enhancements"
-            />
-            <FeatureCard
-              icon={<Palette className="w-6 h-6 text-white" />}
-              title="Auto Color"
-              description="Adjust and improve colors and tones automatically"
-            />
-            <FeatureCard
-              icon={<Image className="w-6 h-6 text-white" />}
-              title="Background Enhance"
-              description="Increase the quality of every detail in the background"
-            />
-            <FeatureCard
-              icon={<Focus className="w-6 h-6 text-white" />}
-              title="Unblur & Sharpen"
-              description="Remove blur and make your images crystal clear"
-            />
-            <FeatureCard
-              icon={<Video className="w-6 h-6 text-white" />}
-              title="Video Enhancer"
-              description="Enhance and enlarge your videos with AI power"
-            />
-          </div>
+      {isWaitlistOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsWaitlistOpen(false)} />
+          <WaitlistCard onClose={() => setIsWaitlistOpen(false)} />
         </div>
-      </section>
-
-      {/* Testimonial Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm text-indigo-600 font-semibold mb-4 uppercase tracking-wide">Our Users</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            "Look at the before and after. If this doesn't blow your mind, I don't know what will! 
-            This is absolute magic!"
-          </h2>
-          <p className="text-lg text-gray-600">
-            <a href="#" className="text-indigo-600 hover:underline">@PiXimperfect - Unmesh Dinda</a>
-          </p>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Try Aporto now!
-          </h2>
-          <p className="text-xl opacity-90 mb-8">
-            Join the Aporto community today and discover the transformative power of cutting-edge AI technology for yourself.
-          </p>
-          <button 
-            onClick={() => setIsAuthModalOpen(true)}
-            className="bg-white text-indigo-600 px-10 py-4 rounded-full text-lg font-semibold hover:shadow-2xl transition-all hover:scale-105"
-          >
-            Get Started
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-white font-bold text-lg mb-4">Enhance</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Unblur & Sharpener</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Denoiser</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Old Photos Restorer</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Image Enlarger</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Color Fixer</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg mb-4">More Tools</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Face Enhancer</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Background Enhancer</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Low Quality Enhancer</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Video Enhancer</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg mb-4">Product</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">AI Photos</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Try Aporto</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg mb-4">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Web Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">App Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 text-sm text-center">
-            <p>© 2024 AI Creativity S.r.l. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-      />
+      )}
     </main>
+  )
+}
+
+function WaitlistCard({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess(false)
+    const valid = /.+@.+\..+/.test(email)
+    if (!valid) {
+      setError('Enter a valid email')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as any).error || 'Something went wrong')
+      setSuccess(true)
+      setEmail('')
+    } catch (err: any) {
+      setError(err.message || 'Failed to join waitlist')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="relative w-full max-w-md rounded-2xl border border-black/10 bg-white/80 supports-[backdrop-filter]:bg-white/70 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.03),0_12px_40px_-8px_rgba(0,0,0,0.25)] p-6">
+      <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        ×
+      </button>
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-900">Join waitlist</h2>
+        <p className="text-sm text-gray-600 mt-1">Get notified when we launch</p>
+      </div>
+      <form onSubmit={submit} className="space-y-3">
+        <div>
+          <label htmlFor="wl-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input id="wl-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" placeholder="you@example.com" />
+        </div>
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">{error}</div>}
+        {success && <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2 text-sm">Thanks! You're on the list.</div>}
+        <button type="submit" disabled={loading} className="w-full inline-flex justify-center rounded-full bg-gray-900 text-white px-6 py-3 font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-60">
+          {loading ? 'Please wait…' : 'Join waitlist'}
+        </button>
+      </form>
+    </div>
   )
 }
