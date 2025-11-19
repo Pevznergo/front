@@ -1,11 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import AudioDemo from '@/components/AudioDemo'
+import BookingModal from '@/components/BookingModal'
 import { Check, ChevronDown, ChevronUp, Shield, Users, TrendingUp, Zap, ArrowRight, Phone, ShoppingCart, Briefcase } from 'lucide-react'
 
 export default function Home() {
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+
+  useEffect(() => {
+    const handleOpenBooking = () => setIsBookingModalOpen(true)
+    window.addEventListener('openBookingModal', handleOpenBooking)
+    return () => window.removeEventListener('openBookingModal', handleOpenBooking)
+  }, [])
+
   return (
     <main className="min-h-screen bg-black text-white selection:bg-blue-500/30">
       <Navigation />
@@ -22,8 +31,8 @@ export default function Home() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mb-8 leading-tight">
-            We Close the Deals You Lost. <br className="hidden sm:block" />
-            <span className="ios-gradient-text">And Reactivate the Customers You Missed.</span>
+            We Close <br className="hidden sm:block" />
+            <span className="ios-gradient-text">the Deals You Lost.</span>
           </h1>
 
           <p className="mt-6 text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
@@ -31,7 +40,10 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-semibold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+            <button
+              onClick={() => setIsBookingModalOpen(true)}
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-semibold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+            >
               Start Recovering Revenue
             </button>
           </div>
@@ -195,7 +207,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* THE NUMBERS / FOOTER */}
+      {/* THE NUMBERS / FOOTER CTA */}
       <section id="calculator" className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/20 to-transparent pointer-events-none" />
 
@@ -221,13 +233,31 @@ export default function Home() {
             <h3 className="text-2xl font-bold mb-2">Your Database is leaking revenue every day.</h3>
             <p className="text-gray-400 mb-8">Let’s plug the hole.</p>
 
-            <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)]">
+            <button
+              onClick={() => setIsBookingModalOpen(true)}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)]"
+            >
               Get a Revenue Recovery Forecast
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
       </section>
+
+      {/* FOOTER */}
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/5 bg-black">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-gray-500 text-sm">
+            © {new Date().getFullYear()} Aporto. All rights reserved.
+          </div>
+          <div className="flex gap-6">
+            <a href="/privacy-policy" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</a>
+            <a href="/data-processing-agreement" className="text-gray-500 hover:text-white text-sm transition-colors">Data Processing Agreement</a>
+          </div>
+        </div>
+      </footer>
+
+      <BookingModal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} />
     </main>
   )
 }
