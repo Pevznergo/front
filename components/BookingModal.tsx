@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import { sendGTMEvent } from '@/lib/gtm'
 
 interface BookingModalProps {
     isOpen: boolean
@@ -48,6 +49,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                         href="https://calendar.app.google/Rsh5hbc8fVBu2jYi7"
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => sendGTMEvent({ event: 'booking_calendar_open', location: 'modal' })}
                         className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-2"
                     >
                         View Available Times

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
+import { sendGTMEvent } from '@/lib/gtm'
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -31,7 +32,10 @@ export default function Navigation() {
             <button onClick={() => scrollToSection('segments')} className="text-sm text-gray-300 hover:text-white transition-colors">Who We Help</button>
 
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent('openBookingModal'))}
+              onClick={() => {
+                sendGTMEvent({ event: 'cta_click', location: 'navigation', label: 'start_recovering_revenue' })
+                window.dispatchEvent(new CustomEvent('openBookingModal'))
+              }}
               className="glass-button px-5 py-2.5 rounded-full text-sm font-medium text-white hover:bg-white/15 border border-white/10 shadow-[0_0_15px_rgba(0,122,255,0.3)] hover:shadow-[0_0_25px_rgba(0,122,255,0.5)] transition-all"
             >
               Start Recovering Revenue
@@ -52,7 +56,10 @@ export default function Navigation() {
             <button onClick={() => scrollToSection('why-it-works')} className="block w-full text-left py-2 text-gray-300 hover:text-white">Why It Works</button>
             <button onClick={() => scrollToSection('segments')} className="block w-full text-left py-2 text-gray-300 hover:text-white">Who We Help</button>
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent('openBookingModal'))}
+              onClick={() => {
+                sendGTMEvent({ event: 'cta_click', location: 'mobile_menu', label: 'start_recovering_revenue' })
+                window.dispatchEvent(new CustomEvent('openBookingModal'))
+              }}
               className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-medium mt-2"
             >
               Start Recovering Revenue

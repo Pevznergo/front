@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import AudioDemo from '@/components/AudioDemo'
 import BookingModal from '@/components/BookingModal'
+import { sendGTMEvent } from '@/lib/gtm'
 import { Check, ChevronDown, ChevronUp, Shield, Users, TrendingUp, Zap, ArrowRight, Phone, ShoppingCart, Briefcase } from 'lucide-react'
 
 export default function Home() {
@@ -41,7 +42,10 @@ export default function Home() {
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => setIsBookingModalOpen(true)}
+              onClick={() => {
+                sendGTMEvent({ event: 'cta_click', location: 'hero', label: 'start_recovering_revenue' })
+                setIsBookingModalOpen(true)
+              }}
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-semibold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
             >
               Start Recovering Revenue
@@ -234,7 +238,10 @@ export default function Home() {
             <p className="text-gray-400 mb-8">Let’s plug the hole.</p>
 
             <button
-              onClick={() => setIsBookingModalOpen(true)}
+              onClick={() => {
+                sendGTMEvent({ event: 'cta_click', location: 'footer', label: 'get_revenue_forecast' })
+                setIsBookingModalOpen(true)
+              }}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)]"
             >
               Get a Revenue Recovery Forecast
