@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Navigation from '@/components/Navigation'
 import AudioDemo from '@/components/AudioDemo'
 import BookingModal from '@/components/BookingModal'
+import Partners from '@/components/Partners'
 import { sendGTMEvent } from '@/lib/gtm'
 import { Check, ChevronDown, ChevronUp, Shield, Users, TrendingUp, Zap, ArrowRight, Phone, ShoppingCart, Briefcase } from 'lucide-react'
 
@@ -52,6 +53,10 @@ export default function Home() {
             </button>
           </div>
           <p className="mt-4 text-sm text-gray-500">Targeting: Churned Users • Expired Trials • Cold Leads</p>
+        </div>
+
+        <div className="mt-16">
+          <Partners />
         </div>
       </section>
 
