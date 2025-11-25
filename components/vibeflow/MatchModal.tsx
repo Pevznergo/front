@@ -28,7 +28,8 @@ interface MatchModalProps {
 
 export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps) {
     const [platformTariffs, setPlatformTariffs] = useState<Tariff[]>([])
-    const [selectedBundle, setSelectedBundle] = useState<'starter' | 'pro'>('pro')
+    const [bundles, setBundles] = useState<any[]>([])
+    const [selectedBundleIndex, setSelectedBundleIndex] = useState<number>(0)
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
 
     useEffect(() => {
@@ -40,23 +41,48 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
         }
     }, [isOpen])
 
+    // Generate bundles when tariffs are loaded
+    useEffect(() => {
+        if (platformTariffs.length > 0 && partner?.tariffs?.length > 0) {
+            const generatedBundles = []
+
+            // Sort tariffs by price to ensure logical pairing
+            const sortedPlatform = [...platformTariffs].sort((a, b) => Number(a.price) - Number(b.price))
+            const sortedPartner = [...partner.tariffs].sort((a, b) => Number(a.price) - Number(b.price))
+
+            // Determine how many bundles to create based on the side with more tariffs
+            const maxBundles = Math.max(sortedPlatform.length, sortedPartner.length)
+
+            for (let i = 0; i < maxBundles; i++) {
+                // If one side runs out of tariffs, reuse the last one (or the only one)
+                // This handles 1-to-N relationships correctly
+                const platformTariff = sortedPlatform[i] || sortedPlatform[sortedPlatform.length - 1]
+                const partnerTariff = sortedPartner[i] || sortedPartner[sortedPartner.length - 1]
+
+                if (platformTariff && partnerTariff) {
+                    generatedBundles.push({
+                        id: `bundle-${i}`,
+                        name: i === 0 ? 'Starter Bundle' : 'Pro Bundle', // Simplified naming for now, could be dynamic
+                        price: Number(platformTariff.price) + Number(partnerTariff.price),
+                        originalPrice: Number(platformTariff.original_price) + Number(partnerTariff.original_price),
+                        items: [
+                            { source: 'Vibeflow', plan: platformTariff.name },
+                            { source: partner.name, plan: partnerTariff.name }
+                        ],
+                        isPopular: i === 1 // Mark second bundle as popular if it exists
+                    })
+                }
+            }
+
+            setBundles(generatedBundles)
+            // Default to the "popular" bundle (index 1) if it exists, otherwise 0
+            setSelectedBundleIndex(generatedBundles.length > 1 ? 1 : 0)
+        }
+    }, [platformTariffs, partner])
+
     if (!isOpen || !partner) return null
 
-    // Helper to get bundle price
-    const getBundlePrice = (type: 'starter' | 'pro') => {
-        const platformPlan = platformTariffs.find(t => t.name.includes(type === 'starter' ? 'Basic' : 'Pro'))
-        const partnerPlan = partner.tariffs?.find(t => t.name.includes(type === 'starter' ? 'Starter' : 'Premium'))
-
-        if (!platformPlan || !partnerPlan) return { price: 0, original: 0 }
-
-        return {
-            price: Number(platformPlan.price) + Number(partnerPlan.price),
-            original: Number(platformPlan.original_price) + Number(partnerPlan.original_price)
-        }
-    }
-
-    const proPrice = getBundlePrice('pro')
-    const starterPrice = getBundlePrice('starter')
+    const selectedBundle = bundles[selectedBundleIndex]
 
     return (
         <>
@@ -97,46 +123,38 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
 
                         {/* Pricing Options */}
                         <div className="space-y-3 mb-4">
-                            {/* Option 1: Pro Bundle */}
-                            <div
-                                onClick={() => setSelectedBundle('pro')}
-                                className={`border rounded-xl p-4 relative cursor-pointer transition-all backdrop-blur-md ${selectedBundle === 'pro' ? 'border-pink-500 bg-pink-500/20' : 'border-white/20 bg-white/5 hover:bg-white/10'}`}
-                            >
-                                {selectedBundle === 'pro' && (
-                                    <div className="absolute -top-3 right-4 bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
-                                        MOST POPULAR
+                            {bundles.map((bundle, index) => (
+                                <div
+                                    key={bundle.id}
+                                    onClick={() => setSelectedBundleIndex(index)}
+                                    className={`border rounded-xl p-4 relative cursor-pointer transition-all backdrop-blur-md ${selectedBundleIndex === index ? 'border-pink-500 bg-pink-500/20' : 'border-white/20 bg-white/5 hover:bg-white/10'}`}
+                                >
+                                    {bundle.isPopular && selectedBundleIndex === index && (
+                                        <div className="absolute -top-3 right-4 bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                            MOST POPULAR
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="font-bold text-white">{bundle.name}</span>
+                                        <span className="font-bold text-pink-400">${bundle.price}/mo <span className="text-white/40 text-sm font-normal line-through">${bundle.originalPrice}</span></span>
                                     </div>
-                                )}
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="font-bold text-white">Pro Bundle</span>
-                                    <span className="font-bold text-pink-400">${proPrice.price}/mo <span className="text-white/40 text-sm font-normal line-through">${proPrice.original}</span></span>
+                                    <ul className="text-xs text-gray-300 space-y-1">
+                                        {bundle.items.map((item: any, i: number) => (
+                                            <li key={i} className="flex items-center gap-1">
+                                                <Check className="w-3 h-3 text-green-400" />
+                                                <span className="font-semibold text-white/90">{item.source}:</span> {item.plan}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <ul className="text-xs text-gray-300 space-y-1">
-                                    <li className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> Vibeflow: Pro Plan</li>
-                                    <li className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> {partner.name}: Premium Plan</li>
-                                </ul>
-                            </div>
-
-                            {/* Option 2: Starter Bundle */}
-                            <div
-                                onClick={() => setSelectedBundle('starter')}
-                                className={`border rounded-xl p-4 cursor-pointer transition-all backdrop-blur-md ${selectedBundle === 'starter' ? 'border-pink-500 bg-pink-500/20' : 'border-white/20 bg-white/5 hover:bg-white/10'}`}
-                            >
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="font-bold text-white">Starter Bundle</span>
-                                    <span className="font-bold text-white">${starterPrice.price}/mo <span className="text-white/40 text-sm font-normal line-through">${starterPrice.original}</span></span>
-                                </div>
-                                <ul className="text-xs text-gray-300 space-y-1">
-                                    <li className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> Vibeflow: Basic Plan</li>
-                                    <li className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> {partner.name}: Starter Plan</li>
-                                </ul>
-                            </div>
+                            ))}
                         </div>
 
                         {/* Checkout Button */}
                         <button
                             onClick={() => setIsCheckoutOpen(true)}
                             className="w-full bg-white text-black font-bold py-4 rounded-xl text-lg shadow-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2 mb-2"
+                            disabled={!selectedBundle}
                         >
                             <CreditCard className="w-5 h-5" />
                             Pay & Unlock Both Apps
@@ -150,13 +168,15 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                 </div>
             </div>
 
-            <CheckoutModal
-                isOpen={isCheckoutOpen}
-                onClose={() => setIsCheckoutOpen(false)}
-                bundleName={selectedBundle === 'pro' ? 'Pro Bundle' : 'Starter Bundle'}
-                price={selectedBundle === 'pro' ? proPrice.price : starterPrice.price}
-                partnerName={partner.name}
-            />
+            {selectedBundle && (
+                <CheckoutModal
+                    isOpen={isCheckoutOpen}
+                    onClose={() => setIsCheckoutOpen(false)}
+                    bundleName={selectedBundle.name}
+                    price={selectedBundle.price}
+                    partnerName={partner.name}
+                />
+            )}
         </>
     )
 }
