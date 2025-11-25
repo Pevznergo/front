@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Navigation from '@/components/Navigation'
-import AudioDemo from '@/components/AudioDemo'
 import BookingModal from '@/components/BookingModal'
 import Partners from '@/components/Partners'
+import MatchGameModal from '@/components/vibeflow/MatchGameModal'
 import { sendGTMEvent } from '@/lib/gtm'
-import { Check, ChevronDown, ChevronUp, Shield, Users, TrendingUp, Zap, ArrowRight, Phone, ShoppingCart, Briefcase } from 'lucide-react'
+import { Check, Users, TrendingUp, Zap, ArrowRight, Heart, ShoppingCart, Briefcase, Gift, Mail, CreditCard, ChevronUp, ChevronDown } from 'lucide-react'
 
 export default function Home() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [isMatchGameOpen, setIsMatchGameOpen] = useState(false)
 
   useEffect(() => {
     const handleOpenBooking = () => setIsBookingModalOpen(true)
@@ -18,41 +20,41 @@ export default function Home() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-black text-white selection:bg-blue-500/30">
+    <main className="min-h-screen bg-black text-white selection:bg-pink-500/30">
       <Navigation />
 
       {/* HERO SECTION */}
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Elements */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-gradient-to-b from-blue-600/20 to-transparent opacity-50 blur-[100px] -z-10 pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-gradient-to-b from-pink-600/20 to-transparent opacity-50 blur-[100px] -z-10 pointer-events-none" />
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-medium text-gray-300">Performance-based pricing. We only earn when you get paid.</span>
+            <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+            <span className="text-xs font-medium text-gray-300">The "Tinder for SaaS" Platform</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mb-8 leading-tight">
-            We Close <br className="hidden sm:block" />
-            <span className="ios-gradient-text">the Deals You Lost.</span>
+            Turn Your Dead Leads into <br className="hidden sm:block" />
+            <span className="bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent">"Power Couples".</span>
           </h1>
 
           <p className="mt-6 text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            Stop letting your "Dead Leads" and "Cancelled Subscriptions" gather dust. We act as your dedicated Win-Back Sales Team. Our AI Agents call your unconverted contacts, overcome their objections with exclusive bundles, and resell your product for you.
+            Reactivate your churned users by bundling your SaaS with the tools they already love (Canva, CapCut, etc.). Run a "Don't Let Your App Be Single" campaign and unlock revenue through exclusive partner matches.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={() => {
-                sendGTMEvent({ event: 'cta_click', location: 'hero', label: 'start_recovering_revenue' })
+                sendGTMEvent({ event: 'cta_click', location: 'hero', label: 'start_matching' })
                 setIsBookingModalOpen(true)
               }}
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-semibold text-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
             >
-              Start Recovering Revenue
+              Launch Your Campaign
             </button>
           </div>
-          <p className="mt-4 text-sm text-gray-500">Targeting: Churned Users • Expired Trials • Cold Leads</p>
+          <p className="mt-4 text-sm text-gray-500">For SaaS Founders • Growth Teams • Partnerships</p>
         </div>
 
         <div className="mt-16">
@@ -60,46 +62,63 @@ export default function Home() {
         </div>
       </section>
 
-      {/* THE REALITY CHECK (Agitation) */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 relative">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-6">You’re Sitting on a Goldmine of <br /><span className="text-yellow-500">"Almost"</span> Customers.</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              You paid huge CAC to get them. They visited, they signed up for a trial, or they bought once... and then they left.
-            </p>
-          </div>
+      {/* DEMO SECTION (The User Experience) */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-pink-900/10 to-black pointer-events-none" />
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">See What Your Users Experience</h2>
+            <p className="text-gray-400 mb-8">Your users swipe to find their perfect partner tool. Try it yourself.</p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { title: "Lost Leads", desc: "Qualified prospects who said 'No' to the price.", icon: <TrendingUp className="w-6 h-6 text-red-400" /> },
-              { title: "Churned Clients", desc: "Users who left due to budget cuts.", icon: <Users className="w-6 h-6 text-orange-400" /> },
-              { title: "Ghosted Trials", desc: "People who signed up and never bought.", icon: <Briefcase className="w-6 h-6 text-gray-400" /> }
-            ].map((item, i) => (
-              <div key={i} className="glass-panel p-6 rounded-2xl text-center hover:bg-white/10 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  {item.icon}
+            <div
+              onClick={() => setIsMatchGameOpen(true)}
+              className="relative w-64 h-96 mx-auto cursor-pointer group perspective-1000"
+            >
+              <div className="relative w-full h-full transition-all duration-500 transform group-hover:scale-105 group-hover:rotate-1 shadow-2xl rounded-3xl overflow-hidden border-4 border-white/10">
+                <Image
+                  src="/logos/canva.png"
+                  alt="Canva"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                {/* Overlay Content */}
+                <div className="absolute bottom-0 left-0 w-full p-6 text-left">
+                  <div className="inline-block px-3 py-1 mb-2 bg-pink-500/90 backdrop-blur-md rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-lg">
+                    Design Wizard
+                  </div>
+                  <h3 className="text-2xl font-black text-white drop-shadow-lg">Canva</h3>
+                  <p className="text-white/80 text-sm mt-1">Click to match</p>
                 </div>
-                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-400">{item.desc}</p>
+
+                {/* Play/Action Icon Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+                    <Heart className="w-8 h-8 text-white fill-current animate-pulse" />
+                  </div>
+                </div>
               </div>
-            ))}
+
+              {/* Decorative Glow */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 -z-10" />
+            </div>
           </div>
 
-          <div className="mt-12 text-center text-gray-400">
-            <p>Your sales team has moved on to fresh leads. Your automated emails are going to Spam.</p>
-            <p className="mt-2 font-medium text-white">But they still need a solution. They just needed a better offer or a personal touch.</p>
-          </div>
+          <MatchGameModal
+            isOpen={isMatchGameOpen}
+            onClose={() => setIsMatchGameOpen(false)}
+          />
         </div>
       </section>
 
-      {/* OUR PROPOSITION (The "We Sell For You" Angle) */}
+      {/* HOW IT WORKS (The B2B2C Flow) */}
       <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-3xl sm:text-5xl font-bold mb-6">Think of Us as Your <br /><span className="ios-gradient-blue">"Second Chance"</span> Sales Force.</h2>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-6">How the <span className="bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent">Platform</span> Works.</h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              We don't just send reminders. We actively sell your product to the people who slipped through the cracks. We use a combination of empathetic AI Voice Agents and irresistible "Cross-Brand Bundles" to turn a "No" into a "Yes."
+              We provide the infrastructure to bundle your product with top-tier SaaS partners.
             </p>
           </div>
 
@@ -107,21 +126,21 @@ export default function Home() {
             {[
               {
                 step: "01",
-                title: "We Pick Up Where You Left Off",
-                desc: "We securely ingest your list of lost leads and churned users. We identify why they didn't buy (Price? Timing? Competitor?).",
-                icon: <Users className="w-6 h-6 text-blue-400" />
+                title: "The Hook",
+                desc: "You send a campaign (Email or In-App) to your lost leads: \"Don't Let [Your App] Be Single\". It's intriguing and different.",
+                icon: <Mail className="w-6 h-6 text-pink-400" />
               },
               {
                 step: "02",
-                title: "We Pitch a Better Offer",
-                desc: "Selling the same thing at the same price won't work. We package your product with complementary non-competing tools to create a no-brainer deal.",
-                icon: <Zap className="w-6 h-6 text-purple-400" />
+                title: "The Match",
+                desc: "Users land on a branded matching page. They swipe to find a complementary tool (e.g., Your CRM + An Email Tool) with a 50% discount.",
+                icon: <Heart className="w-6 h-6 text-red-500" />
               },
               {
                 step: "03",
-                title: "We Close the Sale via AI",
-                desc: "Our AI agents call them personally. They negotiate, handle objections, and close the subscription on your behalf.",
-                icon: <Phone className="w-6 h-6 text-green-400" />
+                title: "The Bundle",
+                desc: "They pay ONE single bill for both apps. We handle the split payments and provision access instantly. Frictionless.",
+                icon: <CreditCard className="w-6 h-6 text-orange-400" />
               }
             ].map((item, i) => (
               <div key={i} className="glass-panel p-8 rounded-3xl relative group hover:bg-white/10 transition-all duration-300">
@@ -137,40 +156,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* AUDIO DEMO SECTION */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-blue-900/10 to-black pointer-events-none" />
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Hear the Difference. <br />Real-Time AI Conversation.</h2>
-            <p className="text-gray-400">Click play to hear how our AI handles a reactivation call.</p>
-          </div>
-
-          <AudioDemo />
-        </div>
-      </section>
-
-      {/* WHY IT WORKS */}
+      {/* VALUE PROPOSITION (Why SaaS Companies Use Us) */}
       <section id="why-it-works" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">Why Our "Win-Back" Approach <br />Succeeds Where Emails Fail</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">The Ultimate Growth Hack</h2>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                title: "Active Selling, Not Passive Waiting",
-                desc: "We call. We talk. We persuade. We don't wait for them to open an email.",
-                icon: <Phone className="w-6 h-6 text-blue-400" />
-              },
-              {
-                title: "The \"Better Than New\" Offer",
-                desc: "By bundling your product with partners, we increase the value proposition without devaluing your brand. The lead feels they are getting an exclusive \"Insider Deal.\"",
+                title: "Reactivation",
+                desc: "Win back dead leads who churned on price. A 50% bundle discount makes your product a 'no-brainer' again.",
                 icon: <Zap className="w-6 h-6 text-yellow-400" />
               },
               {
-                title: "Instant Objection Handling",
-                desc: "\"Too expensive?\" — We have a bundle discount. \"Not needed now?\" — We have a flexible reactivation plan. Our AI handles these objections in real-time.",
-                icon: <Check className="w-6 h-6 text-green-400" />
+                title: "Acquisition",
+                desc: "Get discovered by users of other apps. When Canva users swipe, they find YOU. It's free exposure to high-intent leads.",
+                icon: <TrendingUp className="w-6 h-6 text-green-400" />
+              },
+              {
+                title: "Retention",
+                desc: "Sticky ecosystem. Users who have 2+ integrated tools churn 70% less than single-tool users.",
+                icon: <Check className="w-6 h-6 text-blue-400" />
               }
             ].map((item, i) => (
               <div key={i} className="glass-panel p-8 rounded-2xl hover:border-white/20 transition-colors">
@@ -186,24 +192,24 @@ export default function Home() {
       {/* WHO WE HELP */}
       <section id="segments" className="py-24 px-4 sm:px-6 lg:px-8 bg-white/5">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">Tailored for High-Growth B2B SaaS</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">Join the Ecosystem</h2>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                title: "E-commerce Apps",
-                desc: "Reactivate shop owners who uninstalled your plugin.",
-                icon: <ShoppingCart className="w-6 h-6 text-pink-400" />
+                title: "For CRM Tools",
+                desc: "Partner with Email & Automation tools.",
+                icon: <Users className="w-6 h-6 text-pink-400" />
               },
               {
-                title: "Marketing Tools",
-                desc: "Convert freelancers who expired their free trial.",
-                icon: <TrendingUp className="w-6 h-6 text-blue-400" />
+                title: "For Design Tools",
+                desc: "Partner with Social Media & Video tools.",
+                icon: <Zap className="w-6 h-6 text-blue-400" />
               },
               {
-                title: "HR & Recruitment Tech",
-                desc: "Win back companies that froze hiring budgets.",
-                icon: <Users className="w-6 h-6 text-purple-400" />
+                title: "For E-commerce",
+                desc: "Partner with Reviews & Upsell tools.",
+                icon: <ShoppingCart className="w-6 h-6 text-purple-400" />
               }
             ].map((item, i) => (
               <div key={i} className="glass-panel p-6 rounded-2xl flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
