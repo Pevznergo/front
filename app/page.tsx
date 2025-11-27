@@ -41,7 +41,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl font-medium text-gray-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Reactivate your churned users by bundling your SaaS with the tools they already love. Run a "Don't Let Your App Be Single" campaign and unlock revenue through exclusive partner matches.
+                Activate your users by bundling your SaaS with the tools they already love. Run a "Don't Let Your App Be Single" campaign and unlock revenue through exclusive partner matches.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start pt-4">
