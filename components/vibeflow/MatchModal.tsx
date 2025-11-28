@@ -37,9 +37,20 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
 
     useEffect(() => {
         if (isOpen) {
-            fetch('/api/tariffs/platform')
+            // Get platform name from URL pathname (e.g., "/vibeflow" -> "vibeflow")
+            const pathname = window.location.pathname
+            const platformSlug = pathname.split('/')[1] || 'vibeflow' // Default to 'vibeflow' if at root
+
+            fetch(`/api/tariffs/${platformSlug}`, { cache: 'no-store' })
                 .then(res => res.json())
-                .then(data => setPlatformTariffs(data))
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        setPlatformTariffs(data)
+                    } else {
+                        console.error('Platform tariffs not found:', data.error)
+                        setPlatformTariffs([])
+                    }
+                })
                 .catch(err => console.error('Failed to fetch platform tariffs:', err))
         }
     }, [isOpen])
@@ -47,8 +58,8 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
     // Calculate available billing periods based on intersection of Platform and Partner tariffs
     useEffect(() => {
         if (platformTariffs.length > 0 && partner?.tariffs?.length > 0) {
-            const platformPeriods = new Set(platformTariffs.map(t => t.billing_period))
-            const partnerPeriods = new Set(partner.tariffs.map(t => t.billing_period))
+            const platformPeriods = new Set(platformTariffs.map(t => (t.billing_period || 'monthly').toLowerCase().trim()))
+            const partnerPeriods = new Set(partner.tariffs.map(t => (t.billing_period || 'monthly').toLowerCase().trim()))
 
             const intersection = Array.from(platformPeriods).filter(p => partnerPeriods.has(p)) as ('monthly' | 'yearly')[]
             setAvailablePeriods(intersection)
@@ -64,12 +75,19 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
 
     // Generate bundles when tariffs are loaded or billing period changes
     useEffect(() => {
+        console.log('MatchModal Debug:', {
+            partnerName: partner?.name,
+            partnerTariffs: partner?.tariffs,
+            platformTariffs,
+            availablePeriods,
+            billingPeriod
+        })
         if (platformTariffs.length > 0 && partner?.tariffs?.length > 0 && availablePeriods.includes(billingPeriod)) {
             const generatedBundles = []
 
             // Filter by billing period
-            const filteredPlatform = platformTariffs.filter(t => t.billing_period === billingPeriod)
-            const filteredPartner = partner.tariffs.filter(t => t.billing_period === billingPeriod)
+            const filteredPlatform = platformTariffs.filter(t => (t.billing_period || 'monthly').toLowerCase().trim() === billingPeriod)
+            const filteredPartner = partner.tariffs.filter(t => (t.billing_period || 'monthly').toLowerCase().trim() === billingPeriod)
 
             // Sort tariffs by price
             const sortedPlatform = [...filteredPlatform].sort((a, b) => Number(a.price) - Number(b.price))

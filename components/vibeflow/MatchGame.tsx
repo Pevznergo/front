@@ -12,6 +12,7 @@ interface Tariff {
     original_price: number
     features: string
     type: string
+    billing_period: string
 }
 
 interface Partner {
@@ -36,7 +37,7 @@ export default function MatchGame() {
     useEffect(() => {
         async function fetchPartners() {
             try {
-                const res = await fetch('/api/partners')
+                const res = await fetch('/api/partners', { cache: 'no-store' })
                 const data = await res.json()
                 if (Array.isArray(data)) {
                     setPartners(data)

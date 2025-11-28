@@ -24,6 +24,7 @@ export async function GET() {
 // POST: Create a new tariff
 export async function POST(request: Request) {
     try {
+        await initDatabase()
         const body = await request.json()
         const { name, price, original_price, features, partner_id, type, billing_period } = body
 
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 // DELETE: Delete a tariff
 export async function DELETE(request: Request) {
     try {
+        await initDatabase()
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
 

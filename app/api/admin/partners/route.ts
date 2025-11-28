@@ -18,16 +18,17 @@ export async function GET() {
 // POST: Create a new partner
 export async function POST(request: Request) {
     try {
+        await initDatabase()
         const body = await request.json()
         const { name, role, age, bio, looking_for, discount, logo, is_platform, is_partner } = body
 
-        if (!name || !role || !age || !bio || !looking_for || !discount || !logo) {
+        if (!name || !role || !age || !bio || !looking_for || !logo) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
         const result = await sql`
             INSERT INTO partners (name, role, age, bio, looking_for, discount, logo, is_platform, is_partner)
-            VALUES (${name}, ${role}, ${age}, ${bio}, ${looking_for}, ${discount}, ${logo}, ${is_platform || false}, ${is_partner !== undefined ? is_partner : true})
+            VALUES (${name}, ${role}, ${age}, ${bio}, ${looking_for}, ${discount || '0%'}, ${logo}, ${is_platform || false}, ${is_partner !== undefined ? is_partner : true})
             RETURNING *
         `
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
 // DELETE: Delete a partner
 export async function DELETE(request: Request) {
     try {
+        await initDatabase()
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
 

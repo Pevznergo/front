@@ -10,7 +10,6 @@ export interface Partner {
     age: string
     bio: string
     looking_for: string
-    discount: string
     logo: string
     is_platform: boolean
     is_partner: boolean
@@ -31,7 +30,6 @@ export default function AdminPartnerModal({ isOpen, onClose, onSuccess, partnerT
         age: 'Hidden', // Default value since field is hidden
         bio: '',
         looking_for: '',
-        discount: '',
         logo: '',
         is_platform: false,
         is_partner: true
@@ -49,7 +47,6 @@ export default function AdminPartnerModal({ isOpen, onClose, onSuccess, partnerT
                     age: 'Hidden',
                     bio: '',
                     looking_for: '',
-                    discount: '',
                     logo: '',
                     is_platform: false,
                     is_partner: true
@@ -153,17 +150,6 @@ export default function AdminPartnerModal({ isOpen, onClose, onSuccess, partnerT
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden p-4 space-y-4">
                             <h3 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Details</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Discount</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. 50% OFF"
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
-                                        value={formData.discount}
-                                        onChange={e => setFormData({ ...formData, discount: e.target.value })}
-                                        required
-                                    />
-                                </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-semibold text-gray-500 uppercase">Looking For</label>
                                     <input

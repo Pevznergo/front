@@ -20,7 +20,12 @@ export default function AdminPartnersPage() {
         try {
             const res = await fetch('/api/admin/partners')
             const data = await res.json()
-            setPartners(data)
+            if (Array.isArray(data)) {
+                setPartners(data)
+            } else {
+                console.error('API returned non-array:', data)
+                setPartners([])
+            }
         } catch (error) {
             console.error('Failed to fetch partners', error)
         } finally {
@@ -129,7 +134,7 @@ export default function AdminPartnersPage() {
                                 <div className="hidden md:flex items-center gap-8 text-sm text-gray-500 flex-1 justify-center">
                                     <div className="flex flex-col items-center">
                                         <span className="text-xs font-semibold uppercase text-gray-400">Discount</span>
-                                        <span className="font-medium text-green-600">{partner.discount}</span>
+                                        <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">Dynamic</span>
                                     </div>
                                     <div className="flex flex-col items-center">
                                         <span className="text-xs font-semibold uppercase text-gray-400">Looking For</span>
