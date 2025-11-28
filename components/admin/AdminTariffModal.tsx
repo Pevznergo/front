@@ -203,7 +203,7 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                                                 </span>
                                             </div>
                                             <div className="text-gray-500 text-sm mt-0.5">
-                                                ${tariff.price} <span className="line-through text-gray-300 text-xs">${tariff.original_price}</span>
+                                                ${Number(tariff.price).toFixed(2)} <span className="line-through text-gray-300 text-xs">${Number(tariff.original_price).toFixed(2)}</span>
                                             </div>
                                         </div>
                                         <button

@@ -189,7 +189,7 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                                         )}
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="font-bold text-white">{bundle.name}</span>
-                                            <span className="font-bold text-pink-400">${bundle.price}/{billingPeriod === 'monthly' ? 'mo' : 'yr'} <span className="text-white/40 text-sm font-normal line-through">${bundle.originalPrice}</span></span>
+                                            <span className="font-bold text-pink-400">${Number(bundle.price).toFixed(2)}/{billingPeriod === 'monthly' ? 'mo' : 'yr'} <span className="text-white/40 text-sm font-normal line-through">${Number(bundle.originalPrice).toFixed(2)}</span></span>
                                         </div>
                                         <ul className="text-xs text-gray-300 space-y-1">
                                             {bundle.items.map((item: any, i: number) => (
