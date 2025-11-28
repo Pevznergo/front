@@ -5,7 +5,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
     try {
-        const tariffs = await sql`SELECT * FROM tariffs WHERE type = 'platform' ORDER BY price ASC`
+        // Fetch tariffs for the platform partner (Vibeflow)
+        const tariffs = await sql`
+            SELECT t.* 
+            FROM tariffs t
+            JOIN partners p ON t.partner_id = p.id
+            WHERE p.is_platform = TRUE
+            ORDER BY t.price ASC
+        `
         return NextResponse.json(tariffs)
     } catch (error) {
         console.error('Error fetching platform tariffs:', error)

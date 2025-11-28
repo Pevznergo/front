@@ -11,6 +11,7 @@ interface Tariff {
     original_price: number
     features: string
     type: string
+    billing_period: string
 }
 
 interface Partner {
@@ -31,6 +32,8 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
     const [bundles, setBundles] = useState<any[]>([])
     const [selectedBundleIndex, setSelectedBundleIndex] = useState<number>(0)
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+    const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
+    const [availablePeriods, setAvailablePeriods] = useState<('monthly' | 'yearly')[]>([])
 
     useEffect(() => {
         if (isOpen) {
@@ -41,44 +44,71 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
         }
     }, [isOpen])
 
-    // Generate bundles when tariffs are loaded
+    // Calculate available billing periods based on intersection of Platform and Partner tariffs
     useEffect(() => {
         if (platformTariffs.length > 0 && partner?.tariffs?.length > 0) {
+            const platformPeriods = new Set(platformTariffs.map(t => t.billing_period))
+            const partnerPeriods = new Set(partner.tariffs.map(t => t.billing_period))
+
+            const intersection = Array.from(platformPeriods).filter(p => partnerPeriods.has(p)) as ('monthly' | 'yearly')[]
+            setAvailablePeriods(intersection)
+
+            // Default to monthly if available, otherwise yearly, otherwise whatever is left
+            if (intersection.includes('monthly')) {
+                setBillingPeriod('monthly')
+            } else if (intersection.length > 0) {
+                setBillingPeriod(intersection[0])
+            }
+        }
+    }, [platformTariffs, partner])
+
+    // Generate bundles when tariffs are loaded or billing period changes
+    useEffect(() => {
+        if (platformTariffs.length > 0 && partner?.tariffs?.length > 0 && availablePeriods.includes(billingPeriod)) {
             const generatedBundles = []
 
-            // Sort tariffs by price to ensure logical pairing
-            const sortedPlatform = [...platformTariffs].sort((a, b) => Number(a.price) - Number(b.price))
-            const sortedPartner = [...partner.tariffs].sort((a, b) => Number(a.price) - Number(b.price))
+            // Filter by billing period
+            const filteredPlatform = platformTariffs.filter(t => t.billing_period === billingPeriod)
+            const filteredPartner = partner.tariffs.filter(t => t.billing_period === billingPeriod)
+
+            // Sort tariffs by price
+            const sortedPlatform = [...filteredPlatform].sort((a, b) => Number(a.price) - Number(b.price))
+            const sortedPartner = [...filteredPartner].sort((a, b) => Number(a.price) - Number(b.price))
 
             // Determine how many bundles to create based on the side with more tariffs
+            if (sortedPlatform.length === 0 || sortedPartner.length === 0) {
+                setBundles([])
+                return
+            }
+
             const maxBundles = Math.max(sortedPlatform.length, sortedPartner.length)
 
             for (let i = 0; i < maxBundles; i++) {
-                // If one side runs out of tariffs, reuse the last one (or the only one)
-                // This handles 1-to-N relationships correctly
+                // If one side runs out of tariffs, reuse the last one
                 const platformTariff = sortedPlatform[i] || sortedPlatform[sortedPlatform.length - 1]
                 const partnerTariff = sortedPartner[i] || sortedPartner[sortedPartner.length - 1]
 
                 if (platformTariff && partnerTariff) {
                     generatedBundles.push({
-                        id: `bundle-${i}`,
-                        name: i === 0 ? 'Starter Bundle' : 'Pro Bundle', // Simplified naming for now, could be dynamic
+                        id: `bundle-${i}-${billingPeriod}`,
+                        name: i === 0 ? 'Starter Bundle' : 'Pro Bundle',
                         price: Number(platformTariff.price) + Number(partnerTariff.price),
                         originalPrice: Number(platformTariff.original_price) + Number(partnerTariff.original_price),
                         items: [
                             { source: 'Vibeflow', plan: platformTariff.name },
                             { source: partner.name, plan: partnerTariff.name }
                         ],
-                        isPopular: i === 1 // Mark second bundle as popular if it exists
+                        isPopular: i === 1 // Mark second bundle as popular
                     })
                 }
             }
 
             setBundles(generatedBundles)
-            // Default to the "popular" bundle (index 1) if it exists, otherwise 0
             setSelectedBundleIndex(generatedBundles.length > 1 ? 1 : 0)
+        } else {
+            setBundles([])
         }
-    }, [platformTariffs, partner])
+    }, [platformTariffs, partner, billingPeriod, availablePeriods])
 
     if (!isOpen || !partner) return null
 
@@ -121,33 +151,57 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                             <p className="mt-3 font-medium text-white/90 drop-shadow-md">Unlock the "Power Couple" Bundle</p>
                         </div>
 
+                        {/* Billing Toggle - Only show if multiple periods available */}
+                        {availablePeriods.length > 1 && (
+                            <div className="flex justify-center mb-6">
+                                <div className="bg-white/20 backdrop-blur-md p-1 rounded-full flex">
+                                    <button
+                                        onClick={() => setBillingPeriod('monthly')}
+                                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${billingPeriod === 'monthly' ? 'bg-white text-black shadow-md' : 'text-white hover:bg-white/10'}`}
+                                    >
+                                        Monthly
+                                    </button>
+                                    <button
+                                        onClick={() => setBillingPeriod('yearly')}
+                                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${billingPeriod === 'yearly' ? 'bg-white text-black shadow-md' : 'text-white hover:bg-white/10'}`}
+                                    >
+                                        Yearly <span className="text-[10px] font-normal ml-1 text-green-600 bg-green-100 px-1 rounded">-20%</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Pricing Options */}
                         <div className="space-y-3 mb-4">
-                            {bundles.map((bundle, index) => (
-                                <div
-                                    key={bundle.id}
-                                    onClick={() => setSelectedBundleIndex(index)}
-                                    className={`border rounded-xl p-4 relative cursor-pointer transition-all backdrop-blur-md ${selectedBundleIndex === index ? 'border-pink-500 bg-pink-500/20' : 'border-white/20 bg-white/5 hover:bg-white/10'}`}
-                                >
-                                    {bundle.isPopular && selectedBundleIndex === index && (
-                                        <div className="absolute -top-3 right-4 bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
-                                            MOST POPULAR
+                            {bundles.length === 0 ? (
+                                <div className="text-center text-white/60 py-4">No bundles available for this billing period.</div>
+                            ) : (
+                                bundles.map((bundle, index) => (
+                                    <div
+                                        key={bundle.id}
+                                        onClick={() => setSelectedBundleIndex(index)}
+                                        className={`border rounded-xl p-4 relative cursor-pointer transition-all backdrop-blur-md ${selectedBundleIndex === index ? 'border-pink-500 bg-pink-500/20' : 'border-white/20 bg-white/5 hover:bg-white/10'}`}
+                                    >
+                                        {bundle.isPopular && selectedBundleIndex === index && (
+                                            <div className="absolute -top-3 right-4 bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                                                MOST POPULAR
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-bold text-white">{bundle.name}</span>
+                                            <span className="font-bold text-pink-400">${bundle.price}/{billingPeriod === 'monthly' ? 'mo' : 'yr'} <span className="text-white/40 text-sm font-normal line-through">${bundle.originalPrice}</span></span>
                                         </div>
-                                    )}
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="font-bold text-white">{bundle.name}</span>
-                                        <span className="font-bold text-pink-400">${bundle.price}/mo <span className="text-white/40 text-sm font-normal line-through">${bundle.originalPrice}</span></span>
+                                        <ul className="text-xs text-gray-300 space-y-1">
+                                            {bundle.items.map((item: any, i: number) => (
+                                                <li key={i} className="flex items-center gap-1">
+                                                    <Check className="w-3 h-3 text-green-400" />
+                                                    <span className="font-semibold text-white/90">{item.source}:</span> {item.plan}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
-                                    <ul className="text-xs text-gray-300 space-y-1">
-                                        {bundle.items.map((item: any, i: number) => (
-                                            <li key={i} className="flex items-center gap-1">
-                                                <Check className="w-3 h-3 text-green-400" />
-                                                <span className="font-semibold text-white/90">{item.source}:</span> {item.plan}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
 
                         {/* Checkout Button */}

@@ -8,7 +8,7 @@ export async function GET() {
         // Ensure DB is initialized (tables created, seeded if empty)
         await initDatabase()
 
-        const partners = await sql`SELECT * FROM partners ORDER BY id ASC`
+        const partners = await sql`SELECT * FROM partners WHERE is_partner = TRUE ORDER BY id ASC`
 
         // Fetch tariffs for each partner
         const partnersWithTariffs = await Promise.all(partners.map(async (partner) => {
