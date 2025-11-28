@@ -12,6 +12,7 @@ interface Tariff {
     original_price: number
     features: string
     type: string
+    billing_period: string
 }
 
 interface Partner {
