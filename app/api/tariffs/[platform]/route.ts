@@ -17,15 +17,12 @@ export async function GET(
             )
         }
 
-        // Capitalize first letter to match DB format (e.g., "vibeflow" -> "Vibeflow")
-        const formattedName = platformName.charAt(0).toUpperCase() + platformName.slice(1).toLowerCase()
-
         // Fetch tariffs for the specific platform partner
         const tariffs = await sql`
             SELECT t.* 
             FROM tariffs t
             JOIN partners p ON t.partner_id = p.id
-            WHERE p.name = ${formattedName} AND p.is_platform = TRUE
+            WHERE LOWER(p.name) = LOWER(${platformName}) AND p.is_platform = TRUE
             ORDER BY t.price ASC
         `
 
