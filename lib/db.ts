@@ -1,16 +1,31 @@
 import { neon } from '@neondatabase/serverless'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined')
+// Helper to get safe SQL connection
+const getSql = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not defined')
+  }
+  return neon(process.env.DATABASE_URL)
 }
 
-export const sql = neon(process.env.DATABASE_URL)
+// Export a wrapper that initializes on first use
+export const sql = (strings: TemplateStringsArray, ...values: any[]) => {
+  const sqlConnection = getSql()
+  return sqlConnection(strings, ...values)
+}
 
 // Инициализация таблицы пользователей и партнеров
 export async function initDatabase() {
   try {
+    if (!process.env.DATABASE_URL) {
+      console.warn('DATABASE_URL is not defined, skipping database initialization')
+      return
+    }
+
+    const sqlConnection = getSql()
+
     // Users table
-    await sql`
+    await sqlConnection`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -21,7 +36,7 @@ export async function initDatabase() {
     `
 
     // Partners table
-    await sql`
+    await sqlConnection`
       CREATE TABLE IF NOT EXISTS partners (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -37,7 +52,7 @@ export async function initDatabase() {
     `
 
     // Tariffs table
-    await sql`
+    await sqlConnection`
       CREATE TABLE IF NOT EXISTS tariffs (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
