@@ -31,6 +31,7 @@ export default function MatchGame() {
     const [currentCardIndex, setCurrentCardIndex] = useState(0)
     const [isMatchModalOpen, setIsMatchModalOpen] = useState(false)
     const [matchedPartner, setMatchedPartner] = useState("")
+    const [platformTariffs, setPlatformTariffs] = useState<Tariff[]>([])
 
     useEffect(() => {
         async function fetchPartners() {
@@ -47,6 +48,14 @@ export default function MatchGame() {
             }
         }
         fetchPartners()
+
+        // Fetch platform tariffs
+        fetch('/api/tariffs/vibeflow')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setPlatformTariffs(data)
+            })
+            .catch(err => console.error('Failed to fetch platform tariffs:', err))
     }, [])
 
     if (loading) {
