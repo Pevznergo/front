@@ -74,13 +74,15 @@ export default function AdminPartnerModal({ isOpen, onClose, partner, onSave }: 
         setLoading(true)
 
         try {
-            const url = partner ? `/api/admin/partners/${partner.id}` : '/api/admin/partners'
+            const url = '/api/admin/partners'
             const method = partner ? 'PUT' : 'POST'
+
+            const payload = partner ? { ...formData, id: partner.id } : formData
 
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             })
 
             if (!res.ok) throw new Error('Failed to save partner')

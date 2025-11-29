@@ -49,6 +49,39 @@ export async function POST(request: Request) {
     }
 }
 
+// PUT: Update a tariff
+export async function PUT(request: Request) {
+    try {
+        await initDatabase()
+        const body = await request.json()
+        const { id, name, price, original_price, features, billing_period } = body
+
+        if (!id || !name || !price || !features) {
+            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        }
+
+        const result = await sql`
+            UPDATE tariffs 
+            SET name = ${name}, 
+                price = ${price}, 
+                original_price = ${original_price || null}, 
+                features = ${features}, 
+                billing_period = ${billing_period || 'monthly'}
+            WHERE id = ${id}
+            RETURNING *
+        `
+
+        if (result.length === 0) {
+            return NextResponse.json({ error: 'Tariff not found' }, { status: 404 })
+        }
+
+        return NextResponse.json(result[0])
+    } catch (error) {
+        console.error('Error updating tariff:', error)
+        return NextResponse.json({ error: 'Failed to update tariff' }, { status: 500 })
+    }
+}
+
 // DELETE: Delete a tariff
 export async function DELETE(request: Request) {
     try {

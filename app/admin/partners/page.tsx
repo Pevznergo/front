@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Plus, Loader2, Settings, ChevronRight, Search, Filter, RefreshCw } from 'lucide-react'
+import { Trash2, Plus, Loader2, Settings, ChevronRight, Search, Filter, RefreshCw, Pencil } from 'lucide-react'
 import AdminTariffModal from '@/components/admin/AdminTariffModal'
 import AdminPartnerModal, { Partner } from '@/components/admin/AdminPartnerModal'
 import { revalidateAll } from '@/app/actions/revalidate'
@@ -10,6 +10,7 @@ export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<Partner[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedPartnerForTariffs, setSelectedPartnerForTariffs] = useState<Partner | null>(null)
+    const [editingPartner, setEditingPartner] = useState<Partner | null>(null)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [filter, setFilter] = useState<'all' | 'platform' | 'partner'>('all')
     const [isClearingCache, setIsClearingCache] = useState(false)
@@ -171,11 +172,31 @@ export default function AdminPartnersPage() {
                                 {/* Right: Actions */}
                                 <div className="flex items-center gap-3 justify-end">
                                     <button
-                                        onClick={() => setSelectedPartnerForTariffs(partner)}
+                                        onClick={() => {
+                                            setSelectedPartnerForTariffs(partner)
+                                        }}
                                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-lg transition-colors text-sm font-semibold"
                                     >
                                         <Settings className="w-4 h-4" />
                                         Manage Tariffs
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Reuse the create modal but pass the partner data?
+                                            // The AdminPartnerModal takes a 'partner' prop for editing.
+                                            // We need a state for 'partnerToEdit' and pass it to AdminPartnerModal.
+                                            // But wait, AdminPartnerModal is currently used for creation with 'isCreateModalOpen'.
+                                            // Let's create a separate state 'editingPartner' or reuse 'selectedPartnerForTariffs' if appropriate?
+                                            // No, 'selectedPartnerForTariffs' is for the tariff modal.
+                                            // Let's use a new state 'editingPartner' and open the same modal.
+                                            setEditingPartner(partner)
+                                            setIsCreateModalOpen(true)
+                                        }}
+                                        className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Edit Partner"
+                                    >
+                                        <Settings className="w-5 h-5" />
+                                        {/* Using Settings icon again? Maybe Pencil is better. Let's import Pencil. */}
                                     </button>
                                     <button
                                         onClick={() => handleDelete(partner.id)}
@@ -194,8 +215,15 @@ export default function AdminPartnersPage() {
             {/* Modals */}
             <AdminPartnerModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSave={fetchPartners}
+                onClose={() => {
+                    setIsCreateModalOpen(false)
+                    setEditingPartner(null)
+                }}
+                partner={editingPartner}
+                onSave={() => {
+                    fetchPartners()
+                    setEditingPartner(null)
+                }}
             />
 
             {selectedPartnerForTariffs && (

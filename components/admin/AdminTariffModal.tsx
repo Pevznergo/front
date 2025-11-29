@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Loader2, Check } from 'lucide-react'
+import { X, Plus, Trash2, Loader2, Check, Pencil } from 'lucide-react'
 
 interface Tariff {
     id: number
@@ -28,7 +28,8 @@ interface AdminTariffModalProps {
 export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTariffModalProps) {
     const [tariffs, setTariffs] = useState<Tariff[]>([])
     const [loading, setLoading] = useState(true)
-    const [isCreating, setIsCreating] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [editingTariff, setEditingTariff] = useState<Tariff | null>(null)
     const [formData, setFormData] = useState({
         name: '',
         price: '',
@@ -40,15 +41,13 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
     useEffect(() => {
         if (isOpen && partner) {
             fetchTariffs()
+            resetForm()
         }
     }, [isOpen, partner])
 
     const fetchTariffs = async () => {
         setLoading(true)
         try {
-            // We need to fetch all tariffs and filter client-side or update API to filter by partner_id
-            // For now, let's fetch all and filter since our API is simple
-            // Ideally: GET /api/admin/tariffs?partner_id=X
             const res = await fetch('/api/admin/tariffs')
             const data = await res.json()
             const partnerTariffs = data.filter((t: any) => t.partner_id === partner.id)
@@ -60,6 +59,28 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
         }
     }
 
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            price: '',
+            original_price: '',
+            features: '["Feature 1", "Feature 2"]',
+            billing_period: 'monthly'
+        })
+        setEditingTariff(null)
+    }
+
+    const handleEdit = (tariff: Tariff) => {
+        setEditingTariff(tariff)
+        setFormData({
+            name: tariff.name,
+            price: String(tariff.price),
+            original_price: String(tariff.original_price),
+            features: tariff.features,
+            billing_period: tariff.billing_period
+        })
+    }
+
     const handleDelete = async (id: number) => {
         if (!confirm('Delete this tariff?')) return
 
@@ -67,6 +88,7 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
             const res = await fetch(`/api/admin/tariffs?id=${id}`, { method: 'DELETE' })
             if (res.ok) {
                 setTariffs(tariffs.filter(t => t.id !== id))
+                if (editingTariff?.id === id) resetForm()
             }
         } catch (error) {
             console.error('Failed to delete tariff', error)
@@ -75,7 +97,7 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsCreating(true)
+        setIsSubmitting(true)
 
         try {
             const payload = {
@@ -86,21 +108,36 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                 original_price: Number(formData.original_price)
             }
 
-            const res = await fetch('/api/admin/tariffs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
+            let res
+            if (editingTariff) {
+                // Update existing
+                res = await fetch('/api/admin/tariffs', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, id: editingTariff.id })
+                })
+            } else {
+                // Create new
+                res = await fetch('/api/admin/tariffs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+            }
 
             if (res.ok) {
-                const newTariff = await res.json()
-                setTariffs([newTariff, ...tariffs])
-                setFormData({ ...formData, name: '', price: '', original_price: '' })
+                const savedTariff = await res.json()
+                if (editingTariff) {
+                    setTariffs(tariffs.map(t => t.id === savedTariff.id ? savedTariff : t))
+                } else {
+                    setTariffs([savedTariff, ...tariffs])
+                }
+                resetForm()
             }
         } catch (error) {
-            console.error('Failed to create tariff', error)
+            console.error('Failed to save tariff', error)
         } finally {
-            setIsCreating(false)
+            setIsSubmitting(false)
         }
     }
 
@@ -123,10 +160,15 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                 </div>
 
                 <div className="overflow-y-auto p-6 space-y-8">
-                    {/* Create Form */}
+                    {/* Create/Edit Form */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                            <h3 className="font-semibold text-gray-900">Add New Plan</h3>
+                        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <h3 className="font-semibold text-gray-900">{editingTariff ? 'Edit Plan' : 'Add New Plan'}</h3>
+                            {editingTariff && (
+                                <button onClick={resetForm} className="text-xs text-red-500 hover:text-red-700 font-medium">
+                                    Cancel Edit
+                                </button>
+                            )}
                         </div>
                         <form onSubmit={handleSubmit} className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input
@@ -175,11 +217,11 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                             />
                             <button
                                 type="submit"
-                                disabled={isCreating}
-                                className="bg-blue-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-blue-600 transition-colors md:col-span-2 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                                disabled={isSubmitting}
+                                className={`py-3 px-4 rounded-lg font-bold transition-colors md:col-span-2 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] ${editingTariff ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
                             >
-                                {isCreating ? <Loader2 className="animate-spin w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                Add Plan
+                                {isSubmitting ? <Loader2 className="animate-spin w-4 h-4" /> : (editingTariff ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
+                                {editingTariff ? 'Update Plan' : 'Add Plan'}
                             </button>
                         </form>
                     </div>
@@ -194,7 +236,7 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                         ) : (
                             <div className="grid gap-3">
                                 {tariffs.map(tariff => (
-                                    <div key={tariff.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center group">
+                                    <div key={tariff.id} className={`bg-white p-4 rounded-xl shadow-sm border transition-colors flex justify-between items-center group ${editingTariff?.id === tariff.id ? 'border-orange-500 ring-1 ring-orange-500' : 'border-gray-200'}`}>
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-bold text-gray-900">{tariff.name}</h4>
@@ -206,12 +248,22 @@ export default function AdminTariffModal({ isOpen, onClose, partner }: AdminTari
                                                 ${Number(tariff.price).toFixed(2)} <span className="line-through text-gray-300 text-xs">${Number(tariff.original_price).toFixed(2)}</span>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleDelete(tariff.id)}
-                                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleEdit(tariff)}
+                                                className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Pencil className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(tariff.id)}
+                                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

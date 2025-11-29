@@ -43,6 +43,44 @@ export async function POST(request: Request) {
     }
 }
 
+// PUT: Update a partner
+export async function PUT(request: Request) {
+    try {
+        await initDatabase()
+        const body = await request.json()
+        const { id, name, age, bio, discount, logo, is_platform, is_partner } = body
+
+        if (!id || !name || !age || !bio || !logo) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            )
+        }
+
+        const result = await sql`
+            UPDATE partners 
+            SET name = ${name}, 
+                age = ${age}, 
+                bio = ${bio}, 
+                discount = ${discount || '0%'}, 
+                logo = ${logo}, 
+                is_platform = ${is_platform || false}, 
+                is_partner = ${is_partner !== undefined ? is_partner : true}
+            WHERE id = ${id}
+            RETURNING *
+        `
+
+        if (result.length === 0) {
+            return NextResponse.json({ error: 'Partner not found' }, { status: 404 })
+        }
+
+        return NextResponse.json(result[0])
+    } catch (error) {
+        console.error('Error updating partner:', error)
+        return NextResponse.json({ error: 'Failed to update partner' }, { status: 500 })
+    }
+}
+
 // DELETE: Delete a partner
 export async function DELETE(request: Request) {
     try {
