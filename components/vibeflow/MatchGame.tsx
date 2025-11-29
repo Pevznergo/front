@@ -18,10 +18,8 @@ interface Tariff {
 interface Partner {
     id: number
     name: string
-    role: string
     age: string
     bio: string
-    looking_for: string
     discount: string
     logo: string
     tariffs: Tariff[]
@@ -61,6 +59,37 @@ export default function MatchGame() {
 
     const currentCard = partners[currentCardIndex % partners.length]
 
+    // Calculate dynamic savings (annual, combined max)
+    const savingsDisplay = (() => {
+        if (!currentCard?.tariffs?.length || !platformTariffs.length) return currentCard.discount
+
+        const calculateMaxSavings = (tariffs: Tariff[]) => {
+            let maxSavings = 0
+            for (const tariff of tariffs) {
+                let savings = 0
+                const price = Number(tariff.price)
+                const originalPrice = Number(tariff.original_price)
+
+                if (tariff.billing_period === 'yearly') {
+                    savings = (originalPrice - price) * 12
+                } else {
+                    savings = (originalPrice - price) * 12
+                }
+
+                if (savings > maxSavings) maxSavings = savings
+            }
+            return maxSavings
+        }
+
+        const partnerSavings = calculateMaxSavings(currentCard.tariffs)
+        const platformSavings = calculateMaxSavings(platformTariffs)
+        const totalSavings = partnerSavings + platformSavings
+
+        if (totalSavings > 0) return `Save $${Math.round(totalSavings)}`
+
+        return currentCard.discount
+    })()
+
     const handlePass = () => {
         setCurrentCardIndex(prev => prev + 1)
     }
@@ -89,10 +118,10 @@ export default function MatchGame() {
                     {/* Header */}
                     <div className="flex justify-between items-start">
                         <div className="px-3 py-1 bg-black/20 backdrop-blur-md border border-white/10 rounded-full text-xs font-bold text-white shadow-sm uppercase tracking-wide">
-                            {currentCard.role}
+                            Partner
                         </div>
                         <div className="bg-red-600 text-white px-3 py-1 rounded-lg shadow-lg transform rotate-3 animate-pulse">
-                            <span className="font-black text-lg">{currentCard.discount}</span>
+                            <span className="font-black text-lg">{savingsDisplay}</span>
                         </div>
                     </div>
 
@@ -105,9 +134,6 @@ export default function MatchGame() {
                         <div className="space-y-2">
                             <p className="text-white/80 text-xs leading-relaxed drop-shadow-md line-clamp-3">
                                 <span className="font-bold text-white">Bio:</span> {currentCard.bio}
-                            </p>
-                            <p className="text-white/80 text-xs drop-shadow-md">
-                                <span className="font-bold text-white">Looking for:</span> {currentCard.looking_for}
                             </p>
                         </div>
                     </div>

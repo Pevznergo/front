@@ -20,15 +20,19 @@ export async function POST(request: Request) {
     try {
         await initDatabase()
         const body = await request.json()
-        const { name, role, age, bio, looking_for, discount, logo, is_platform, is_partner } = body
+        const { name, age, bio, discount, logo, is_platform, is_partner } = body
 
-        if (!name || !role || !age || !bio || !looking_for || !logo) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        if (!name || !age || !bio || !logo) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            )
         }
 
+        // Insert new partner
         const result = await sql`
-            INSERT INTO partners (name, role, age, bio, looking_for, discount, logo, is_platform, is_partner)
-            VALUES (${name}, ${role}, ${age}, ${bio}, ${looking_for}, ${discount || '0%'}, ${logo}, ${is_platform || false}, ${is_partner !== undefined ? is_partner : true})
+            INSERT INTO partners (name, age, bio, discount, logo, is_platform, is_partner)
+            VALUES (${name}, ${age}, ${bio}, ${discount || '0%'}, ${logo}, ${is_platform || false}, ${is_partner !== undefined ? is_partner : true})
             RETURNING *
         `
 

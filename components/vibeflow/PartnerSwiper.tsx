@@ -18,10 +18,8 @@ interface Tariff {
 interface Partner {
     id: number
     name: string
-    role: string
     age: string
     bio: string
-    looking_for: string
     discount: string
     logo: string
     tariffs: Tariff[]
@@ -37,7 +35,7 @@ export default function PartnerSwiper({ onDiscountChange }: { onDiscountChange?:
     useEffect(() => {
         async function fetchPartners() {
             try {
-                const res = await fetch('/api/partners')
+                const res = await fetch('/api/partners', { cache: 'no-store' })
                 const data = await res.json()
                 if (Array.isArray(data)) {
                     setPartners(data)
@@ -60,33 +58,63 @@ export default function PartnerSwiper({ onDiscountChange }: { onDiscountChange?:
         setIsMatchModalOpen(true)
     }
 
+    const [platformTariffs, setPlatformTariffs] = useState<Tariff[]>([])
+
+    useEffect(() => {
+        // Fetch platform tariffs (default to vibeflow for now as we are in the swiper context)
+        // In a real app, this might come from a context or prop
+        fetch('/api/tariffs/vibeflow')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setPlatformTariffs(data)
+            })
+            .catch(err => console.error('Failed to fetch platform tariffs:', err))
+    }, [])
+
     const currentCard = partners[currentCardIndex]
 
-    // Calculate dynamic discount percentage
-    const discountPercentage = (() => {
-        if (!currentCard?.tariffs?.length) {
-            return null
+    // Calculate dynamic savings (annual, combined max)
+    const savingsDisplay = (() => {
+        if (!currentCard?.tariffs?.length || !platformTariffs.length) return null
+
+        const calculateMaxSavings = (tariffs: Tariff[]) => {
+            let maxSavings = 0
+
+            // Group by type/name to find corresponding monthly/yearly pairs if needed, 
+            // but for now we just look for the single tariff that offers the absolute most savings annually
+            for (const tariff of tariffs) {
+                let savings = 0
+                const price = Number(tariff.price)
+                const originalPrice = Number(tariff.original_price)
+
+                if (tariff.billing_period === 'yearly') {
+                    // DB stores monthly price, so annual savings is monthly diff * 12
+                    savings = (originalPrice - price) * 12
+                } else {
+                    // Monthly * 12
+                    savings = (originalPrice - price) * 12
+                }
+
+                if (savings > maxSavings) maxSavings = savings
+            }
+            return maxSavings
         }
 
-        const firstTariff = currentCard.tariffs[0]
-        const originalPrice = Number(firstTariff.original_price)
-        const price = Number(firstTariff.price)
+        const partnerSavings = calculateMaxSavings(currentCard.tariffs)
+        const platformSavings = calculateMaxSavings(platformTariffs)
+        const totalSavings = partnerSavings + platformSavings
 
-        if (originalPrice > price && originalPrice > 0) {
-            return Math.round(((originalPrice - price) / originalPrice) * 100)
-        }
-        return null
+        if (totalSavings > 0) return `Save $${Math.round(totalSavings)}`
+
+        return currentCard.discount // Fallback
     })()
-
-    // Fix: Don't append "OFF" here if we are going to append it in the JSX or if the static string already has it
-    const displayDiscount = discountPercentage ? `${discountPercentage}%` : (currentCard?.discount?.replace(' OFF', '') || '40%')
 
     // Notify parent about discount change
     useEffect(() => {
-        if (onDiscountChange) {
-            onDiscountChange(displayDiscount)
+        if (onDiscountChange && savingsDisplay) {
+            onDiscountChange(savingsDisplay)
         }
-    }, [displayDiscount, onDiscountChange])
+    }, [savingsDisplay, onDiscountChange])
 
     if (loading) {
         return <div className="text-center text-gray-600 font-medium">Loading partners...</div>
@@ -121,7 +149,7 @@ export default function PartnerSwiper({ onDiscountChange }: { onDiscountChange?:
                         <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-orange-400 rounded-full blur-lg opacity-75 animate-pulse"></div>
                         {/* Main badge */}
                         <div className="relative bg-gradient-to-br from-pink-500 to-orange-500 text-white px-5 py-2.5 rounded-full font-black text-base shadow-2xl border-2 border-white/50 animate-[bounce_2s_ease-in-out_infinite]">
-                            {displayDiscount} OFF
+                            {savingsDisplay}
                         </div>
                     </div>
                 </div>

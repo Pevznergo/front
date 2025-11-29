@@ -40,10 +40,8 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS partners (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        role VARCHAR(255) NOT NULL,
         age VARCHAR(255) NOT NULL,
         bio TEXT NOT NULL,
-        looking_for VARCHAR(255) NOT NULL,
         discount VARCHAR(255) NOT NULL,
         logo VARCHAR(255) NOT NULL,
         is_platform BOOLEAN DEFAULT FALSE,

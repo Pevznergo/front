@@ -7,7 +7,6 @@ import { Zap, Video, Code2, Palette } from 'lucide-react'
 interface Partner {
     id: number
     name: string
-    role: string
     bio: string
     discount: string
     logo: string

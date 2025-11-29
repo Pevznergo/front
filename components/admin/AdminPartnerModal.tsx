@@ -6,205 +6,242 @@ import { X, Loader2, Save } from 'lucide-react'
 export interface Partner {
     id: number
     name: string
-    role: string
     age: string
     bio: string
-    looking_for: string
+    discount: string
     logo: string
     is_platform: boolean
     is_partner: boolean
+    tariffs: Tariff[]
+}
+
+interface Tariff {
+    // Assuming Tariff structure, not provided in the prompt
+    // Add properties as needed, e.g.,
+    // id: number;
+    // name: string;
+    // price: number;
 }
 
 interface AdminPartnerModalProps {
     isOpen: boolean
     onClose: () => void
-    onSuccess: (partner: Partner) => void
-    partnerToEdit?: Partner | null
+    partner?: Partner | null
+    onSave: () => void
 }
 
-export default function AdminPartnerModal({ isOpen, onClose, onSuccess, partnerToEdit }: AdminPartnerModalProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [formData, setFormData] = useState<Omit<Partner, 'id'> & { id?: number }>({
+export default function AdminPartnerModal({ isOpen, onClose, partner, onSave }: AdminPartnerModalProps) {
+    const [formData, setFormData] = useState({
         name: '',
-        role: '',
-        age: 'Hidden', // Default value since field is hidden
+        age: '',
         bio: '',
-        looking_for: '',
+        discount: '',
         logo: '',
         is_platform: false,
         is_partner: true
     })
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
         if (isOpen) {
-            if (partnerToEdit) {
-                setFormData(partnerToEdit)
+            if (partner) {
+                setFormData({
+                    name: partner.name,
+                    age: partner.age,
+                    bio: partner.bio,
+                    discount: partner.discount,
+                    logo: partner.logo,
+                    is_platform: partner.is_platform,
+                    is_partner: partner.is_partner
+                })
             } else {
                 // Reset for new partner
                 setFormData({
                     name: '',
-                    role: '',
-                    age: 'Hidden',
+                    age: '',
                     bio: '',
-                    looking_for: '',
+                    discount: '',
                     logo: '',
                     is_platform: false,
                     is_partner: true
                 })
             }
         }
-    }, [isOpen, partnerToEdit])
+    }, [isOpen, partner])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsSubmitting(true)
+        setLoading(true)
 
         try {
-            // Determine if we are creating or updating (logic would be in API or handled here if we had separate endpoints)
-            // For now, assuming this is just for creation based on previous implementation, 
-            // but let's make it robust. If ID exists, it's an update (though our current API might only support POST/DELETE)
-            // The current API at /api/admin/partners only supports GET, POST (create), DELETE.
-            // So for now, this will primarily be for CREATION. Editing would require API update.
-            // I'll implement it as Create for now.
+            const url = partner ? `/api/admin/partners/${partner.id}` : '/api/admin/partners'
+            const method = partner ? 'PUT' : 'POST'
 
-            const res = await fetch('/api/admin/partners', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             })
 
-            if (res.ok) {
-                const newPartner = await res.json()
-                onSuccess(newPartner)
-                onClose()
-            } else {
-                alert('Failed to save partner')
-            }
+            if (!res.ok) throw new Error('Failed to save partner')
+
+            onSave()
+            onClose()
         } catch (error) {
-            console.error('Failed to save partner', error)
+            console.error('Error saving partner:', error)
+            alert('Failed to save partner')
         } finally {
-            setIsSubmitting(false)
+            setLoading(false)
         }
     }
 
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={onClose} />
-
-            <div className="relative bg-[#F2F2F7] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                {/* Header */}
-                <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-10">
-                    <h2 className="text-lg font-bold text-gray-900">
-                        {partnerToEdit ? 'Edit Partner' : 'Add New Partner'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
+                    <h2 className="text-xl font-bold text-gray-900">
+                        {partner ? 'Edit Partner' : 'Add New Partner'}
                     </h2>
-                    <button onClick={onClose} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
                 <div className="overflow-y-auto p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Main Info Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden p-4 space-y-4">
-                            <h3 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Basic Info</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Name</label>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-1">Name</label>
+                            <input
+                                type="text"
+                                required
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all text-gray-900 font-medium"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-1">Age/Tagline</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all text-gray-900 font-medium"
+                                    value={formData.age}
+                                    onChange={e => setFormData({ ...formData, age: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-1">Discount</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 50% OFF"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all text-gray-900 font-medium"
+                                    value={formData.discount}
+                                    onChange={e => setFormData({ ...formData, discount: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-1">Bio</label>
+                            <textarea
+                                required
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all resize-none text-gray-900 font-medium"
+                                value={formData.bio}
+                                onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-1">Logo</label>
+                            <div className="space-y-3">
+                                {formData.logo && (
+                                    <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+                                        <img src={formData.logo} alt="Preview" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, logo: '' })}
+                                            className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-6 h-6 text-white" />
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-3">
+                                    <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm">
+                                        <span>Upload Image</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0]
+                                                if (!file) return
+
+                                                const data = new FormData()
+                                                data.append('file', file)
+
+                                                try {
+                                                    const res = await fetch('/api/upload', {
+                                                        method: 'POST',
+                                                        body: data
+                                                    })
+                                                    if (!res.ok) throw new Error('Upload failed')
+                                                    const { url } = await res.json()
+                                                    setFormData({ ...formData, logo: url })
+                                                } catch (error) {
+                                                    console.error('Upload error:', error)
+                                                    alert('Failed to upload image')
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    <span className="text-xs text-gray-500 font-medium">or</span>
                                     <input
                                         type="text"
-                                        placeholder="e.g. Canva"
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Role</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. The Designer"
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
-                                        value={formData.role}
-                                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Logo URL</label>
-                                    <input
-                                        type="text"
-                                        placeholder="/logos/canva.png"
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Paste URL..."
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all text-sm text-gray-900"
                                         value={formData.logo}
                                         onChange={e => setFormData({ ...formData, logo: e.target.value })}
-                                        required
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Details Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden p-4 space-y-4">
-                            <h3 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Looking For</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Design Partners"
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
-                                        value={formData.looking_for}
-                                        onChange={e => setFormData({ ...formData, looking_for: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">Bio</label>
-                                    <textarea
-                                        placeholder="Short description..."
-                                        className="w-full bg-gray-50 border-0 rounded-lg p-3 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 h-24 resize-none"
-                                        value={formData.bio}
-                                        onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Roles Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden p-4 space-y-4">
-                            <h3 className="font-semibold text-gray-900 border-b border-gray-100 pb-2">Roles</h3>
+                        <div className="bg-gray-50 rounded-xl p-4 space-y-2 border border-gray-200">
+                            <h3 className="font-semibold text-gray-900 text-sm">Configuration</h3>
                             <div className="flex gap-6">
-                                <label className="flex items-center gap-3 cursor-pointer group">
+                                <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        className="w-5 h-5 rounded-md border-gray-300 text-purple-600 focus:ring-purple-500"
+                                        className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
                                         checked={formData.is_platform}
                                         onChange={e => setFormData({ ...formData, is_platform: e.target.checked })}
                                     />
-                                    <span className="font-medium text-gray-700 group-hover:text-purple-700 transition-colors">Is Platform?</span>
+                                    <span className="text-sm font-medium text-gray-700">Is Platform?</span>
                                 </label>
-                                <label className="flex items-center gap-3 cursor-pointer group">
+                                <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        className="w-5 h-5 rounded-md border-gray-300 text-green-600 focus:ring-green-500"
+                                        className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
                                         checked={formData.is_partner}
                                         onChange={e => setFormData({ ...formData, is_partner: e.target.checked })}
                                     />
-                                    <span className="font-medium text-gray-700 group-hover:text-green-700 transition-colors">Is Partner?</span>
+                                    <span className="text-sm font-medium text-gray-700">Is Partner?</span>
                                 </label>
                             </div>
                         </div>
 
                         <button
                             type="submit"
-                            disabled={isSubmitting}
-                            className="w-full bg-blue-500 text-white py-3 px-4 rounded-xl font-bold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                            disabled={loading}
+                            className="w-full bg-black text-white py-3 px-4 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
+                            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Save className="w-5 h-5" />}
                             Save Partner
                         </button>
                     </form>

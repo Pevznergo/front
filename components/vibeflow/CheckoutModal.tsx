@@ -9,9 +9,10 @@ interface CheckoutModalProps {
     bundleName: string
     price: number
     partnerName: string
+    billingPeriod: 'monthly' | 'yearly'
 }
 
-export default function CheckoutModal({ isOpen, onClose, bundleName, price, partnerName }: CheckoutModalProps) {
+export default function CheckoutModal({ isOpen, onClose, bundleName, price, partnerName, billingPeriod }: CheckoutModalProps) {
     const [step, setStep] = useState<'form' | 'processing' | 'success'>('form')
 
     if (!isOpen) return null
@@ -43,7 +44,9 @@ export default function CheckoutModal({ isOpen, onClose, bundleName, price, part
                                 <p className="font-bold text-gray-900">{bundleName}</p>
                                 <p className="text-sm text-gray-500">Vibeflow + {partnerName}</p>
                             </div>
-                            <div className="text-xl font-black text-gray-900">${price}/mo</div>
+                            <div className="text-xl font-black text-gray-900">
+                                ${price}/{billingPeriod === 'yearly' ? 'year' : 'mo'}
+                            </div>
                         </div>
 
                         <div className="space-y-4 mb-6">

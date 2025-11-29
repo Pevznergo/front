@@ -107,11 +107,26 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                 const partnerTariff = sortedPartner[i] || sortedPartner[sortedPartner.length - 1]
 
                 if (platformTariff && partnerTariff) {
+                    const price = Number(platformTariff.price) + Number(partnerTariff.price)
+                    const originalPrice = Number(platformTariff.original_price) + Number(partnerTariff.original_price)
+
+                    // Savings is always calculated annually: (Monthly Original - Monthly Price) * 12
+                    const savings = (originalPrice - price) * 12
+
+                    // Display price is always monthly (DB stores monthly price for annual tariffs too)
+                    const displayPrice = price
+                    const displayOriginalPrice = originalPrice
+
+                    // Checkout price: if yearly, multiply monthly price by 12. If monthly, just use monthly price.
+                    const checkoutPrice = billingPeriod === 'yearly' ? price * 12 : price
+
                     generatedBundles.push({
                         id: `bundle-${i}-${billingPeriod}`,
                         name: i === 0 ? 'Starter Bundle' : 'Pro Bundle',
-                        price: Number(platformTariff.price) + Number(partnerTariff.price),
-                        originalPrice: Number(platformTariff.original_price) + Number(partnerTariff.original_price),
+                        price: checkoutPrice,
+                        displayPrice: displayPrice,
+                        displayOriginalPrice: displayOriginalPrice,
+                        savings: savings,
                         items: [
                             { source: 'Vibeflow', plan: platformTariff.name },
                             { source: partner.name, plan: partnerTariff.name }
@@ -166,7 +181,7 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                                     {partner.name.charAt(0)}
                                 </div>
                             </div>
-                            <p className="mt-3 font-medium text-white/90 drop-shadow-md">Unlock the "Power Couple" Bundle</p>
+                            <p className="mt-3 font-medium text-white/90 drop-shadow-md">Get access to <span className="text-pink-400 font-bold">Vibeflow</span> + <span className="text-orange-400 font-bold">{partner.name}</span></p>
                         </div>
 
                         {/* Billing Toggle - Only show if multiple periods available */}
@@ -183,7 +198,7 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                                         onClick={() => setBillingPeriod('yearly')}
                                         className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${billingPeriod === 'yearly' ? 'bg-white text-black shadow-md' : 'text-white hover:bg-white/10'}`}
                                     >
-                                        Yearly <span className="text-[10px] font-normal ml-1 text-green-600 bg-green-100 px-1 rounded">-20%</span>
+                                        Yearly
                                     </button>
                                 </div>
                             </div>
@@ -205,11 +220,27 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                                                 MOST POPULAR
                                             </div>
                                         )}
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="font-bold text-white">{bundle.name}</span>
-                                            <span className="font-bold text-pink-400">${Number(bundle.price).toFixed(2)}/{billingPeriod === 'monthly' ? 'mo' : 'yr'} <span className="text-white/40 text-sm font-normal line-through">${Number(bundle.originalPrice).toFixed(2)}</span></span>
+
+                                        {/* Savings Badge */}
+                                        {bundle.savings > 0 && (
+                                            <div className="absolute -top-3 left-4 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm animate-pulse">
+                                                SAVE ${Math.round(bundle.savings)}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="font-bold text-white text-lg">{bundle.name}</span>
+                                            <div className="text-right">
+                                                <div className="flex items-baseline gap-2 justify-end">
+                                                    <span className="font-bold text-pink-400 text-xl">${Number(bundle.displayPrice).toFixed(2)}<span className="text-sm text-pink-400/80">/mo</span></span>
+                                                    <span className="text-white/40 text-sm font-normal line-through">${Number(bundle.displayOriginalPrice).toFixed(2)}</span>
+                                                </div>
+                                                {billingPeriod === 'yearly' && (
+                                                    <div className="text-[10px] text-white/60 uppercase tracking-wide font-medium">Billed annually</div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <ul className="text-xs text-gray-300 space-y-1">
+                                        <ul className="text-xs text-gray-300 space-y-1 mt-2">
                                             {bundle.items.map((item: any, i: number) => (
                                                 <li key={i} className="flex items-center gap-1">
                                                     <Check className="w-3 h-3 text-green-400" />
@@ -247,6 +278,7 @@ export default function MatchModal({ isOpen, onClose, partner }: MatchModalProps
                     bundleName={selectedBundle.name}
                     price={selectedBundle.price}
                     partnerName={partner.name}
+                    billingPeriod={billingPeriod}
                 />
             )}
         </>

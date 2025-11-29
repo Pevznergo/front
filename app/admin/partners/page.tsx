@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Plus, Loader2, Settings, ChevronRight, Search, Filter } from 'lucide-react'
+import { Trash2, Plus, Loader2, Settings, ChevronRight, Search, Filter, RefreshCw } from 'lucide-react'
 import AdminTariffModal from '@/components/admin/AdminTariffModal'
 import AdminPartnerModal, { Partner } from '@/components/admin/AdminPartnerModal'
+import { revalidateAll } from '@/app/actions/revalidate'
 
 export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<Partner[]>([])
@@ -11,6 +12,7 @@ export default function AdminPartnersPage() {
     const [selectedPartnerForTariffs, setSelectedPartnerForTariffs] = useState<Partner | null>(null)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [filter, setFilter] = useState<'all' | 'platform' | 'partner'>('all')
+    const [isClearingCache, setIsClearingCache] = useState(false)
 
     useEffect(() => {
         fetchPartners()
@@ -30,6 +32,24 @@ export default function AdminPartnersPage() {
             console.error('Failed to fetch partners', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleClearCache = async () => {
+        setIsClearingCache(true)
+        try {
+            const result = await revalidateAll()
+            if (result.success) {
+                alert('Cache cleared successfully!')
+                fetchPartners() // Refresh local list too
+            } else {
+                alert('Failed to clear cache')
+            }
+        } catch (error) {
+            console.error('Clear cache error:', error)
+            alert('Error clearing cache')
+        } finally {
+            setIsClearingCache(false)
         }
     }
 
@@ -66,13 +86,23 @@ export default function AdminPartnersPage() {
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Partners & Tariffs</h1>
                     <p className="text-gray-500 mt-1">Manage your ecosystem partners and their pricing plans.</p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-blue-500 text-white py-2.5 px-5 rounded-xl font-bold hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm active:scale-95 self-start md:self-auto"
-                >
-                    <Plus className="w-5 h-5" />
-                    Add Partner
-                </button>
+                <div className="flex gap-3 self-start md:self-auto">
+                    <button
+                        onClick={handleClearCache}
+                        disabled={isClearingCache}
+                        className="bg-white border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl font-bold hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${isClearingCache ? 'animate-spin' : ''}`} />
+                        {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                    </button>
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-blue-500 text-white py-2.5 px-5 rounded-xl font-bold hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm active:scale-95"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Add Partner
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -126,7 +156,7 @@ export default function AdminPartnersPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        <p className="text-sm text-gray-500">{partner.role}</p>
+                                        <p className="text-sm text-gray-500">{partner.age}</p>
                                     </div>
                                 </div>
 
@@ -135,10 +165,6 @@ export default function AdminPartnersPage() {
                                     <div className="flex flex-col items-center">
                                         <span className="text-xs font-semibold uppercase text-gray-400">Discount</span>
                                         <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-xs">Dynamic</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-xs font-semibold uppercase text-gray-400">Looking For</span>
-                                        <span className="font-medium text-gray-700">{partner.looking_for}</span>
                                     </div>
                                 </div>
 
@@ -169,7 +195,7 @@ export default function AdminPartnersPage() {
             <AdminPartnerModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={handleCreateSuccess}
+                onSave={fetchPartners}
             />
 
             {selectedPartnerForTariffs && (
