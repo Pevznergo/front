@@ -9,8 +9,8 @@
   --background-end-rgb: 10, 10, 10;
   --neon-blue: #007AFF;
   --neon-purple: #BF5AF2;
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.03);
 }
 
 body {

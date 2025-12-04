@@ -16,34 +16,34 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="fixed top-0 w-full z-50 border-b border-gray-200/50 bg-white/50 backdrop-blur-xl supports-[backdrop-filter]:bg-white/20">
+    <nav className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/50 backdrop-blur-xl supports-[backdrop-filter]:bg-black/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
-              <span className="font-bold text-white text-lg">A</span>
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md">
+              <span className="font-bold text-black text-lg">A</span>
             </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">Aporto</span>
+            <span className="text-xl font-bold text-white tracking-tight">Aporto</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
-            <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">How it Works</button>
-            <button onClick={() => scrollToSection('why-it-works')} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Why It Works</button>
-            <button onClick={() => scrollToSection('segments')} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Who We Help</button>
+            <button onClick={() => scrollToSection('catalog')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">The Stack</button>
+            <button onClick={() => scrollToSection('value-prop')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">For Communities</button>
+            <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">FAQ</button>
 
             <button
               onClick={() => {
-                sendGTMEvent({ event: 'cta_click', location: 'navigation', label: 'start_recovering_revenue' })
+                sendGTMEvent({ event: 'cta_click', location: 'navigation', label: 'partner_with_us' })
                 window.dispatchEvent(new CustomEvent('openBookingModal'))
               }}
-              className="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              className="px-5 py-2.5 rounded-full text-sm font-bold text-black bg-white hover:bg-gray-200 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              Start Recovering Revenue
+              Partner With Us
             </button>
           </div>
 
           <button
-            className="md:hidden text-gray-600 hover:text-gray-900"
+            className="md:hidden text-gray-300 hover:text-white"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -51,18 +51,18 @@ export default function Navigation() {
         </div>
 
         {isOpen && (
-          <div className="md:hidden py-4 space-y-4 bg-white/90 backdrop-blur-xl absolute top-20 left-0 w-full px-4 border-b border-gray-200/50 shadow-xl">
-            <button onClick={() => scrollToSection('how-it-works')} className="block w-full text-left py-2 text-gray-600 hover:text-gray-900 font-medium">How it Works</button>
-            <button onClick={() => scrollToSection('why-it-works')} className="block w-full text-left py-2 text-gray-600 hover:text-gray-900 font-medium">Why It Works</button>
-            <button onClick={() => scrollToSection('segments')} className="block w-full text-left py-2 text-gray-600 hover:text-gray-900 font-medium">Who We Help</button>
+          <div className="md:hidden py-4 space-y-4 bg-black/90 backdrop-blur-xl absolute top-20 left-0 w-full px-4 border-b border-white/10 shadow-xl">
+            <button onClick={() => scrollToSection('catalog')} className="block w-full text-left py-2 text-gray-300 hover:text-white font-medium">The Stack</button>
+            <button onClick={() => scrollToSection('value-prop')} className="block w-full text-left py-2 text-gray-300 hover:text-white font-medium">For Communities</button>
+            <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-2 text-gray-300 hover:text-white font-medium">FAQ</button>
             <button
               onClick={() => {
-                sendGTMEvent({ event: 'cta_click', location: 'mobile_menu', label: 'start_recovering_revenue' })
+                sendGTMEvent({ event: 'cta_click', location: 'mobile_menu', label: 'partner_with_us' })
                 window.dispatchEvent(new CustomEvent('openBookingModal'))
               }}
-              className="w-full bg-gray-900 text-white px-6 py-3 rounded-xl font-bold mt-2 shadow-lg"
+              className="w-full bg-white text-black px-6 py-3 rounded-xl font-bold mt-2 shadow-lg"
             >
-              Start Recovering Revenue
+              Partner With Us
             </button>
           </div>
         )}
