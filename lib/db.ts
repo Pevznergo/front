@@ -63,11 +63,29 @@ export async function initDatabase() {
       )
     `
 
-    // ==========================================
-    // SEEDING DISABLED - Use Admin Panel or Reseed button
-    // ==========================================
-    // Partners and tariffs are now managed via Admin Panel
-    // To reset to default data, use the "Reset to Default Data" button in Admin
+    // Reviews table
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id SERIAL PRIMARY KEY,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'pending',
+        user_email VARCHAR(255)
+      )
+    `
+    // Note: referencing by email is easier if user table IDs vary between auth methods, but linking by ID is better. 
+    // Let's add user_id column and try to alter password.
+
+    try {
+      await sqlConnection`ALTER TABLE users ALTER COLUMN password DROP NOT NULL`
+    } catch (e) {
+      // Ignore if already nullable or other error (e.g. column doesn't exist yet on fresh init, which is handled by CREATE above if I change it there)
+    }
+
+    // Since CREATE TABLE IF NOT EXISTS doesn't update existing tables, we run ALTERs
+    try {
+      await sqlConnection`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)`
+    } catch (e) { }
 
     console.log('Database initialized successfully')
   } catch (error) {

@@ -1,38 +1,29 @@
-import type { Metadata } from 'next'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
+import { cn } from '@/lib/utils'
+import { SessionProvider } from "next-auth/react";
+import AuthProvider from "@/components/AuthProvider";
 
-export const metadata: Metadata = {
-  title: 'Aporto | We Close the Deals You Lost & Reactivate Missed Customers',
-  description: 'Stop letting your "Dead Leads" gather dust. Aporto acts as your dedicated Win-Back Sales Team. We use AI Agents to call unconverted contacts and resell your product. Performance-based pricing.',
-  keywords: ['churn recovery', 'win-back sales', 'AI sales agents', 'B2B SaaS sales', 'reactivate customers', 'dead leads', 'revenue recovery'],
-  openGraph: {
-    title: 'Aporto | We Close the Deals You Lost',
-    description: 'Reactivate your lost B2B customers with our AI-powered Win-Back Sales Team. Zero integration fees. You only pay when we win them back.',
-    url: 'https://aporto.tech',
-    siteName: 'Aporto',
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Aporto | We Close the Deals You Lost',
-    description: 'Stop letting your "Dead Leads" gather dust. Aporto acts as your dedicated Win-Back Sales Team.',
-  },
-}
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
+
+export const metadata = {
+  title: "Resolve AI - Automated Review Removal",
+  description: "Delete unfair negative reviews with AI legal precision.",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className="dark">
-      <head>
-      </head>
-      <body className="antialiased bg-gray-950 text-gray-100">
-        {children}
+    <html lang="en">
+      <body className={cn(inter.variable, jetbrainsMono.variable, "font-sans antialiased")}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
-  )
+  );
 }
-

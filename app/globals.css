@@ -1,89 +1,53 @@
 @tailwind base;
-/* Force rebuild */
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 10, 10, 10;
-  --neon-blue: #007AFF;
-  --neon-purple: #BF5AF2;
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(255, 255, 255, 0.03);
+  --background: #F2F2F7;
+  /* iOS System Gray 6 (Light) */
+  --foreground: #000000;
+  --ios-blue: #007AFF;
+  --ios-indigo: #5856D6;
+  --ios-green: #34C759;
+  --ios-red: #FF3B30;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb)));
-  min-height: 100vh;
-  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased;
+    font-feature-settings: "cv05", "cv08", "ss01";
+    /* Inter adjustments for SF feel */
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm;
   }
 
-  /* Marquee Animation */
-  @keyframes marquee {
-    0% {
-      transform: translateX(0);
-    }
-
-    100% {
-      transform: translateX(-50%);
-    }
+  .glass-dark {
+    @apply bg-black/60 backdrop-blur-xl border border-white/10 shadow-lg text-white;
   }
 
-  .animate-marquee {
-    animation: marquee 30s linear infinite;
+  /* iOS Squircle Approximation */
+  .squircle {
+    border-radius: 22%;
+    /* Ideally requires clip-path url(#squircle), but substantial rounded corner is close enough for CSS-only */
   }
 
-  .animate-marquee:hover {
-    animation-play-state: paused;
+  .ios-card {
+    @apply bg-white rounded-[1.5rem] shadow-sm active:scale-[0.98] transition-transform duration-200;
   }
 
-  .glass-panel {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+  .ios-btn {
+    @apply bg-[#007AFF] text-white font-semibold rounded-full px-6 py-3 active:opacity-70 transition-opacity;
   }
 
-  .glass-button {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300;
+  .ios-list {
+    @apply bg-white rounded-xl overflow-hidden divide-y divide-slate-100;
   }
 
-  .text-glow {
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  .ios-list-item {
+    @apply px-4 py-3 flex items-center justify-between active:bg-slate-50 transition-colors cursor-pointer;
   }
-}
-
-.ios-gradient-text {
-  background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.ios-gradient-blue {
-  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
