@@ -1,11 +1,16 @@
+'use client';
 
-import { HelpCircle } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Minus } from 'lucide-react';
 
 export default function FAQ() {
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
+
     const faqs = [
         {
             question: "Do you guarantee removal?",
-            answer: "We guarantee the best possible legal argument. No one can guarantee 100% removal as it ultimately depends on the platform's moderator. However, if our scan determines chances are low, we will tell you upfront before you pay."
+            answer: "We guarantee the best possible legal argument. No one can guarantee 100% removal as it ultimately depends on the platform's moderator. However, if our scan determines chances are low, we will tell you upfront. You only pay if the removal is successful."
         },
         {
             question: "Do you need my Google/Yelp password?",
@@ -13,11 +18,11 @@ export default function FAQ() {
         },
         {
             question: "Is this legal?",
-            answer: "Yes. We strictly follow the platform's own Terms of Service and Content Policies. We identify where a review violates these existing contracts and professionally flag it for removal."
+            answer: "Yes. We strictly follow the platform's own Terms of Service and Content Policies. We identify where a review violates existing contracts (defamation, conflict of interest, etc.) and professionally flag it for removal."
         },
         {
             question: "How long does it take?",
-            answer: "Our AI generates the appeal instantly (2 minutes). Platform moderators typically review appeals within 3-5 business days. Escalations via demand letter may take longer."
+            answer: "Our AI generates the appeal instantly. Platform moderators typically review appeals within 3-5 business days. Escalations via demand letter may take longer."
         }
     ];
 
@@ -28,16 +33,36 @@ export default function FAQ() {
                     <h2 className="text-3xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-4">
                     {faqs.map((faq, index) => (
-                        <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                            <h3 className="font-bold text-lg text-slate-900 mb-3 flex items-start gap-3">
-                                <HelpCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-1" />
-                                {faq.question}
-                            </h3>
-                            <p className="text-slate-600 leading-relaxed pl-8">
-                                {faq.answer}
-                            </p>
+                        <div
+                            key={index}
+                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 transition-all duration-200 hover:shadow-md cursor-pointer"
+                            onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                        >
+                            <div className="p-6 flex items-center justify-between gap-4">
+                                <h3 className="font-bold text-lg text-slate-900 select-none">
+                                    {faq.question}
+                                </h3>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${openIndex === index ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-400'}`}>
+                                    {openIndex === index ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                </div>
+                            </div>
+
+                            <AnimatePresence>
+                                {openIndex === index && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                                    >
+                                        <div className="px-6 pb-6 pt-0 text-slate-600 leading-relaxed border-t border-slate-50 mt-2">
+                                            {faq.answer}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     ))}
                 </div>

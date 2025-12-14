@@ -32,10 +32,7 @@ export default function Hero() {
                 body: JSON.stringify({ content: inputValue })
             });
 
-            // Redirect to login after animation shows "Complete"
-            setTimeout(() => {
-                router.push('/login');
-            }, 7500);
+            // Auto-redirect removed as requested. User must click "Start Application".
 
         } catch (error) {
             console.error("Submission failed", error);
@@ -203,7 +200,8 @@ export default function Hero() {
                                                                 {step >= 3 && (
                                                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 font-bold text-slate-800">
                                                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                                                        Violation detected: "Conflict of Interest"
+                                                                        {/* Blurred violation text as requested */}
+                                                                        Violation detected: <span className="blur-sm bg-slate-200 text-transparent select-none rounded ml-1">"Conflict of Interest"</span>
                                                                     </motion.div>
                                                                 )}
                                                             </div>
@@ -223,7 +221,7 @@ export default function Hero() {
                                                         <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-lg relative overflow-hidden group">
                                                             <div className="flex items-center justify-between mb-3 relative z-10">
                                                                 <div>
-                                                                    <h4 className="text-slate-900 font-bold text-lg tracking-tight">High Probability of Removal</h4>
+                                                                    <h4 className="text-slate-900 font-bold text-lg tracking-tight">Check Probability of Removal</h4>
                                                                     <p className="text-slate-500 text-sm font-medium">Drafting appeal strategy...</p>
                                                                 </div>
                                                                 <div className="w-10 h-10 rounded-full bg-[#34C759] flex items-center justify-center shadow-lg shadow-green-500/30">
@@ -231,8 +229,11 @@ export default function Hero() {
                                                                 </div>
                                                             </div>
 
-                                                            <button className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-[1rem] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl">
-                                                                Start Application ($49)
+                                                            <button
+                                                                onClick={() => router.push('/login')}
+                                                                className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-[1rem] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl"
+                                                            >
+                                                                Start Application
                                                                 <ArrowRight className="w-4 h-4" />
                                                             </button>
                                                         </div>

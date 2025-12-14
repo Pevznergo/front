@@ -1,7 +1,11 @@
+'use client';
 
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 export default function Header() {
+    const { data: session } = useSession();
+
     return (
         <header className="fixed top-0 left-0 right-0 z-50 bg-slate-50/80 backdrop-blur-md border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,10 +32,10 @@ export default function Header() {
 
                     <div>
                         <Link
-                            href="#start"
-                            className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-hover transition-colors shadow-sm"
+                            href={session ? "/dashboard" : "/login"}
+                            className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-[#007AFF] hover:bg-[#006ee6] transition-colors shadow-sm"
                         >
-                            Start Risk-Free
+                            {session ? "Dashboard" : "Start Risk-Free"}
                         </Link>
                     </div>
                 </div>

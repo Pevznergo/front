@@ -89,8 +89,9 @@ export default function Pricing() {
 
                 </div>
 
-                <p className="text-center text-xs text-slate-400 mt-8 font-medium">
-                    Analysis runs instantly. Escalation services require manual legal review.
+                <p className="text-center text-xs text-slate-400 mt-8 font-medium max-w-2xl mx-auto leading-relaxed">
+                    * Funds are only reserved during the active order period. You do not pay if the review is not removed. <br />
+                    Legal Escalation (Stage 2) is an optional add-on service, paid separately upon mutual agreement.
                 </p>
             </div>
         </section>
