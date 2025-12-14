@@ -21,29 +21,34 @@ export default function LoginPage() {
 
         try {
             if (isRegistering) {
-                // Register Flow
+                // Register flow
+                if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                    (window as any).dataLayer.push({ event: 'register_submit', method: 'email' });
+                }
+
                 const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, name })
+                    body: JSON.stringify({ name, email, password })
                 });
 
-                const data = await res.json();
-
-                if (!res.ok) {
-                    alert(data.error || "Registration failed");
-                    setLoading(false);
-                    return;
+                if (res.ok) {
+                    // Auto-login after register
+                    await signIn('credentials', {
+                        email,
+                        password,
+                        callbackUrl: '/dashboard'
+                    });
+                } else {
+                    alert("Registration failed");
                 }
 
-                // Auto login after register
-                await signIn('credentials', {
-                    email,
-                    password,
-                    callbackUrl: '/dashboard'
-                });
             } else {
-                // Login Flow
+                // Login flow
+                if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                    (window as any).dataLayer.push({ event: 'login_submit', method: 'email' });
+                }
+
                 const result = await signIn('credentials', {
                     email,
                     password,
@@ -52,7 +57,6 @@ export default function LoginPage() {
 
                 if (result?.error) {
                     alert("Invalid credentials");
-                    setLoading(false);
                 } else {
                     router.push('/dashboard');
                 }
@@ -60,6 +64,7 @@ export default function LoginPage() {
         } catch (error) {
             console.error("Auth error:", error);
             alert("An error occurred");
+        } finally {
             setLoading(false);
         }
     };

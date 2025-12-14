@@ -26,7 +26,7 @@ export default function DashboardSidebar() {
                     <span className="font-bold text-xl text-slate-900 tracking-tight">Aporto</span>
                 </Link>
 
-                <button className="w-full bg-[#1A6334] hover:bg-[#14522B] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95">
+                <button className="w-full bg-[#007AFF] hover:bg-[#006ee6] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95">
                     <Plus className="w-5 h-5" />
                     New Task
                 </button>

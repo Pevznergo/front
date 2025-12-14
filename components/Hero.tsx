@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle, Shield, Lock, Terminal, Search, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -17,12 +17,34 @@ export default function Hero() {
     // 6: Result
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
+    const consoleRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom when step changes
+    useEffect(() => {
+        if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+    }, [step]);
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim()) return;
 
-        setStep(1); // Connecting...
+        // Custom Event: Start Analysis
+        if (typeof window !== 'undefined' && (window as any).dataLayer) {
+            (window as any).dataLayer.push({ event: 'analyze_review_start' });
+        }
+
+        // Send to API
+        try {
+            fetch('/api/submit-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: inputValue })
+            });
+        } catch (e) {
+            console.error("Failed to save request", e);
+        }
 
         // Organic simulation sequence
         setTimeout(() => setStep(2), 1500);  // Fetching metadata
@@ -103,7 +125,12 @@ export default function Hero() {
                                 <div className="flex items-center gap-2">
                                     {step === 0 && <span className="text-[10px] uppercase font-bold text-slate-400">Ready</span>}
                                     {step > 0 && step < 6 && <span className="text-[10px] uppercase font-bold text-blue-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
-                                    {step === 6 && <span className="text-[10px] uppercase font-bold text-green-500">Complete</span>}
+                                    {step === 6 && (() => {
+                                        if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                                            (window as any).dataLayer.push({ event: 'analyze_review_complete' });
+                                        }
+                                        return <span className="text-[10px] uppercase font-bold text-green-500">Complete</span>;
+                                    })()}
                                     <div className="w-8 h-8 rounded-full bg-slate-200/50 flex items-center justify-center">
                                         <Lock className="w-3.5 h-3.5 text-slate-500" />
                                     </div>
@@ -111,7 +138,7 @@ export default function Hero() {
                             </div>
 
                             {/* Content Area */}
-                            <div className="p-6 flex-1 flex flex-col relative">
+                            <div className="p-6 flex-1 flex flex-col relative overflow-y-auto" ref={consoleRef}>
 
                                 {/* State 0: Input Form */}
                                 <AnimatePresence mode="wait">
@@ -160,7 +187,7 @@ export default function Hero() {
                                             key="processing"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
-                                            className="absolute inset-0 p-6 flex flex-col font-sans pointer-events-none"
+                                            className="absolute inset-0 p-6 flex flex-col font-sans" // Removed pointer-events-none to allow scrolling if needed, though auto-scroll handles it
                                         >
                                             {/* Replicating the iOS User Bubble */}
                                             <div className="flex justify-end mb-6">
@@ -239,7 +266,7 @@ export default function Hero() {
                                                     <motion.div
                                                         initial={{ opacity: 0, y: 20 }}
                                                         animate={{ opacity: 1, y: 0 }}
-                                                        className="mt-auto pointer-events-auto"
+                                                        className="mt-4 pointer-events-auto pb-4" // Added padding bottom
                                                     >
                                                         <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-lg relative overflow-hidden group">
                                                             <div className="flex items-center justify-between mb-3 relative z-10">

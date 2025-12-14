@@ -11,6 +11,33 @@ import RecommendedActions from '@/components/RecommendedActions';
 export default function DashboardPage() {
     const { data: session } = useSession();
     const [taskInput, setTaskInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleCreateTask = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!taskInput.trim()) return;
+
+        setIsLoading(true);
+        try {
+            await fetch('/api/tasks/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: taskInput })
+            });
+
+            // GTM Event
+            if (typeof window !== 'undefined' && (window as any).dataLayer) {
+                (window as any).dataLayer.push({ event: 'task_create', task_content: taskInput });
+            }
+
+            setTaskInput("");
+            alert("Task created! We will review it shortly.");
+        } catch (error) {
+            console.error("Failed to create task:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Get current time greeting
     const hour = new Date().getHours();
@@ -41,7 +68,7 @@ export default function DashboardPage() {
 
                     {/* Main Input */}
                     <div className="relative group">
-                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 hover:border-slate-200 transition-colors p-2 flex flex-col min-h-[140px] relative focus-within:ring-4 focus-within:ring-slate-50 focus-within:border-slate-300">
+                        <form onSubmit={handleCreateTask} className="bg-white rounded-[2rem] shadow-sm border border-slate-100 hover:border-slate-200 transition-colors p-2 flex flex-col min-h-[140px] relative focus-within:ring-4 focus-within:ring-slate-50 focus-within:border-slate-300">
                             <textarea
                                 value={taskInput}
                                 onChange={(e) => setTaskInput(e.target.value)}
@@ -50,7 +77,7 @@ export default function DashboardPage() {
                             />
 
                             <div className="flex items-center justify-between px-4 pb-2 mt-auto">
-                                <button className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors">
+                                <button type="button" className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors">
                                     <Paperclip className="w-5 h-5" />
                                 </button>
                                 <button
@@ -60,7 +87,7 @@ export default function DashboardPage() {
                                     <ArrowUp className="w-5 h-5" />
                                 </button>
                             </div>
-                        </div>
+                        </form>
                     </div>
 
                     {/* Widgets & Actions */}
@@ -68,7 +95,7 @@ export default function DashboardPage() {
                     <RecommendedActions />
 
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }

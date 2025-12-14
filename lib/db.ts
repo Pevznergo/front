@@ -87,6 +87,17 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)`
     } catch (e) { }
 
+    // Analysis Requests table (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS analysis_requests (
+        id SERIAL PRIMARY KEY,
+        content TEXT NOT NULL,
+        source VARCHAR(50) NOT NULL,
+        user_email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)

@@ -6,30 +6,30 @@ import { Receipt, AlertTriangle, XCircle, Bot } from 'lucide-react';
 export default function RecommendedActions() {
     const actions = [
         {
-            title: "Lower a bill",
-            description: "Save on monthly expenses",
-            icon: <Receipt className="w-5 h-5 text-pink-500" />,
-            iconBg: "bg-pink-100",
-            provider: "T-Mobile",
-            savings: "$25 saved"
+            title: "Remove Google Review",
+            description: "Flag fake or policy-violating reviews",
+            icon: <Receipt className="w-5 h-5 text-[#007AFF]" />,
+            iconBg: "bg-blue-100",
+            provider: "Google Maps",
+            savings: "High Priority"
         },
         {
-            title: "File a Complaint",
-            description: "Get what you deserve",
+            title: "Draft Legal Appeal",
+            description: "Generate formal removal request",
             icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
             iconBg: "bg-amber-100",
-            provider: "Better Business Bureau"
+            provider: "PDF Export"
         },
         {
-            title: "Cancel Subscription",
-            description: "Stop unwanted charges",
+            title: "Analyze Yelp Profile",
+            description: "Audit reviews for TOS violations",
             icon: <XCircle className="w-5 h-5 text-red-500" />,
             iconBg: "bg-red-100",
-            provider: "Netflix"
+            provider: "Yelp"
         },
         {
-            title: "Handle It For Me",
-            description: "AI General Agent",
+            title: "Monitor New Reviews",
+            description: "Auto-scan for negative feedback",
             icon: <Bot className="w-5 h-5 text-indigo-500" />,
             iconBg: "bg-indigo-100",
         }
