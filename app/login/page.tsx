@@ -29,7 +29,15 @@ export default function LoginPage() {
 
                     <div className="space-y-3">
                         <button
-                            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                            type="button"
+                            onClick={async () => {
+                                console.log("Initiating Google Sign In...");
+                                const result = await signIn('google', { callbackUrl: '/dashboard' });
+                                if (result?.error) {
+                                    console.error("Sign in error:", result.error);
+                                    alert("Login failed: " + result.error);
+                                }
+                            }}
                             className="w-full bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                         >
                             <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true"><path d="M12.0003 20.45c-4.6667 0-8.45005-3.7834-8.45005-8.45005C3.55025 7.33328 7.3336 3.54993 12.0003 3.54993c2.0673 0 3.9616.75887 5.4318 2.01307l-2.071 2.071c-.78-.63-1.99-1.18-3.3608-1.18-2.61 0-4.825 1.77-5.615 4.145-.205.62-.32 1.285-.32 1.975s.115 1.355.32 1.975c.79 2.375 3.005 4.145 5.615 4.145 2.195 0 3.655-1.12 4.455-1.93.655-.66 1.09-1.615 1.24-2.815H12.0003v-3.5h7.795c.075.385.115.795.115 1.235 0 3.73-2.515 6.385-6.385 6.385h-.0003l-1.5247-1.1247z" fill="currentColor" /></svg>
