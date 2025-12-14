@@ -2,7 +2,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { sql } from '@/lib/db';
+import { sql, initDatabase } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 const handler = NextAuth({
@@ -47,6 +47,9 @@ const handler = NextAuth({
                     // We use ON CONFLICT to do nothing if exists, or update?
                     // Since we don't have constraints on name/image, maybe just ensure existence.
                     // Note: The users table might have 'password' column. We made it nullable.
+
+                    // Ensure DB is initialized (and password column is nullable)
+                    await initDatabase();
 
                     // Check if user exists
                     const existingUser = await sql`SELECT * FROM users WHERE email = ${email}`;

@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata = {
-  title: "Resolve AI - Automated Review Removal",
+  title: "Aporto AI - Automated Review Removal",
   description: "Delete unfair negative reviews with AI legal precision.",
 };
 

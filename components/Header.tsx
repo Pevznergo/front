@@ -13,7 +13,7 @@ export default function Header() {
                     <div className="flex-shrink-0">
                         <Link href="/" className="flex items-center">
                             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                                Resolve AI
+                                Aporto AI
                             </span>
                         </Link>
                     </div>

@@ -9,7 +9,7 @@ export default function Footer() {
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="inline-block mb-4">
                             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                                Resolve AI
+                                Aporto AI
                             </span>
                         </Link>
                         <p className="text-sm text-slate-500 mb-4">
@@ -46,7 +46,7 @@ export default function Footer() {
 
                 <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-sm text-slate-500">
-                        © 2024 Resolve AI. All rights reserved.
+                        © 2024 Aporto AI. All rights reserved.
                     </p>
                     <div className="flex gap-4">
                         {/* Social icons could go here */}

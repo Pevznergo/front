@@ -13,12 +13,12 @@ export default function TermsOfService() {
 
                 <div className="prose prose-slate max-w-none">
                     <p>
-                        Welcome to Resolve AI. By using our website and services, you agree to comply with and be bound by the following terms and conditions.
+                        Welcome to Aporto AI. By using our website and services, you agree to comply with and be bound by the following terms and conditions.
                     </p>
 
                     <h3>1. Services</h3>
                     <p>
-                        Resolve AI provides automated tools to assist in drafting appeals for content removal on third-party platforms. We do not guarantee the removal of any content, as this decision is at the sole discretion of the platform (e.g., Google, Yelp).
+                        Aporto AI provides automated tools to assist in drafting appeals for content removal on third-party platforms. We do not guarantee the removal of any content, as this decision is at the sole discretion of the platform (e.g., Google, Yelp).
                     </p>
 
                     <h3>2. Payments and Refunds</h3>
@@ -34,7 +34,7 @@ export default function TermsOfService() {
 
                     <h3>4. Limitation of Liability</h3>
                     <p>
-                        Resolve AI is not a law firm and does not provide legal advice. Our services are information-based tools. We are not liable for any damages arising from the use or inability to use our services.
+                        Aporto AI is not a law firm and does not provide legal advice. Our services are information-based tools. We are not liable for any damages arising from the use or inability to use our services.
                     </p>
 
                     <h3>5. Changes to Terms</h3>
