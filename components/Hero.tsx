@@ -8,32 +8,35 @@ import { useRouter } from 'next/navigation';
 export default function Hero() {
     const router = useRouter();
     const [step, setStep] = useState(0);
-    // 0: Input, 1: Formatting, 2: Fetching, 3: Analyzing, 4: Result
+    // 0: Input
+    // 1: Connecting
+    // 2: Scrape/Fetch
+    // 3: Semantics
+    // 4: Policy Check
+    // 5: Strategy
+    // 6: Result
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
 
-    // Simulation sequence trigger
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim()) return;
 
-        setStep(1); // Start sequence
+        setStep(1); // Connecting...
 
-        // Start animation sequence
-        setTimeout(() => setStep(2), 1500); // Fetching logs
-        setTimeout(() => setStep(3), 3500); // Analysis logs
-        setTimeout(() => setStep(4), 6500); // Result
+        // Organic simulation sequence
+        setTimeout(() => setStep(2), 1500);  // Fetching metadata
+        setTimeout(() => setStep(3), 3800);  // Analyzing semantics
+        setTimeout(() => setStep(4), 6500);  // Cross-referencing policies
+        setTimeout(() => setStep(5), 9000);  // Generating strategy
+        setTimeout(() => setStep(6), 11500); // Final Result
 
         try {
-            // Save to DB in background
             await fetch('/api/submit-review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: inputValue })
             });
-
-            // Auto-redirect removed as requested. User must click "Start Application".
-
         } catch (error) {
             console.error("Submission failed", error);
         }
@@ -99,8 +102,8 @@ export default function Hero() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {step === 0 && <span className="text-[10px] uppercase font-bold text-slate-400">Ready</span>}
-                                    {step > 0 && step < 4 && <span className="text-[10px] uppercase font-bold text-blue-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
-                                    {step === 4 && <span className="text-[10px] uppercase font-bold text-green-500">Complete</span>}
+                                    {step > 0 && step < 6 && <span className="text-[10px] uppercase font-bold text-blue-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
+                                    {step === 6 && <span className="text-[10px] uppercase font-bold text-green-500">Complete</span>}
                                     <div className="w-8 h-8 rounded-full bg-slate-200/50 flex items-center justify-center">
                                         <Lock className="w-3.5 h-3.5 text-slate-500" />
                                     </div>
@@ -186,21 +189,41 @@ export default function Hero() {
 
                                                             <div className="space-y-3 font-mono text-xs text-slate-600">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-                                                                    Initial scan started...
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${step >= 1 ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                                                                    Establishing secure connection...
                                                                 </div>
 
                                                                 {step >= 2 && (
                                                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
-                                                                        Cross-referencing Google Prohibited Content Policy v4.2...
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                                                        Fetching platform metadata...
                                                                     </motion.div>
                                                                 )}
 
                                                                 {step >= 3 && (
+                                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                                                                        Analyzing linguistic patterns...
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {step >= 4 && (
+                                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                                                                        Cross-referencing Policy Database v4.2...
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {step >= 5 && (
                                                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 font-bold text-slate-800">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                                                        {/* Blurred violation text as requested */}
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                                                        Drafting optimal removal strategy...
+                                                                    </motion.div>
+                                                                )}
+
+                                                                {step >= 6 && (
+                                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 font-bold text-slate-800 pt-2">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
                                                                         Violation detected: <span className="blur-sm bg-slate-200 text-transparent select-none rounded ml-1">"Conflict of Interest"</span>
                                                                     </motion.div>
                                                                 )}
@@ -212,7 +235,7 @@ export default function Hero() {
 
                                             {/* Result Card */}
                                             <AnimatePresence>
-                                                {step >= 4 && (
+                                                {step >= 6 && (
                                                     <motion.div
                                                         initial={{ opacity: 0, y: 20 }}
                                                         animate={{ opacity: 1, y: 0 }}
