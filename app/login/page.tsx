@@ -59,7 +59,10 @@ export default function LoginPage() {
                                 placeholder="name@work-email.com"
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all text-slate-900 placeholder:text-slate-400"
                             />
-                            <button className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20">
+                            <button
+                                onClick={() => alert("Email login is not configured yet. Please use Google.")}
+                                className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20"
+                            >
                                 Sign in
                                 <ArrowRight className="w-4 h-4" />
                             </button>

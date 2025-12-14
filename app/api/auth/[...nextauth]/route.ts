@@ -31,8 +31,10 @@ const handler = NextAuth({
                     }
                     return true;
                 } catch (error) {
-                    console.error("Error saving user to DB:", error);
-                    return false;
+                    console.error("CRITICAL DB ERROR during sign in:", error);
+                    // For debugging: Allow sign-in even if DB save fails, so we know if Auth provider is working.
+                    // return false; 
+                    return true;
                 }
             }
             return true;
