@@ -1,10 +1,69 @@
+
 'use client';
 
-import { ArrowRight, Github } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+    const router = useRouter();
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            if (isRegistering) {
+                // Register Flow
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert(data.error || "Registration failed");
+                    setLoading(false);
+                    return;
+                }
+
+                // Auto login after register
+                await signIn('credentials', {
+                    email,
+                    password,
+                    callbackUrl: '/dashboard'
+                });
+            } else {
+                // Login Flow
+                const result = await signIn('credentials', {
+                    email,
+                    password,
+                    redirect: false
+                });
+
+                if (result?.error) {
+                    alert("Invalid credentials");
+                    setLoading(false);
+                } else {
+                    router.push('/dashboard');
+                }
+            }
+        } catch (error) {
+            console.error("Auth error:", error);
+            alert("An error occurred");
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center p-4">
             {/* Background Ambience */}
@@ -24,19 +83,19 @@ export default function LoginPage() {
                 </div>
 
                 <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 shadow-2xl border border-white/50">
-                    <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">Welcome back</h1>
-                    <p className="text-center text-slate-500 text-sm mb-8">Log in to view your scan results</p>
+                    <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">
+                        {isRegistering ? "Create Account" : "Welcome back"}
+                    </h1>
+                    <p className="text-center text-slate-500 text-sm mb-8">
+                        {isRegistering ? "Get started with your free scan" : "Log in to view your scan results"}
+                    </p>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <button
                             type="button"
                             onClick={async () => {
-                                console.log("Initiating Google Sign In...");
                                 const result = await signIn('google', { callbackUrl: '/dashboard' });
-                                if (result?.error) {
-                                    console.error("Sign in error:", result.error);
-                                    alert("Login failed: " + result.error);
-                                }
+                                if (result?.error) alert("Google Login failed: " + result.error);
                             }}
                             className="w-full bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                         >
@@ -53,26 +112,56 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <form onSubmit={handleSubmit} className="space-y-3">
+                            {isRegistering && (
+                                <input
+                                    type="text"
+                                    placeholder="Full Name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all text-slate-900 placeholder:text-slate-400"
+                                    required
+                                />
+                            )}
                             <input
                                 type="email"
                                 placeholder="name@work-email.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all text-slate-900 placeholder:text-slate-400"
+                                required
+                            />
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] transition-all text-slate-900 placeholder:text-slate-400"
+                                required
                             />
                             <button
-                                onClick={() => alert("Email login is not configured yet. Please use Google.")}
-                                className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20"
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20 disabled:opacity-70"
                             >
-                                Sign in
-                                <ArrowRight className="w-4 h-4" />
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isRegistering ? "Create Account" : "Sign in")}
+                                {!loading && <ArrowRight className="w-4 h-4" />}
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
 
-                <div className="mt-8 text-center space-x-6 text-xs text-slate-400 font-medium">
-                    <Link href="#" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
-                    <Link href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+                <div className="mt-8 text-center">
+                    <button
+                        onClick={() => setIsRegistering(!isRegistering)}
+                        className="text-sm font-medium text-[#007AFF] hover:text-blue-600 transition-colors"
+                    >
+                        {isRegistering ? "Already have an account? Sign in" : "New here? Create an account"}
+                    </button>
+                    <div className="mt-6 space-x-6 text-xs text-slate-400 font-medium">
+                        <Link href="#" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+                        <Link href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+                    </div>
                 </div>
             </div>
         </div>

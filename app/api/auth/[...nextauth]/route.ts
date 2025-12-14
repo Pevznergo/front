@@ -1,14 +1,42 @@
 
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { sql } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
 const handler = NextAuth({
     providers: [
         GoogleProvider({
             clientId: "136560219104-tieaa9h4tupbo07shb8l6idmto5t9hhk.apps.googleusercontent.com",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "", // User needs to provide this
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         }),
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" }
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) return null;
+
+                try {
+                    const users = await sql`SELECT * FROM users WHERE email = ${credentials.email}`;
+                    const user = users[0];
+
+                    if (user && user.password) {
+                        const isValid = await bcrypt.compare(credentials.password, user.password);
+                        if (isValid) {
+                            return { id: user.id, name: user.name, email: user.email };
+                        }
+                    }
+                    return null;
+                } catch (e) {
+                    console.error("Auth error:", e);
+                    return null;
+                }
+            }
+        })
     ],
     callbacks: {
         async signIn({ user, account, profile }) {
