@@ -78,7 +78,7 @@ export default function LoginPage() {
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                             <div className="w-4 h-4 bg-white rounded-md opacity-20" />
                         </div>
-                        <span className="font-bold text-xl text-slate-900 tracking-tight">Aporto AI</span>
+                        <span className="font-bold text-xl text-slate-900 tracking-tight">Aporto</span>
                     </div>
                 </div>
 

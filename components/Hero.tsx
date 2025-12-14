@@ -181,7 +181,7 @@ export default function Hero() {
                                                                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-sm">
                                                                     <Terminal className="w-4 h-4 text-white" />
                                                                 </div>
-                                                                <span className="text-sm font-semibold text-slate-900">Aporto AI Agent</span>
+                                                                <span className="text-sm font-semibold text-slate-900">Aporto Agent</span>
                                                             </div>
 
                                                             <div className="space-y-3 font-mono text-xs text-slate-600">

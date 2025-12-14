@@ -37,7 +37,7 @@ export default function DashboardPage() {
                             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">R</span>
                             </div>
-                            Aporto AI
+                            Aporto
                         </Link>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">

@@ -13,7 +13,7 @@ export default function ComparisonTable() {
                     {/* Header */}
                     <div className="grid grid-cols-3 p-4 bg-slate-50/50 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">
                         <div>Feature</div>
-                        <div className="text-[#007AFF]">Aporto AI</div>
+                        <div className="text-[#007AFF]">Aporto</div>
                         <div>Agencies</div>
                     </div>
 

@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
 
                 <div className="prose prose-slate max-w-none">
                     <p>
-                        At Aporto AI, we take your privacy seriously. This policy describes how we collect, use, and protect your personal information.
+                        At Aporto, we take your privacy seriously. This policy describes how we collect, use, and protect your personal information.
                     </p>
 
                     <h3>1. Information We Collect</h3>
