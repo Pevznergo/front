@@ -62,7 +62,8 @@ export default function Hero() {
         const linkParam = searchParams.get('link');
         if (linkParam && !hasAutoStarted.current) {
             hasAutoStarted.current = true;
-            runAnalysis(linkParam);
+            // Just pre-fill, don't auto-start
+            setInputValue(`Remove this review - ${linkParam}`);
         }
     }, [searchParams]);
 
