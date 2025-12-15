@@ -1,9 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { sql, initDatabase } from '@/lib/db';
 
 export async function POST(req: Request) {
     try {
+        await initDatabase();
         const { content } = await req.json();
 
         if (!content || typeof content !== 'string') {

@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle, Shield, Lock, Terminal, Search, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function Hero() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [step, setStep] = useState(0);
     // 0: Input
     // 1: Connecting
@@ -18,6 +19,7 @@ export default function Hero() {
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
     const consoleRef = useRef<HTMLDivElement>(null);
+    const hasAutoStarted = useRef(false);
 
     // Auto-scroll to bottom when step changes
     useEffect(() => {
@@ -26,9 +28,10 @@ export default function Hero() {
         }
     }, [step]);
 
-    const handleAnalyze = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!inputValue.trim()) return;
+    const runAnalysis = async (content: string) => {
+        if (!content.trim()) return;
+        setInputValue(content);
+        setStep(1); // Connecting...
 
         // Custom Event: Start Analysis
         if (typeof window !== 'undefined' && (window as any).dataLayer) {
@@ -40,7 +43,7 @@ export default function Hero() {
             fetch('/api/submit-review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: inputValue })
+                body: JSON.stringify({ content })
             });
         } catch (e) {
             console.error("Failed to save request", e);
@@ -52,16 +55,20 @@ export default function Hero() {
         setTimeout(() => setStep(4), 6500);  // Cross-referencing policies
         setTimeout(() => setStep(5), 9000);  // Generating strategy
         setTimeout(() => setStep(6), 11500); // Final Result
+    };
 
-        try {
-            await fetch('/api/submit-review', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: inputValue })
-            });
-        } catch (error) {
-            console.error("Submission failed", error);
+    // Check for URL param on mount
+    useEffect(() => {
+        const linkParam = searchParams.get('link');
+        if (linkParam && !hasAutoStarted.current) {
+            hasAutoStarted.current = true;
+            runAnalysis(linkParam);
         }
+    }, [searchParams]);
+
+    const handleAnalyze = async (e: React.FormEvent) => {
+        e.preventDefault();
+        runAnalysis(inputValue);
     };
 
     return (

@@ -7,11 +7,15 @@ import Pricing from '../components/Pricing';
 import FAQ from '../components/FAQ';
 import Footer from '../components/Footer';
 
+import { Suspense } from 'react';
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#F2F2F7] relative">
       <Header />
-      <Hero />
+      <Suspense fallback={null}>
+        <Hero />
+      </Suspense>
       <HowItWorks />
       <ComparisonTable />
       <Pricing />
