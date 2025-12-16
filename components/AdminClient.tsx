@@ -25,9 +25,6 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
     const [reviewerName, setReviewerName] = useState('');
     const [orgUrl, setOrgUrl] = useState('');
     const [contacts, setContacts] = useState('');
-
-    const [previewLink, setPreviewLink] = useState<ShortLink | null>(null);
-
     const [loading, setLoading] = useState(false);
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -258,23 +255,37 @@ Best, aporto.tech`
                                             <div className="flex flex-col gap-2 items-start">
                                                 {getStatusIcon(link.email_status)}
 
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-col gap-1.5 w-full">
                                                     <button
-                                                        onClick={() => setPreviewLink(link)}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all text-xs font-semibold"
+                                                        onClick={() => {
+                                                            const { subject } = generateEmail(link);
+                                                            copyToClipboard(subject, `sub-${link.id}`);
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
                                                     >
-                                                        <Mail className="w-3 h-3" />
-                                                        Preview
+                                                        {copiedId === `sub-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                        Copy Subject
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            const { body } = generateEmail(link);
+                                                            copyToClipboard(body, `body-${link.id}`);
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
+                                                    >
+                                                        {copiedId === `body-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Mail className="w-3 h-3" />}
+                                                        Copy Message
                                                     </button>
 
                                                     {link.email_status !== 'sent' && link.email_status !== 'opened' && link.email_status !== 'replied' && link.email_status !== 'queued' && (
                                                         <button
                                                             onClick={() => handleSendEmail(link.id)}
                                                             disabled={sendingId === link.id || !link.contacts}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-[#007AFF] hover:text-[#007AFF] rounded-lg transition-all text-xs font-semibold disabled:opacity-50"
+                                                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-[#007AFF] hover:text-[#007AFF] rounded-lg transition-all text-xs font-semibold disabled:opacity-50 w-full mt-1"
                                                         >
                                                             {sendingId === link.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                                                            Send
+                                                            Send via API
                                                         </button>
                                                     )}
                                                 </div>
