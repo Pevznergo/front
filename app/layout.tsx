@@ -27,6 +27,10 @@ import { Suspense } from 'react';
 
 // ... imports
 
+import Mixpanel from '@/components/Mixpanel';
+
+// ... imports
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +42,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <GoogleTagManager />
         </Suspense>
+        <Mixpanel />
         <AuthProvider>
           {children}
         </AuthProvider>
