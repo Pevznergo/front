@@ -98,6 +98,16 @@ export async function initDatabase() {
       )
     `
 
+    // Short Links table (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS short_links (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(10) UNIQUE NOT NULL,
+        target_url TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
