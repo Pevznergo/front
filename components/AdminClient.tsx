@@ -52,6 +52,12 @@ Best, aporto.tech`
         };
     };
 
+    const extractEmail = (text: string | undefined) => {
+        if (!text) return '';
+        const match = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        return match ? match[0] : '';
+    };
+
     const handleSendEmail = async (id: number) => {
         if (!confirm("Send email to this contact?")) return;
         setSendingId(id);
@@ -276,6 +282,18 @@ Best, aporto.tech`
                                                     >
                                                         {copiedId === `body-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Mail className="w-3 h-3" />}
                                                         Copy Message
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            const email = extractEmail(link.contacts);
+                                                            if (email) copyToClipboard(email, `email-${link.id}`);
+                                                            else alert("No email found in contacts");
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
+                                                    >
+                                                        {copiedId === `email-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                        Copy Email
                                                     </button>
 
                                                     {link.email_status !== 'sent' && link.email_status !== 'opened' && link.email_status !== 'replied' && link.email_status !== 'queued' && (
