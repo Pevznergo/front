@@ -108,6 +108,15 @@ export async function initDatabase() {
       )
     `
 
+    // Link Schema Updates
+    try {
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(255)`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS org_url TEXT`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS contacts TEXT`;
+    } catch (e) {
+      console.warn("Schema update warning (short_links cols):", e);
+    }
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)

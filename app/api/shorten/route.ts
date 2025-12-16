@@ -16,7 +16,7 @@ function generateCode(length: number) {
 export async function POST(req: Request) {
     try {
         await initDatabase();
-        const { target_url } = await req.json();
+        const { target_url, reviewer_name, org_url, contacts } = await req.json();
 
         if (!target_url || typeof target_url !== 'string') {
             return NextResponse.json({ error: 'target_url is required' }, { status: 400 });
@@ -30,8 +30,8 @@ export async function POST(req: Request) {
         while (retries < 5) {
             try {
                 await sql`
-                  INSERT INTO short_links (code, target_url)
-                  VALUES (${code}, ${target_url})
+                  INSERT INTO short_links (code, target_url, reviewer_name, org_url, contacts)
+                  VALUES (${code}, ${target_url}, ${reviewer_name || null}, ${org_url || null}, ${contacts || null})
                 `;
                 break; // Success
             } catch (e: any) {
