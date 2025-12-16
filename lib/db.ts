@@ -113,6 +113,8 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(255)`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS org_url TEXT`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS contacts TEXT`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS email_status VARCHAR(50) DEFAULT 'pending'`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS smartlead_lead_id VARCHAR(100)`;
     } catch (e) {
       console.warn("Schema update warning (short_links cols):", e);
     }
