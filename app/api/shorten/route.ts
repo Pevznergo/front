@@ -56,3 +56,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        await initDatabase();
+        const body = await req.json();
+        const { id } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+        }
+
+        await sql`DELETE FROM short_links WHERE id = ${id}`;
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Delete error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}

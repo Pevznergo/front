@@ -40,15 +40,8 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
         const shortUrl = `https://aporto.tech/s/${link.code}`;
 
         return {
-            subject: `1-star review from ${reviewer}`,
-            body: `Hey,
-
-I saw that recent 1-star review from ${reviewer} is dragging down your rating on Maps.
-
-I scanned it with our Agent, and it actually violates Google's posting policies. We can help you file a formal appeal to get it deleted.
-
-Check your removal chances for free here: ${shortUrl}
-Best, aporto.tech`
+            subject: `Remove 1-star review from ${reviewer}`,
+            body: `Hi! Just noticed that recent 1-star review from ${reviewer} on your Maps profile. 😟\n\nIt looks like it actually violates Google's policies (I double-checked). You can likely get it removed.\n\nWe have a free tool to confirm the removal chances here: ${shortUrl}\n\nHope this helps!`
         };
     };
 
@@ -306,6 +299,29 @@ Best, aporto.tech`
                                                             Send via API
                                                         </button>
                                                     )}
+
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!confirm('Are you sure you want to delete this link?')) return;
+                                                            try {
+                                                                const res = await fetch('/api/shorten', {
+                                                                    method: 'DELETE',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ id: link.id })
+                                                                });
+                                                                if (res.ok) {
+                                                                    setLinks(prev => prev.filter(l => l.id !== link.id));
+                                                                } else {
+                                                                    alert('Failed to delete');
+                                                                }
+                                                            } catch (e) {
+                                                                alert('Error deleting');
+                                                            }
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-all text-xs font-medium w-full mt-2"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </td>
