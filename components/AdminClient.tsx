@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Link as LinkIcon, Copy, Check, Send, Mail, Eye, MessageSquare } from 'lucide-react';
+import { Loader2, Link as LinkIcon, Copy, Check, Send, Mail, Eye, MessageSquare, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ShortLink {
@@ -41,7 +41,7 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
 
         return {
             subject: `Remove 1-star review from ${reviewer}`,
-            body: `Hi! Just noticed that recent 1-star review from ${reviewer} on your Maps profile. 😟\n\nIt looks like it actually violates Google's policies (I double-checked). You can likely get it removed.\n\nWe have a free tool to confirm the removal chances here: ${shortUrl}\n\nHope this helps!`
+            body: `Hey there. That recent 1-star review from ${reviewer} is really hurting your overall rating on Google Maps. 📉\n\nGood news is: it likely violates Google's policies. We can help you file a formal appeal to get it deleted.\n\nCheck your removal chances for free here: ${shortUrl}`
         };
     };
 
@@ -94,13 +94,19 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
         try {
             const fullTargetUrl = `https://aporto.tech/?link=${encodeURIComponent(reviewUrl)}`;
 
+            // Normalize orgUrl to ensure it has a protocol
+            let formattedOrgUrl = orgUrl;
+            if (formattedOrgUrl && !/^https?:\/\//i.test(formattedOrgUrl)) {
+                formattedOrgUrl = `https://${formattedOrgUrl}`;
+            }
+
             const shortenRes = await fetch('/api/shorten', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     target_url: fullTargetUrl,
                     reviewer_name: reviewerName,
-                    org_url: orgUrl,
+                    org_url: formattedOrgUrl,
                     contacts: contacts
                 })
             });
@@ -114,7 +120,7 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                 target_url: fullTargetUrl,
                 created_at: new Date().toISOString(),
                 reviewer_name: reviewerName,
-                org_url: orgUrl,
+                org_url: formattedOrgUrl,
                 contacts: contacts,
                 email_status: 'pending'
             };
@@ -170,10 +176,10 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                                 Organization Website
                             </label>
                             <input
-                                type="url"
+                                type="text"
                                 value={orgUrl}
                                 onChange={(e) => setOrgUrl(e.target.value)}
-                                placeholder="https://example.com"
+                                placeholder="example.com"
                                 className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-[#007AFF] focus:ring-4 focus:ring-blue-500/10 transition-all"
                             />
                         </div>
@@ -212,58 +218,59 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                     <table className="w-full text-left text-sm text-slate-600">
                         <thead className="bg-slate-50 text-slate-900 font-semibold">
                             <tr>
-                                <th className="p-4">Short Link</th>
-                                <th className="p-4">Reviewer</th>
-                                <th className="p-4">Org / Contact</th>
-                                <th className="p-4">Actions</th>
-                                <th className="p-4">Date</th>
+                                <th className="p-3">Short Link</th>
+                                <th className="p-3">Reviewer</th>
+                                <th className="p-3">Org / Contact</th>
+                                <th className="p-3 w-[200px]">Actions</th>
+                                <th className="p-3">Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {links.map((link) => {
                                 const shortUrl = `https://aporto.tech/s/${link.code}`;
                                 return (
-                                    <tr key={link.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-4 align-top">
-                                            <div className='flex flex-col gap-2'>
+                                    <tr key={link.id} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                                        <td className="p-3 align-top">
+                                            <div className='flex flex-col gap-1'>
                                                 <button
                                                     onClick={() => copyToClipboard(shortUrl, `short-${link.id}`)}
-                                                    className="flex items-center gap-2 group hover:text-[#007AFF] transition-colors font-mono font-bold"
+                                                    className="flex items-center gap-2 group hover:text-[#007AFF] transition-colors font-mono font-bold text-sm"
                                                 >
                                                     {link.code}
-                                                    {copiedId === `short-${link.id}` ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                                    {copiedId === `short-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />}
                                                 </button>
                                                 <button
                                                     onClick={() => copyToClipboard(link.target_url, `target-${link.id}`)}
-                                                    className="text-xs text-slate-400 hover:text-[#007AFF] flex items-center gap-1"
+                                                    className="text-[10px] text-slate-400 hover:text-[#007AFF] flex items-center gap-1 w-fit"
                                                 >
                                                     Original Map Link
                                                 </button>
                                             </div>
                                         </td>
-                                        <td className="p-4 align-top">
-                                            <div className="font-medium text-slate-900">{link.reviewer_name || '-'}</div>
+                                        <td className="p-3 align-top">
+                                            <div className="font-medium text-slate-900 text-sm">{link.reviewer_name || '-'}</div>
                                         </td>
-                                        <td className="p-4 align-top max-w-[250px]">
-                                            <div className="flex flex-col gap-1">
-                                                {link.org_url && <a href={link.org_url} target="_blank" className="text-[#007AFF] underline truncate">{link.org_url}</a>}
-                                                <div className="text-xs text-slate-500 break-words">{link.contacts || '-'}</div>
+                                        <td className="p-3 align-top max-w-[200px]">
+                                            <div className="flex flex-col gap-0.5">
+                                                {link.org_url && <a href={link.org_url} target="_blank" className="text-[#007AFF] underline truncate text-xs">{link.org_url}</a>}
+                                                <div className="text-[11px] text-slate-500 break-words leading-tight">{link.contacts || '-'}</div>
                                             </div>
                                         </td>
-                                        <td className="p-4 align-top">
-                                            <div className="flex flex-col gap-2 items-start">
+                                        <td className="p-3 align-top">
+                                            <div className="space-y-2">
                                                 {getStatusIcon(link.email_status)}
 
-                                                <div className="flex flex-col gap-1.5 w-full">
+                                                <div className="grid grid-cols-2 gap-1.5">
                                                     <button
                                                         onClick={() => {
                                                             const { subject } = generateEmail(link);
                                                             copyToClipboard(subject, `sub-${link.id}`);
                                                         }}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
+                                                        className="flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-[11px] font-medium"
+                                                        title="Copy Subject"
                                                     >
                                                         {copiedId === `sub-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                                        Copy Subject
+                                                        Subj
                                                     </button>
 
                                                     <button
@@ -271,10 +278,11 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                                                             const { body } = generateEmail(link);
                                                             copyToClipboard(body, `body-${link.id}`);
                                                         }}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
+                                                        className="flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-[11px] font-medium"
+                                                        title="Copy Message Body"
                                                     >
                                                         {copiedId === `body-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Mail className="w-3 h-3" />}
-                                                        Copy Message
+                                                        Body
                                                     </button>
 
                                                     <button
@@ -283,49 +291,52 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                                                             if (email) copyToClipboard(email, `email-${link.id}`);
                                                             else alert("No email found in contacts");
                                                         }}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-xs font-medium w-full"
+                                                        className="flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg transition-all text-[11px] font-medium"
+                                                        title="Copy Email Address"
                                                     >
                                                         {copiedId === `email-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                                        Copy Email
+                                                        Email
                                                     </button>
 
                                                     {link.email_status !== 'sent' && link.email_status !== 'opened' && link.email_status !== 'replied' && link.email_status !== 'queued' && (
                                                         <button
                                                             onClick={() => handleSendEmail(link.id)}
                                                             disabled={sendingId === link.id || !link.contacts}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-[#007AFF] hover:text-[#007AFF] rounded-lg transition-all text-xs font-semibold disabled:opacity-50 w-full mt-1"
+                                                            className="flex items-center justify-center gap-1.5 px-2 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 rounded-lg transition-all text-[11px] font-semibold disabled:opacity-50"
+                                                            title="Send via API"
                                                         >
                                                             {sendingId === link.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                                                            Send via API
+                                                            Send
                                                         </button>
                                                     )}
-
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (!confirm('Are you sure you want to delete this link?')) return;
-                                                            try {
-                                                                const res = await fetch('/api/shorten', {
-                                                                    method: 'DELETE',
-                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                    body: JSON.stringify({ id: link.id })
-                                                                });
-                                                                if (res.ok) {
-                                                                    setLinks(prev => prev.filter(l => l.id !== link.id));
-                                                                } else {
-                                                                    alert('Failed to delete');
-                                                                }
-                                                            } catch (e) {
-                                                                alert('Error deleting');
-                                                            }
-                                                        }}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-all text-xs font-medium w-full mt-2"
-                                                    >
-                                                        Delete
-                                                    </button>
                                                 </div>
+
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!confirm('Are you sure you want to delete this link?')) return;
+                                                        try {
+                                                            const res = await fetch('/api/shorten', {
+                                                                method: 'DELETE',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ id: link.id })
+                                                            });
+                                                            if (res.ok) {
+                                                                setLinks(prev => prev.filter(l => l.id !== link.id));
+                                                            } else {
+                                                                alert('Failed to delete');
+                                                            }
+                                                        } catch (e) {
+                                                            alert('Error deleting');
+                                                        }
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-1.5 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all text-[10px]"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                    Delete
+                                                </button>
                                             </div>
                                         </td>
-                                        <td className="p-4 align-top text-slate-400 text-xs whitespace-nowrap">
+                                        <td className="p-3 align-top text-slate-400 text-xs whitespace-nowrap">
                                             {formatDate(link.created_at)}
                                         </td>
                                     </tr>
