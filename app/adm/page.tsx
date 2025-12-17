@@ -26,11 +26,28 @@ export default async function AdminPage() {
         smartlead_lead_id: link.smartlead_lead_id || null
     }));
 
+    // Check n8n status
+    let n8nStatus = false;
+    try {
+        const res = await fetch('http://127.0.0.1:5678/healthz', {
+            next: { revalidate: 0 },
+            signal: AbortSignal.timeout(2000)
+        });
+        if (res.ok) n8nStatus = true;
+    } catch (e) {
+        // failed to reach n8n
+    }
+
     return (
         <div className="min-h-screen bg-[#F2F2F7] p-8 font-sans">
             <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-slate-900">Admin Console</h1>
-                <div className='bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-bold'>n8n Disconnected</div>
+                <div className={`px-3 py-1 rounded-full text-xs font-bold ${n8nStatus
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-red-50 text-red-600'
+                    }`}>
+                    n8n {n8nStatus ? 'Connected' : 'Disconnected'}
+                </div>
             </div>
             <AdminClient initialLinks={serializedLinks} />
         </div>
