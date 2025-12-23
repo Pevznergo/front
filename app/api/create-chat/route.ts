@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTelegramClient } from "@/lib/telegram";
+import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
