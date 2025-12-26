@@ -3,6 +3,7 @@ import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { sql } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
     // 1. Auth check (NextAuth session)
@@ -112,9 +113,45 @@ export async function POST(req: NextRequest) {
             })
         ) as any;
 
+        const inviteLink = inviteLinkResult.link;
+
+        // 7. Save to database with a unique short code
+        // Simple random code generator
+        const generateCode = () => {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let res = '';
+            for (let i = 0; i < 6; i++) {
+                res += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return res;
+        };
+
+        let shortCode = generateCode();
+        // Check for collision (basic attempt)
+        let isUnique = false;
+        let attempts = 0;
+        while (!isUnique && attempts < 5) {
+            const existing = await sql`SELECT id FROM short_links WHERE code = ${shortCode}`;
+            if (existing.length === 0) {
+                isUnique = true;
+            } else {
+                shortCode = generateCode();
+                attempts++;
+            }
+        }
+
+        await sql`
+            INSERT INTO short_links (code, target_url, tg_chat_id)
+            VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()})
+        `;
+
+        const shortUrl = `https://aporto.tech/r/${shortCode}`;
+
         return NextResponse.json({
             success: true,
-            link: inviteLinkResult.link,
+            link: inviteLink,
+            shortUrl: shortUrl,
+            shortCode: shortCode,
             chatId: channelId.toString()
         });
 

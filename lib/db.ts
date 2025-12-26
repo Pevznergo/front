@@ -110,6 +110,10 @@ export async function initDatabase() {
 
     // Link Schema Updates
     try {
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS tg_chat_id VARCHAR(100)`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS clicks_count INTEGER DEFAULT 0`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS member_count INTEGER DEFAULT 0`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS last_count_update TIMESTAMP`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(255)`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS org_url TEXT`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS contacts TEXT`;
