@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 export const authOptions = {
     providers: [
         GoogleProvider({
-            clientId: "136560219104-tieaa9h4tupbo07shb8l6idmto5t9hhk.apps.googleusercontent.com",
+            clientId: process.env.GOOGLE_CLIENT_ID || "",
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         }),
         CredentialsProvider({
@@ -37,11 +37,16 @@ export const authOptions = {
             }
         })
     ],
+    secret: process.env.NEXTAUTH_SECRET,
+    session: {
+        strategy: "jwt" as const,
+    },
+    debug: process.env.NODE_ENV === 'development',
     callbacks: {
         async signIn({ user, account, profile }: any) {
             if (account?.provider === 'google') {
                 try {
-                    const { email, name, image } = user;
+                    const { email, name } = user;
                     // Ensure DB is initialized
                     await initDatabase();
 
@@ -49,20 +54,26 @@ export const authOptions = {
                     const existingUser = await sql`SELECT * FROM users WHERE email = ${email}`;
 
                     if (existingUser.length === 0) {
+                        console.log("Creating new Google user:", email);
                         await sql`
-               INSERT INTO users (email, name, password)
-               VALUES (${email}, ${name}, NULL)
-             `;
+                            INSERT INTO users (email, name, password)
+                            VALUES (${email}, ${name}, NULL)
+                        `;
                     }
                     return true;
                 } catch (error) {
                     console.error("CRITICAL DB ERROR during sign in:", error);
+                    // It's often better to return false here if the user can't be created/found,
+                    // but keeping true to maintain previous behavior unless requested otherwise.
                     return true;
                 }
             }
             return true;
         },
         async session({ session, token }: any) {
+            if (session.user) {
+                (session.user as any).id = token.sub;
+            }
             return session;
         }
     },

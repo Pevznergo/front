@@ -36,11 +36,15 @@ export async function POST(req: NextRequest) {
             })
         ) as any;
 
-        const updates = createResult.updates;
-        const channelUpdate = updates.find((u: any) => u.channelId || u.id);
-        const channelId = channelUpdate?.channelId || channelUpdate?.id;
+        const chats = createResult.chats || [];
+        const chat = chats.find((c: any) => c.className === 'Channel' || c.className === 'Chat' || c.id);
+        const channelId = chat?.id;
 
-        if (!channelId) throw new Error("Failed to get channel ID");
+        if (!channelId) {
+            console.error("CreateChannel result:", JSON.stringify(createResult, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value, 2));
+            throw new Error("Failed to get channel ID from response");
+        }
 
         // Need the full entity to work with it
         const channel = await client.getEntity(channelId);
