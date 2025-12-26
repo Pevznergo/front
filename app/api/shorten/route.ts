@@ -61,13 +61,17 @@ export async function DELETE(req: Request) {
     try {
         await initDatabase();
         const body = await req.json();
-        const { id } = body;
+        const { id, code } = body;
 
-        if (!id) {
-            return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+        if (!id && !code) {
+            return NextResponse.json({ error: 'ID or Code is required' }, { status: 400 });
         }
 
-        await sql`DELETE FROM short_links WHERE id = ${id}`;
+        if (id) {
+            await sql`DELETE FROM short_links WHERE id = ${id}`;
+        } else {
+            await sql`DELETE FROM short_links WHERE code = ${code}`;
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

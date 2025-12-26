@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Loader2, Send, QrCode, Download, History, MessageSquare, ExternalLink } from "lucide-react";
+import { Loader2, Send, QrCode, Download, History, MessageSquare, ExternalLink, Trash2 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
 
@@ -10,6 +10,7 @@ interface ChatHistoryItem {
     id: string;
     title: string;
     link: string;
+    shortCode?: string;
     createdAt: string;
 }
 
@@ -57,6 +58,7 @@ export default function NextClient() {
                 id: resultData.chatId || Math.random().toString(36).substr(2, 9),
                 title: data.title,
                 link: resultData.link,
+                shortCode: resultData.shortCode,
                 createdAt: new Date().toISOString(),
             };
 
@@ -84,6 +86,33 @@ export default function NextClient() {
             document.body.removeChild(downloadLink);
         } catch (err) {
             console.error("Failed to generate QR for download", err);
+        }
+    };
+
+    const handleDelete = async (item: ChatHistoryItem) => {
+        if (!confirm(`Удалить чат "${item.title}"? Это также удалит короткую ссылку из базы данных.`)) return;
+
+        try {
+            // 1. Delete from DB if shortCode exists
+            if (item.shortCode) {
+                await fetch("/api/shorten", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: item.shortCode })
+                });
+            }
+
+            // 2. Remove from local state and localStorage
+            const updatedHistory = history.filter(h => h.id !== item.id);
+            setHistory(updatedHistory);
+            localStorage.setItem("tg_chat_history", JSON.stringify(updatedHistory));
+
+            if (result?.link === item.link) {
+                setResult(null);
+            }
+        } catch (err) {
+            console.error("Failed to delete chat", err);
+            alert("Ошибка при удалении");
         }
     };
 
@@ -214,6 +243,13 @@ export default function NextClient() {
                                                 >
                                                     <ExternalLink className="w-4 h-4" />
                                                 </a>
+                                                <button
+                                                    onClick={() => handleDelete(item)}
+                                                    className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+                                                    title="Удалить"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
