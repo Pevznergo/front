@@ -15,7 +15,7 @@ interface ChatHistoryItem {
 }
 
 export default function NextClient() {
-    const { register, handleSubmit, reset, formState: { errors } } = useForm<{ title: string }>();
+    const { register, handleSubmit, reset, formState: { errors } } = useForm<{ title: string, district: string }>();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
     const [history, setHistory] = useState<ChatHistoryItem[]>([]);
@@ -33,7 +33,7 @@ export default function NextClient() {
         }
     }, []);
 
-    const onSubmit = async (data: { title: string }) => {
+    const onSubmit = async (data: { title: string, district: string }) => {
         setLoading(true);
         setError(null);
         setResult(null);
@@ -140,6 +140,14 @@ export default function NextClient() {
                         {errors.title && (
                             <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
                         )}
+                    </div>
+
+                    <div className="relative">
+                        <input
+                            {...register("district")}
+                            placeholder="Район (напр: Хамовники)"
+                            className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                        />
                     </div>
 
                     <button

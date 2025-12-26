@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from 'next/navigation';
 import NextClient from "@/components/NextClient";
+import Link from "next/link";
 
 export default async function NextPage() {
     const session = await getServerSession(authOptions);
@@ -40,6 +41,13 @@ export default async function NextPage() {
                 </div>
 
                 <NextClient />
+
+                <div className="flex flex-col items-center gap-4 mt-12">
+                    <Link href="/market" className="group relative px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-medium hover:bg-white/10 transition-all flex items-center gap-3">
+                        <span className="text-slate-400 group-hover:text-white transition-colors">🏘️ Перейти в Барахолку района</span>
+                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                    </Link>
+                </div>
 
                 <div className="pt-12 border-t border-white/5 w-full">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500 uppercase tracking-widest">

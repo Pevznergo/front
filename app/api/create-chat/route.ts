@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid secret key" }, { status: 403 });
     }
 
-    const { title } = await req.json();
+    const { title, district } = await req.json();
     if (!title) {
         return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         const createResult = await client.invoke(
             new Api.channels.CreateChannel({
                 title: title,
-                about: `Автоматически созданная экосистема для ${title}`,
+                about: `Автоматически созданная экосистема для ${title}${district ? ` (${district})` : ""}`,
                 megagroup: true,
             })
         ) as any;
@@ -60,29 +60,17 @@ export async function POST(req: NextRequest) {
 
         /**
          * 5. Create Topics
-         * 🗣 Флудилка (синий)
-         * 📢 Новости (только чтение - это сложнее, требует разрешений)
-         * 🛒 БАРАХОЛКА (корзина)
-         * services Услуги
          */
-
-        // Topics are created with an icon color/emoji
-        // Note: Generic "General" topic exists by default in forums
 
         // Topic 1: 🗣 Флудилка
         await client.invoke(
             new Api.channels.CreateForumTopic({
                 channel: channel,
                 title: "🗣 Флудилка",
-                // iconColor and iconEmojiDocumentId can be set
             })
         );
 
         // Topic 2: 📢 Новости
-        // To make it read-only, we might need to adjust permissions for the topic, 
-        // but default Forum Topics don't have per-topic granular permissions in the same way channels do.
-        // Usually, people use a separate channel for news. 
-        // For MVP, we'll just create the topic.
         await client.invoke(
             new Api.channels.CreateForumTopic({
                 channel: channel,
@@ -90,13 +78,21 @@ export async function POST(req: NextRequest) {
             })
         );
 
-        // Topic 3: 🛒 БАРАХОЛКА
-        await client.invoke(
+        // Topic 3: 🛒 БАРАХОЛКА (Capture ID)
+        const marketTopicResult = await client.invoke(
             new Api.channels.CreateForumTopic({
                 channel: channel,
                 title: "🛒 БАРАХОЛКА",
             })
-        );
+        ) as any;
+
+        const marketplaceTopicId = marketTopicResult?.updates?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id
+            || marketTopicResult?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id;
+
+        // Log for debugging if ID capture fails
+        if (!marketplaceTopicId) {
+            console.log("Marketplace Topic ID not captured directly from result. Updates:", JSON.stringify(marketTopicResult.updates));
+        }
 
         // Topic 4: 👋 Услуги
         await client.invoke(
@@ -141,8 +137,8 @@ export async function POST(req: NextRequest) {
         }
 
         await sql`
-            INSERT INTO short_links (code, target_url, tg_chat_id)
-            VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()})
+            INSERT INTO short_links (code, target_url, tg_chat_id, district, marketplace_topic_id)
+            VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()}, ${district || null}, ${marketplaceTopicId || null})
         `;
 
         const shortUrl = `https://aporto.tech/r/${shortCode}`;

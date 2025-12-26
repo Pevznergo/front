@@ -114,6 +114,8 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS clicks_count INTEGER DEFAULT 0`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS member_count INTEGER DEFAULT 0`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS last_count_update TIMESTAMP`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS district VARCHAR(255)`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS marketplace_topic_id INTEGER`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(255)`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS org_url TEXT`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS contacts TEXT`;
@@ -122,6 +124,22 @@ export async function initDatabase() {
     } catch (e) {
       console.warn("Schema update warning (short_links cols):", e);
     }
+
+    // Market Ads table (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS market_ads (
+        id SERIAL PRIMARY KEY,
+        chat_id VARCHAR(100) NOT NULL,
+        topic_id INTEGER,
+        message_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        sender_username VARCHAR(255),
+        sender_id VARCHAR(100),
+        district VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(chat_id, message_id)
+      )
+    `;
 
     console.log('Database initialized successfully')
   } catch (error) {
