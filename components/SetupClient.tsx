@@ -1,0 +1,160 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Search, MapPin, CheckCircle2, Loader2, ChevronRight, QrCode } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+interface Group {
+    id: number;
+    code: string;
+    tg_chat_id: string;
+    title: string;
+    district: string;
+    target_url: string;
+}
+
+export default function SetupClient({ code }: { code: string }) {
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [savingId, setSavingId] = useState<number | null>(null);
+    const [success, setSuccess] = useState(false);
+    const router = useRouter();
+
+    useEffect(() => {
+        fetch("/api/groups")
+            .then(res => res.json())
+            .then(data => {
+                setGroups(Array.isArray(data) ? data : []);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, []);
+
+    const filteredGroups = groups.filter(g =>
+        (g.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (g.district || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleSelect = async (group: Group) => {
+        setSavingId(group.id);
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tgChatId: group.tg_chat_id,
+                    title: group.title,
+                    district: group.district,
+                    targetUrl: group.target_url // Use the group's invite link
+                })
+            });
+            if (res.ok) {
+                setSuccess(true);
+                setTimeout(() => router.push(`/s/${code}`), 1500);
+            }
+        } catch (e) {
+            alert("Ошибка при сохранении");
+        } finally {
+            setSavingId(null);
+        }
+    };
+
+    if (success) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+                <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
+                    <CheckCircle2 className="w-12 h-12 text-green-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-white mb-2">Готово!</h1>
+                <p className="text-slate-400">QR-код успешно привязан. Сейчас вы будете перенаправлены в группу.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-indigo-500/30">
+            {/* Header */}
+            <header className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 p-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-lg font-bold">Настройка QR</h1>
+                    <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                        <QrCode className="w-3 h-3" /> {code}
+                    </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                </div>
+            </header>
+
+            <main className="p-4 space-y-4 pb-20">
+                {/* Search */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                        type="text"
+                        placeholder="Поиск ЖК или района..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full h-12 bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    />
+                </div>
+
+                <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">Выберите группу для привязки:</div>
+
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span className="text-xs">Загрузка групп...</span>
+                    </div>
+                ) : filteredGroups.length > 0 ? (
+                    <div className="grid gap-3">
+                        {filteredGroups.map(group => (
+                            <button
+                                key={group.id}
+                                onClick={() => handleSelect(group)}
+                                disabled={savingId !== null}
+                                className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between active:scale-[0.98] ${savingId === group.id
+                                        ? 'bg-indigo-500/20 border-indigo-500/50'
+                                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className="space-y-1 flex-1 min-w-0 pr-4">
+                                    <div className="font-semibold truncate">{group.title || "Без названия"}</div>
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                        <MapPin className="w-3 h-3" />
+                                        {group.district || "Район не указан"}
+                                    </div>
+                                </div>
+                                {savingId === group.id ? (
+                                    <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                                ) : (
+                                    <ChevronRight className="w-5 h-5 text-slate-600" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-20 space-y-4">
+                        <div className="text-slate-600">Группы не найдены</div>
+                        <button
+                            onClick={() => setSearchTerm("")}
+                            className="px-6 py-2 bg-white/5 rounded-full text-xs font-semibold hover:bg-white/10 transition-all"
+                        >
+                            Сбросить поиск
+                        </button>
+                    </div>
+                )}
+            </main>
+
+            {/* Footer Tip */}
+            <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent p-6 pointer-events-none">
+                <div className="max-w-xs mx-auto bg-indigo-500/10 border border-indigo-500/20 rounded-full py-2 px-4 shadow-2xl backdrop-blur-md">
+                    <p className="text-[9px] text-indigo-300 text-center uppercase tracking-tighter font-bold">
+                        Нажмите на группу, чтобы привязать QR-код
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}

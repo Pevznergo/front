@@ -11,6 +11,8 @@ export default async function ShortLinkPage({ params }: { params: { code: string
     `;
 
     if (rows.length > 0) {
+        const link = rows[0];
+
         // Increment click count (best effort)
         try {
             await sql`
@@ -21,7 +23,32 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         } catch (e) {
             console.error("Failed to increment clicks:", e);
         }
-        redirect(rows[0].target_url);
+
+        // If target_url is missing, it's an unlinked QR
+        if (!link.target_url) {
+            // Check for admin session to allow setup
+            // Note: getServerSession is available in server components
+            const { getServerSession } = await import("next-auth");
+            const session = await getServerSession();
+
+            if (session?.user?.email === "pevznergo@gmail.com") {
+                redirect(`/setup/${params.code}`);
+            }
+
+            return (
+                <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
+                    <div className="w-20 h-20 bg-indigo-500/20 rounded-3xl flex items-center justify-center mb-6 animate-pulse">
+                        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h1 className="text-2xl font-bold text-white mb-2">Это новая точка доступа</h1>
+                    <p className="text-slate-400 max-w-sm">
+                        Наши специалисты уже работают над этим районом. <br /> Скоро здесь появится чат вашего дома!
+                    </p>
+                </div>
+            );
+        }
+
+        redirect(link.target_url);
     } else {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans">
