@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Loader2, Send, QrCode, Download, History, MessageSquare, ExternalLink, Trash2 } from "lucide-react";
+import {
+    Loader2, Send, QrCode, Download, History as HistoryIcon,
+    MessageSquare, ExternalLink, Trash2, Search,
+    Link as LinkIcon, Link2Off, MapPin, Edit3
+} from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
 
@@ -32,13 +36,25 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
+    const [editingGroup, setEditingGroup] = useState<{ id: number; tgChatId: string; title: string; district: string } | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [refreshingId, setRefreshingId] = useState<number | null>(null);
 
-    // Filter links that are ecosystems (have reviewer_name/title)
-    const ecosystemLinks = links.filter(l => l.tg_chat_id || l.reviewer_name);
-    // Filter all links for the QR generator tab
-    const allLinks = links;
+    // Filter logic
+    const filterLinks = (list: ShortLink[]) => {
+        if (!searchTerm) return list;
+        const low = searchTerm.toLowerCase();
+        return list.filter(l =>
+            l.code.toLowerCase().includes(low) ||
+            (l.reviewer_name || "").toLowerCase().includes(low) ||
+            (l.district || "").toLowerCase().includes(low) ||
+            (l.target_url || "").toLowerCase().includes(low)
+        );
+    };
+
+    const ecosystemLinks = filterLinks(links.filter(l => l.tg_chat_id || l.reviewer_name));
+    const allLinks = filterLinks(links);
 
     // We no longer use localStorage history since we have DB-backed initialLinks
     useEffect(() => {
@@ -165,9 +181,55 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                 body: JSON.stringify({ targetUrl: editingTarget.value })
             });
             if (!res.ok) throw new Error("Failed to update");
-
             setLinks(prev => prev.map(l => l.id === id ? { ...l, target_url: editingTarget.value } : l));
             setEditingTarget(null);
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleUpdateGroup = async (code: string, id: number) => {
+        if (!editingGroup) return;
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tgChatId: editingGroup.tgChatId || null,
+                    title: editingGroup.title || null,
+                    district: editingGroup.district || null
+                })
+            });
+            if (!res.ok) throw new Error("Failed to update");
+
+            setLinks(prev => prev.map(l => l.id === id ? {
+                ...l,
+                tg_chat_id: editingGroup.tgChatId,
+                reviewer_name: editingGroup.title,
+                district: editingGroup.district
+            } : l));
+            setEditingGroup(null);
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleDisconnect = async (code: string, id: number) => {
+        if (!confirm('Отвязать эту ссылку от группы?')) return;
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tgChatId: null })
+            });
+            if (!res.ok) throw new Error("Failed to disconnect");
+
+            setLinks(prev => prev.map(l => l.id === id ? {
+                ...l,
+                tg_chat_id: undefined,
+                reviewer_name: undefined,
+                member_count: 0
+            } : l));
         } catch (e: any) {
             alert(e.message);
         }
@@ -201,29 +263,42 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     };
 
     return (
-        <div className="w-full max-w-4xl space-y-12">
-            {/* Tabs */}
-            <div className="flex justify-center gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit mx-auto">
-                <button
-                    onClick={() => setActiveTab('ecosystem')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`}
-                >
-                    <MessageSquare className="w-4 h-4" />
-                    Экосистемы
-                </button>
-                <button
-                    onClick={() => setActiveTab('qr_batch')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`}
-                >
-                    <QrCode className="w-4 h-4" />
-                    QR Генератор
-                </button>
+        <div className="w-full max-w-6xl space-y-12">
+            {/* Tabs & Search */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4">
+                <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
+                    <button
+                        onClick={() => setActiveTab('ecosystem')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Экосистемы
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('qr_batch')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <QrCode className="w-4 h-4" />
+                        QR Генератор
+                    </button>
+                </div>
+
+                <div className="relative w-full md:w-80">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Поиск по коду, адресу или району..."
+                        className="w-full h-12 bg-slate-900/50 border border-white/10 rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                    />
+                </div>
             </div>
 
             {activeTab === 'ecosystem' ? (
@@ -322,26 +397,44 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     {ecosystemLinks.length > 0 && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-400 px-2">
-                                <History className="w-4 h-4" />
+                                <HistoryIcon className="w-4 h-4" />
                                 <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
                             </div>
 
                             <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b border-white/10 bg-white/5">
-                                            <th className="p-4 font-semibold text-slate-300">Название (Адрес)</th>
-                                            <th className="p-4 font-semibold text-slate-300">Статистика</th>
-                                            <th className="p-4 font-semibold text-slate-300">Код</th>
-                                            <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
+                                        <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
+                                            <th className="p-4 font-semibold">Группа / Район</th>
+                                            <th className="p-4 font-semibold">Статистика</th>
+                                            <th className="p-4 font-semibold">Код</th>
+                                            <th className="p-4 font-semibold text-right">Действие</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {ecosystemLinks.map((item) => (
                                             <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                 <td className="p-4">
-                                                    <div className="font-medium text-white">{item.reviewer_name || 'Без названия'}</div>
-                                                    <div className="text-[10px] text-slate-500">{new Date(item.created_at).toLocaleDateString()}</div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2 group/title">
+                                                            <div className="font-medium text-white">{item.reviewer_name || 'Без названия'}</div>
+                                                            <button
+                                                                onClick={() => setEditingGroup({
+                                                                    id: item.id,
+                                                                    tgChatId: item.tg_chat_id || '',
+                                                                    title: item.reviewer_name || '',
+                                                                    district: item.district || ''
+                                                                })}
+                                                                className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500"
+                                                            >
+                                                                <Edit3 className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                                            <MapPin className="w-3 h-3" />
+                                                            {item.district || 'Район не указан'}
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex gap-4 items-center">
@@ -357,42 +450,51 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             onClick={() => handleRefreshStats(item.code, item.id)}
                                                             className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
                                                         >
-                                                            <History className="w-3 h-3" />
+                                                            <HistoryIcon className="w-3 h-3" />
                                                         </button>
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
-                                                    <button
-                                                        onClick={() => copyToClipboard(`${window.location.protocol}//${window.location.host}/s/${item.code}`, `ec-${item.id}`)}
-                                                        className="font-mono text-xs text-slate-400 bg-white/5 px-2 py-1 rounded hover:text-white transition-colors flex items-center gap-1"
-                                                    >
-                                                        {item.code}
-                                                        <ExternalLink className={`w-3 h-3 ${copiedId === `ec-${item.id}` ? 'text-green-400' : 'opacity-0'}`} />
-                                                    </button>
+                                                    <div className="flex flex-col gap-1">
+                                                        <button
+                                                            onClick={() => copyToClipboard(`${window.location.protocol}//${window.location.host}/s/${item.code}`, `ec-${item.id}`)}
+                                                            className="font-mono text-xs text-slate-400 bg-white/5 px-2 py-1 rounded hover:text-white transition-colors flex items-center gap-1 w-fit"
+                                                        >
+                                                            {item.code}
+                                                            <ExternalLink className={`w-3 h-3 ${copiedId === `ec-${item.id}` ? 'text-green-400' : 'opacity-0'}`} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 <td className="p-4 text-right">
-                                                    <div className="flex justify-end gap-2">
+                                                    <div className="flex justify-end gap-2 text-slate-400">
                                                         <button
                                                             onClick={() => downloadQR(`${window.location.protocol}//${window.location.host}/s/${item.code}`, item.reviewer_name || item.code)}
-                                                            className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
+                                                            className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
                                                             title="Скачать QR"
                                                         >
-                                                            <QrCode className="w-4 h-4" />
+                                                            <QrCode className="w-4.5 h-4.5" />
                                                         </button>
                                                         <a
                                                             href={item.target_url}
                                                             target="_blank"
-                                                            className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors"
-                                                            title="Открыть"
+                                                            className="p-2.5 hover:bg-white/10 rounded-xl text-indigo-400 transition-all"
+                                                            title="Открыть группу"
                                                         >
-                                                            <ExternalLink className="w-4 h-4" />
+                                                            <ExternalLink className="w-4.5 h-4.5" />
                                                         </a>
                                                         <button
-                                                            onClick={() => handleDeleteLink(item.id, item.code)}
-                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
-                                                            title="Удалить"
+                                                            onClick={() => handleDisconnect(item.code, item.id)}
+                                                            className="p-2.5 hover:bg-white/10 rounded-xl hover:text-orange-400 transition-all"
+                                                            title="Отвязать от группы"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <Link2Off className="w-4.5 h-4.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteLink(item.id, item.code)}
+                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl text-red-500/50 hover:text-red-500 transition-all"
+                                                            title="Удалить полностью"
+                                                        >
+                                                            <Trash2 className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -452,11 +554,11 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-white/10 bg-white/5">
-                                        <th className="p-4 font-semibold text-slate-300">Код</th>
-                                        <th className="p-4 font-semibold text-slate-300">Статистика</th>
-                                        <th className="p-4 font-semibold text-slate-300">Target URL (Редирект)</th>
-                                        <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
+                                    <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
+                                        <th className="p-4 font-semibold">Код</th>
+                                        <th className="p-4 font-semibold">Группа / Привязка</th>
+                                        <th className="p-4 font-semibold">Редирект</th>
+                                        <th className="p-4 font-semibold text-right">Действие</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -473,25 +575,65 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             {link.code}
                                                             <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
                                                         </button>
-                                                        <span className="text-[10px] text-slate-500">{new Date(link.created_at).toLocaleDateString()}</span>
+                                                        <div className="flex gap-2 text-[8px] text-slate-600 uppercase">
+                                                            <span>{link.clicks_count || 0} clks</span>
+                                                            <span>{link.member_count || 0} subs</span>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
-                                                    <div className="flex gap-3 items-center">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[8px] text-slate-500 uppercase">Clicks</span>
-                                                            <span className="text-xs font-bold text-indigo-400">{link.clicks_count || 0}</span>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[8px] text-slate-500 uppercase">Subs</span>
-                                                            <span className="text-xs font-bold text-purple-400">{link.member_count || 0}</span>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleRefreshStats(link.code, link.id)}
-                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === link.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
-                                                        >
-                                                            <History className="w-3 h-3" />
-                                                        </button>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        {editingGroup?.id === link.id ? (
+                                                            <div className="space-y-2 p-3 bg-slate-900/50 rounded-xl border border-indigo-500/30">
+                                                                <input
+                                                                    placeholder="Chat ID (напр: -100...)"
+                                                                    value={editingGroup.tgChatId}
+                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                />
+                                                                <input
+                                                                    placeholder="Название группы"
+                                                                    value={editingGroup.title}
+                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                />
+                                                                <input
+                                                                    placeholder="Район"
+                                                                    value={editingGroup.district}
+                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, district: e.target.value })}
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <button onClick={() => handleUpdateGroup(link.code, link.id)} className="flex-1 py-1 px-2 bg-indigo-600 text-white text-[10px] rounded font-bold">Safe</button>
+                                                                    <button onClick={() => setEditingGroup(null)} className="py-1 px-3 bg-white/5 text-slate-500 text-[10px] rounded">Cancel</button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-0.5 max-w-[200px]">
+                                                                {link.tg_chat_id ? (
+                                                                    <>
+                                                                        <div className="text-xs font-semibold text-white truncate">{link.reviewer_name || 'Связанный чат'}</div>
+                                                                        <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                                                                            <MapPin className="w-2.5 h-2.5" />
+                                                                            {link.district || 'Без района'}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => setEditingGroup({ id: link.id, tgChatId: link.tg_chat_id || '', title: link.reviewer_name || '', district: link.district || '' })}
+                                                                            className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors w-fit flex items-center gap-1 mt-1"
+                                                                        >
+                                                                            <Edit3 className="w-3 h-3" /> Редактировать привязку
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => setEditingGroup({ id: link.id, tgChatId: '', title: '', district: '' })}
+                                                                        className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 text-[10px] font-bold hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 w-fit"
+                                                                    >
+                                                                        <LinkIcon className="w-3 h-3" /> Привязать к группе
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
@@ -511,41 +653,34 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                                 >
                                                                     Save
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => setEditingTarget(null)}
-                                                                    className="px-3 py-1 bg-white/5 text-slate-400 text-xs rounded"
-                                                                >
-                                                                    Esc
-                                                                </button>
                                                             </div>
                                                         ) : (
-                                                            <div className="flex items-center gap-2 group">
-                                                                <div className={`text-sm truncate max-w-[300px] ${link.target_url ? 'text-slate-300' : 'text-red-400 italic'}`}>
-                                                                    {link.target_url || 'Ссылка не настроена'}
+                                                            <div className="flex items-center gap-2 group/target">
+                                                                <div className={`text-xs truncate max-w-[200px] ${link.target_url ? 'text-slate-400' : 'text-red-400 italic'}`}>
+                                                                    {link.target_url || 'Target не задан'}
                                                                 </div>
                                                                 <button
                                                                     onClick={() => setEditingTarget({ id: link.id, value: link.target_url || '' })}
-                                                                    className="p-1 hover:bg-white/10 rounded text-slate-500 hover:text-white transition-colors"
-                                                                    title="Редактировать"
+                                                                    className="opacity-0 group-hover/target:opacity-100 p-1 hover:bg-white/10 rounded text-slate-500 transition-all"
                                                                 >
-                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                    <Edit3 className="w-3 h-3" />
                                                                 </button>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-right">
-                                                    <div className="flex justify-end gap-3">
+                                                    <div className="flex justify-end gap-2 text-slate-500">
                                                         <button
                                                             onClick={() => downloadQR(shortUrl, `QR_${link.code}`)}
-                                                            className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
+                                                            className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
                                                             title="Скачать QR"
                                                         >
                                                             <QrCode className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteLink(link.id, link.code)}
-                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl hover:text-red-500 transition-all"
                                                             title="Удалить"
                                                         >
                                                             <Trash2 className="w-4 h-4" />

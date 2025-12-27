@@ -137,8 +137,8 @@ export async function POST(req: NextRequest) {
         }
 
         await sql`
-            INSERT INTO short_links (code, target_url, tg_chat_id, district, marketplace_topic_id)
-            VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()}, ${district || null}, ${marketplaceTopicId || null})
+            INSERT INTO short_links (code, target_url, tg_chat_id, district, marketplace_topic_id, reviewer_name)
+            VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()}, ${district || null}, ${marketplaceTopicId || null}, ${title})
         `;
 
         const shortUrl = `https://aporto.tech/r/${shortCode}`;

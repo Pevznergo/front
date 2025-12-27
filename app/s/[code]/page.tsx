@@ -11,6 +11,16 @@ export default async function ShortLinkPage({ params }: { params: { code: string
     `;
 
     if (rows.length > 0) {
+        // Increment click count (best effort)
+        try {
+            await sql`
+                UPDATE short_links 
+                SET clicks_count = COALESCE(clicks_count, 0) + 1 
+                WHERE code = ${params.code}
+            `;
+        } catch (e) {
+            console.error("Failed to increment clicks:", e);
+        }
         redirect(rows[0].target_url);
     } else {
         return (

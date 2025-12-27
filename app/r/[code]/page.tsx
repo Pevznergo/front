@@ -32,10 +32,10 @@ export default async function RedirectPage({ params }: RedirectPageProps) {
     // For simplicity here we await it to ensure it's recorded.
     try {
         await sql`
-      UPDATE short_links 
-      SET clicks_count = clicks_count + 1 
-      WHERE id = ${link.id}
-    `;
+          UPDATE short_links 
+          SET clicks_count = COALESCE(clicks_count, 0) + 1 
+          WHERE id = ${link.id}
+        `;
     } catch (error) {
         console.error("Error updating click count:", error);
     }

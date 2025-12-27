@@ -89,39 +89,29 @@ export async function PATCH(
 
     const { code } = params;
     const body = await req.json();
-    const { targetUrl, tgChatId } = body;
+    const { targetUrl, tgChatId, title, district } = body;
 
-    if (!targetUrl && !tgChatId) {
+    if (!targetUrl && !tgChatId && !title && !district) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
     try {
-        const updates = [];
-        if (targetUrl) updates.push(sql`target_url = ${targetUrl}`);
-        if (tgChatId) updates.push(sql`tg_chat_id = ${tgChatId}`);
+        if (targetUrl) {
+            await sql`UPDATE short_links SET target_url = ${targetUrl} WHERE code = ${code}`;
+        }
+        if (tgChatId) {
+            await sql`UPDATE short_links SET tg_chat_id = ${tgChatId} WHERE code = ${code}`;
+        }
+        if (title) {
+            await sql`UPDATE short_links SET reviewer_name = ${title} WHERE code = ${code}`;
+        }
+        if (district) {
+            await sql`UPDATE short_links SET district = ${district} WHERE code = ${code}`;
+        }
 
-        // Note: Building dynamic UPDATE query with this SQL helper might be tricky 
-        // if it doesn't support partial updates easily. 
-        // For simplicity, we'll do separate checks or a combined one if both present.
-
-        if (targetUrl && tgChatId) {
-            await sql`
-                UPDATE short_links 
-                SET target_url = ${targetUrl}, tg_chat_id = ${tgChatId} 
-                WHERE code = ${code}
-            `;
-        } else if (targetUrl) {
-            await sql`
-                UPDATE short_links 
-                SET target_url = ${targetUrl} 
-                WHERE code = ${code}
-            `;
-        } else if (tgChatId) {
-            await sql`
-                UPDATE short_links 
-                SET tg_chat_id = ${tgChatId} 
-                WHERE code = ${code}
-            `;
+        // Handle unlinking (explicit NULL) - if body contains fields as null
+        if (body.tgChatId === null) {
+            await sql`UPDATE short_links SET tg_chat_id = NULL, reviewer_name = NULL, member_count = 0 WHERE code = ${code}`;
         }
 
         return NextResponse.json({ success: true });
