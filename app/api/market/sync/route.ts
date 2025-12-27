@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
-import { sql } from "@/lib/db";
+import { sql, initDatabase } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
     try {
+        await initDatabase();
         const client = await getTelegramClient();
 
         // 1. Fetch all chats that have a marketplace topic

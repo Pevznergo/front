@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { sql, initDatabase } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
     try {
+        await initDatabase();
         const { searchParams } = new URL(req.url);
         const district = searchParams.get("district");
         const limit = parseInt(searchParams.get("limit") || "50");
