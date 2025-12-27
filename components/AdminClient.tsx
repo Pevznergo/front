@@ -28,6 +28,7 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
     const [loading, setLoading] = useState(false);
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
 
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text || '');
@@ -139,6 +140,23 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
         }
     };
 
+    const handleUpdateTarget = async (code: string, id: number) => {
+        if (!editingTarget) return;
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUrl: editingTarget.value })
+            });
+            if (!res.ok) throw new Error("Failed to update");
+
+            setLinks(prev => prev.map(l => l.id === id ? { ...l, target_url: editingTarget.value } : l));
+            setEditingTarget(null);
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto space-y-8">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -239,12 +257,38 @@ export default function AdminClient({ initialLinks }: AdminClientProps) {
                                                     {link.code}
                                                     {copiedId === `short-${link.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />}
                                                 </button>
-                                                <button
-                                                    onClick={() => copyToClipboard(link.target_url, `target-${link.id}`)}
-                                                    className="text-[10px] text-slate-400 hover:text-[#007AFF] flex items-center gap-1 w-fit"
-                                                >
-                                                    Original Map Link
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {editingTarget?.id === link.id ? (
+                                                        <div className="flex gap-1 w-full max-w-[300px]">
+                                                            <input
+                                                                type="text"
+                                                                value={editingTarget.value}
+                                                                onChange={(e) => setEditingTarget({ ...editingTarget, value: e.target.value })}
+                                                                className="flex-1 p-1 text-xs border border-slate-200 rounded outline-none focus:border-blue-500"
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() => handleUpdateTarget(link.code, link.id)}
+                                                                className="px-2 py-1 bg-blue-600 text-white text-[10px] rounded hover:bg-blue-700"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingTarget(null)}
+                                                                className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] rounded hover:bg-slate-200"
+                                                            >
+                                                                Esc
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setEditingTarget({ id: link.id, value: link.target_url || '' })}
+                                                            className={`text-[10px] flex items-center gap-1 w-fit transition-colors ${link.target_url ? 'text-slate-400 hover:text-[#007AFF]' : 'text-red-500 hover:text-red-600 font-bold'}`}
+                                                        >
+                                                            {link.target_url ? 'Original Map Link / Edit Redirect' : 'Configure Redirect ⚠️'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-3 align-top">

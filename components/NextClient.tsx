@@ -20,6 +20,9 @@ export default function NextClient() {
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
     const [history, setHistory] = useState<ChatHistoryItem[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch'>('ecosystem');
+    const [batchLoading, setBatchLoading] = useState(false);
+    const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
 
     // Load history from localStorage
     useEffect(() => {
@@ -116,154 +119,233 @@ export default function NextClient() {
         }
     };
 
+    const handleBatchGenerate = async () => {
+        if (!confirm("Сгенерировать 200 новых QR-кодов (коротких ссылок)?")) return;
+        setBatchLoading(true);
+        setBatchResult(null);
+        try {
+            const res = await fetch("/api/batch-qr", { method: "POST" });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to generate");
+            setBatchResult({ count: data.count });
+            alert(`Успешно создано ${data.count} кодов! Вы можете найти их в админ-панели.`);
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
     return (
         <div className="w-full max-w-4xl space-y-12">
-            {/* Creation Form */}
-            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-xl font-semibold">Создание экосистемы</h2>
-                        <p className="text-sm text-slate-400">Введите адрес дома для создания чата с топиками</p>
-                    </div>
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="relative">
-                        <input
-                            {...register("title", { required: "Адрес дома обязателен" })}
-                            placeholder="Напр: ул. Пушкина, д. 10"
-                            className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                        />
-                        {errors.title && (
-                            <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
-                        )}
-                    </div>
-
-                    <div className="relative">
-                        <input
-                            {...register("district")}
-                            placeholder="Район (напр: Хамовники)"
-                            className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
-                    >
-                        {loading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <>
-                                <Send className="w-5 h-5" />
-                                ⚡ Создать экосистему
-                            </>
-                        )}
-                    </button>
-
-                    {error && (
-                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-                </form>
+            {/* Tabs */}
+            <div className="flex justify-center gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit mx-auto">
+                <button
+                    onClick={() => setActiveTab('ecosystem')}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                >
+                    <MessageSquare className="w-4 h-4" />
+                    Экосистемы
+                </button>
+                <button
+                    onClick={() => setActiveTab('qr_batch')}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                >
+                    <QrCode className="w-4 h-4" />
+                    QR Генератор
+                </button>
             </div>
 
-            {/* Result Block */}
-            {result && (
-                <div className="p-8 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex flex-col md:flex-row gap-8 items-center">
-                        <div className="p-4 bg-white rounded-2xl">
-                            <QRCode value={result.link} size={180} />
+            {activeTab === 'ecosystem' ? (
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* Creation Form */}
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                <MessageSquare className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div className="text-left">
+                                <h2 className="text-xl font-semibold">Создание экосистемы</h2>
+                                <p className="text-sm text-slate-400">Введите адрес дома для создания чата с топиками</p>
+                            </div>
                         </div>
-                        <div className="flex-1 text-left space-y-4">
-                            <div>
-                                <h3 className="text-2xl font-bold text-white">Готово! 🚀</h3>
-                                <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
+
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="relative">
+                                <input
+                                    {...register("title", { required: "Адрес дома обязателен" })}
+                                    placeholder="Напр: ул. Пушкина, д. 10"
+                                    className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                                />
+                                {errors.title && (
+                                    <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
+                                )}
                             </div>
 
-                            <div className="flex flex-wrap gap-3">
-                                <a
-                                    href={result.link}
-                                    target="_blank"
-                                    className="px-6 h-12 bg-white text-slate-900 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-100 transition-colors"
-                                >
-                                    <ExternalLink className="w-4 h-4" />
-                                    Открыть чат
-                                </a>
-                                <button
-                                    onClick={() => downloadQR(result.link, result.title)}
-                                    className="px-6 h-12 bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 transition-colors"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Скачать QR
-                                </button>
+                            <div className="relative">
+                                <input
+                                    {...register("district")}
+                                    placeholder="Район (напр: Хамовники)"
+                                    className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                            >
+                                {loading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Send className="w-5 h-5" />
+                                        ⚡ Создать экосистему
+                                    </>
+                                )}
+                            </button>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+                        </form>
+                    </div>
+
+                    {/* Result Block */}
+                    {result && (
+                        <div className="p-8 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex flex-col md:flex-row gap-8 items-center">
+                                <div className="p-4 bg-white rounded-2xl">
+                                    <QRCode value={result.link} size={180} />
+                                </div>
+                                <div className="flex-1 text-left space-y-4">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-white">Готово! 🚀</h3>
+                                        <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-3">
+                                        <a
+                                            href={result.link}
+                                            target="_blank"
+                                            className="px-6 h-12 bg-white text-slate-900 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-100 transition-colors"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                            Открыть чат
+                                        </a>
+                                        <button
+                                            onClick={() => downloadQR(result.link, result.title)}
+                                            className="px-6 h-12 bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 transition-colors"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Скачать QR
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* History Table */}
+                    {history.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-slate-400 px-2">
+                                <History className="w-4 h-4" />
+                                <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
+                            </div>
+
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-white/10 bg-white/5">
+                                            <th className="p-4 font-semibold text-slate-300">Название (Адрес)</th>
+                                            <th className="p-4 font-semibold text-slate-300">Дата</th>
+                                            <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.map((item) => (
+                                            <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="font-medium text-white">{item.title}</div>
+                                                </td>
+                                                <td className="p-4 text-sm text-slate-400">
+                                                    {new Date(item.createdAt).toLocaleDateString()}
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => downloadQR(item.link, item.title)}
+                                                            className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
+                                                            title="Скачать QR"
+                                                        >
+                                                            <QrCode className="w-4 h-4" />
+                                                        </button>
+                                                        <a
+                                                            href={item.link}
+                                                            target="_blank"
+                                                            className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors"
+                                                            title="Открыть"
+                                                        >
+                                                            <ExternalLink className="w-4 h-4" />
+                                                        </a>
+                                                        <button
+                                                            onClick={() => handleDelete(item)}
+                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+                                                            title="Удалить"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            ) : (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
+                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                            <QrCode className="w-10 h-10 text-indigo-400" />
+                        </div>
 
-            {/* History Table */}
-            {history.length > 0 && (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-slate-400 px-2">
-                        <History className="w-4 h-4" />
-                        <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
-                    </div>
+                        <div className="max-w-md mx-auto space-y-2">
+                            <h2 className="text-2xl font-bold">Массовая генерация</h2>
+                            <p className="text-slate-400">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки в админ-панели.</p>
+                        </div>
 
-                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/10 bg-white/5">
-                                    <th className="p-4 font-semibold text-slate-300">Название (Адрес)</th>
-                                    <th className="p-4 font-semibold text-slate-300">Дата</th>
-                                    <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map((item) => (
-                                    <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                        <td className="p-4">
-                                            <div className="font-medium text-white">{item.title}</div>
-                                        </td>
-                                        <td className="p-4 text-sm text-slate-400">
-                                            {new Date(item.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => downloadQR(item.link, item.title)}
-                                                    className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
-                                                    title="Скачать QR"
-                                                >
-                                                    <QrCode className="w-4 h-4" />
-                                                </button>
-                                                <a
-                                                    href={item.link}
-                                                    target="_blank"
-                                                    className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors"
-                                                    title="Открыть"
-                                                >
-                                                    <ExternalLink className="w-4 h-4" />
-                                                </a>
-                                                <button
-                                                    onClick={() => handleDelete(item)}
-                                                    className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
-                                                    title="Удалить"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <button
+                            onClick={handleBatchGenerate}
+                            disabled={batchLoading}
+                            className="h-16 px-12 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl mx-auto text-lg"
+                        >
+                            {batchLoading ? (
+                                <Loader2 className="w-6 h-6 animate-spin" />
+                            ) : (
+                                <>
+                                    <Send className="w-5 h-5" />
+                                    Сгенерировать 200 кодов
+                                </>
+                            )}
+                        </button>
+
+                        {batchResult && (
+                            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                                Готово! Создано {batchResult.count} ссылок. Настройте их в админке.
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

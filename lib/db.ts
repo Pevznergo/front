@@ -103,7 +103,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS short_links (
         id SERIAL PRIMARY KEY,
         code VARCHAR(10) UNIQUE NOT NULL,
-        target_url TEXT NOT NULL,
+        target_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
@@ -114,6 +114,7 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS clicks_count INTEGER DEFAULT 0`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS member_count INTEGER DEFAULT 0`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS last_count_update TIMESTAMP`;
+      await sqlConnection`ALTER TABLE short_links ALTER COLUMN target_url DROP NOT NULL`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS district VARCHAR(255)`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS marketplace_topic_id INTEGER`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(255)`;
