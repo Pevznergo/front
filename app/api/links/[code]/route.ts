@@ -89,9 +89,9 @@ export async function PATCH(
 
     const { code } = params;
     const body = await req.json();
-    const { targetUrl, tgChatId, title, district } = body;
+    const { targetUrl, tgChatId, title, district, status, isStuck } = body;
 
-    if (!targetUrl && !tgChatId && !title && !district) {
+    if (!targetUrl && !tgChatId && !title && !district && !status && isStuck === undefined) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
@@ -100,7 +100,7 @@ export async function PATCH(
             await sql`UPDATE short_links SET target_url = ${targetUrl} WHERE code = ${code}`;
         }
         if (tgChatId) {
-            await sql`UPDATE short_links SET tg_chat_id = ${tgChatId} WHERE code = ${code}`;
+            await sql`UPDATE short_links SET tg_chat_id = ${tgChatId}, status = 'подключен' WHERE code = ${code}`;
         }
         if (title) {
             await sql`UPDATE short_links SET reviewer_name = ${title} WHERE code = ${code}`;
@@ -108,10 +108,16 @@ export async function PATCH(
         if (district) {
             await sql`UPDATE short_links SET district = ${district} WHERE code = ${code}`;
         }
+        if (status) {
+            await sql`UPDATE short_links SET status = ${status} WHERE code = ${code}`;
+        }
+        if (isStuck !== undefined) {
+            await sql`UPDATE short_links SET is_stuck = ${isStuck} WHERE code = ${code}`;
+        }
 
         // Handle unlinking (explicit NULL) - if body contains fields as null
         if (body.tgChatId === null) {
-            await sql`UPDATE short_links SET tg_chat_id = NULL, reviewer_name = NULL, member_count = 0 WHERE code = ${code}`;
+            await sql`UPDATE short_links SET tg_chat_id = NULL, reviewer_name = NULL, member_count = 0, status = 'не подключен' WHERE code = ${code}`;
         }
 
         return NextResponse.json({ success: true });

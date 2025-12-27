@@ -122,9 +122,24 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS contacts TEXT`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS email_status VARCHAR(50) DEFAULT 'pending'`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS smartlead_lead_id VARCHAR(100)`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'не распечатан'`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS is_stuck BOOLEAN DEFAULT FALSE`;
     } catch (e) {
       console.warn("Schema update warning (short_links cols):", e);
     }
+
+    // Chat Creation Queue (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS chat_creation_queue (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        district VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'pending',
+        error TEXT,
+        scheduled_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
 
     // Market Ads table (New)
     await sqlConnection`
