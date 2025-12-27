@@ -6,10 +6,16 @@ import {
     Loader2, Send, QrCode, Download, History as HistoryIcon,
     MessageSquare, ExternalLink, Trash2, Search,
     Link as LinkIcon, Link2Off, MapPin, Edit3, CheckCircle2,
-    Clock, AlertCircle, List
+    Clock, AlertCircle, List, Map as MapIcon, Globe
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
+import dynamic from "next/dynamic";
+
+const MapScout = dynamic(() => import("./MapScout"), {
+    ssr: false,
+    loading: () => <div className="h-[600px] w-full bg-white/5 animate-pulse rounded-3xl flex items-center justify-center font-bold text-slate-500 uppercase tracking-tighter">Загрузка карты...</div>
+});
 
 interface ShortLink {
     id: number;
@@ -44,7 +50,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch'>('ecosystem');
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map'>('ecosystem');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -56,6 +62,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [queue, setQueue] = useState<QueueItem[]>([]);
     const [batchInput, setBatchInput] = useState("");
     const [batchInterval, setBatchInterval] = useState(15);
+    const [scoutedAddresses, setScoutedAddresses] = useState<any[]>([]);
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -240,6 +247,35 @@ export default function NextClient({ initialLinks }: NextClientProps) {
             alert(`Добавлено в очередь: ${batch.length} чатов`);
             setBatchInput("");
             fetchQueue();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
+    const handlePushScoutedToQueue = async () => {
+        if (scoutedAddresses.length === 0) return;
+
+        setBatchLoading(true);
+        try {
+            const batch = scoutedAddresses.map(a => ({
+                title: a.title,
+                district: a.district || ""
+            }));
+
+            const res = await fetch("/api/queue", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ batch, intervalMinutes: batchInterval })
+            });
+
+            if (!res.ok) throw new Error("Failed to add to queue");
+
+            alert(`Добавлено в очередь: ${batch.length} адресов`);
+            setScoutedAddresses([]);
+            fetchQueue();
+            setActiveTab('qr_batch'); // Switch to batch tab to see queue
         } catch (e: any) {
             alert(e.message);
         } finally {
@@ -450,6 +486,16 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     >
                         <QrCode className="w-4 h-4" />
                         QR Генератор
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('map')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'map'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <MapIcon className="w-4 h-4" />
+                        Разведчик
                     </button>
                 </div>
 
@@ -697,6 +743,29 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                             </div>
                         </div>
                     )}
+                </div>
+            ) : activeTab === 'map' ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-bold">Карта-Разведчик</h2>
+                                <p className="text-slate-500 text-sm">Найдите дома на карте и добавьте их в очередь создания чатов.</p>
+                            </div>
+                            {scoutedAddresses.length > 0 && (
+                                <button
+                                    onClick={handlePushScoutedToQueue}
+                                    disabled={batchLoading}
+                                    className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white flex items-center gap-3 transition-all shadow-xl shadow-indigo-500/20"
+                                >
+                                    {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />}
+                                    Добавить в очередь ({scoutedAddresses.length})
+                                </button>
+                            )}
+                        </div>
+
+                        <MapScout onAddressesFound={setScoutedAddresses} />
+                    </div>
                 </div>
             ) : (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
