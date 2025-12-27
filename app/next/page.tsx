@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from 'next/navigation';
 import NextClient from "@/components/NextClient";
 import Link from "next/link";
+import { sql, initDatabase } from "@/lib/db";
 
 export default async function NextPage() {
     const session = await getServerSession(authOptions);
@@ -14,6 +15,20 @@ export default async function NextPage() {
         // Redirect if not logged in or not the authorized user
         redirect('/login?callbackUrl=/next');
     }
+
+    // Ensure DB is ready and fetch links
+    await initDatabase();
+    let links: any[] = [];
+    try {
+        links = await sql`SELECT * FROM short_links ORDER BY created_at DESC`;
+    } catch (e) {
+        console.error("Failed to fetch links", e);
+    }
+
+    const serializedLinks = links.map(l => ({
+        ...l,
+        created_at: l.created_at?.toISOString() || new Date().toISOString()
+    }));
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center p-8 md:p-24 font-sans selection:bg-indigo-500/30 overflow-x-hidden">
@@ -40,7 +55,7 @@ export default async function NextPage() {
                     </p>
                 </div>
 
-                <NextClient />
+                <NextClient initialLinks={serializedLinks} />
 
                 <div className="flex flex-col items-center gap-4 mt-12">
                     <Link href="/market" className="group relative px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-medium hover:bg-white/10 transition-all flex items-center gap-3">

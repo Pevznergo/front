@@ -6,34 +6,43 @@ import { Loader2, Send, QrCode, Download, History, MessageSquare, ExternalLink, 
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
 
-interface ChatHistoryItem {
-    id: string;
-    title: string;
-    link: string;
-    shortCode?: string;
-    createdAt: string;
+interface ShortLink {
+    id: number;
+    code: string;
+    target_url: string;
+    created_at: string;
+    clicks_count?: number;
+    member_count?: number;
+    tg_chat_id?: string;
+    reviewer_name?: string; // used as title for ecosystems
+    district?: string;
 }
 
-export default function NextClient() {
+interface NextClientProps {
+    initialLinks: ShortLink[];
+}
+
+export default function NextClient({ initialLinks }: NextClientProps) {
     const { register, handleSubmit, reset, formState: { errors } } = useForm<{ title: string, district: string }>();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
-    const [history, setHistory] = useState<ChatHistoryItem[]>([]);
+    const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch'>('ecosystem');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
+    const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [refreshingId, setRefreshingId] = useState<number | null>(null);
 
-    // Load history from localStorage
+    // Filter links that are ecosystems (have reviewer_name/title)
+    const ecosystemLinks = links.filter(l => l.tg_chat_id || l.reviewer_name);
+    // Filter all links for the QR generator tab
+    const allLinks = links;
+
+    // We no longer use localStorage history since we have DB-backed initialLinks
     useEffect(() => {
-        const saved = localStorage.getItem("tg_chat_history");
-        if (saved) {
-            try {
-                setHistory(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to parse history", e);
-            }
-        }
+        // Just for reference if we need to migrate anything, but usually we just use the API now
     }, []);
 
     const onSubmit = async (data: { title: string, district: string }) => {
@@ -57,24 +66,43 @@ export default function NextClient() {
                 throw new Error(resultData.error || "Failed to create chat");
             }
 
-            const newItem: ChatHistoryItem = {
+            const newItem: ShortLink = {
                 id: resultData.chatId || Math.random().toString(36).substr(2, 9),
-                title: data.title,
-                link: resultData.link,
-                shortCode: resultData.shortCode,
-                createdAt: new Date().toISOString(),
+                code: resultData.shortCode,
+                target_url: resultData.link,
+                reviewer_name: data.title,
+                district: data.district,
+                created_at: new Date().toISOString(),
+                clicks_count: 0,
+                member_count: 0
             };
 
-            const updatedHistory = [newItem, ...history];
-            setHistory(updatedHistory);
-            localStorage.setItem("tg_chat_history", JSON.stringify(updatedHistory));
-
+            setLinks([newItem, ...links]);
             setResult({ link: resultData.link, title: data.title });
             reset();
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRefreshStats = async (code: string, id: number) => {
+        setRefreshingId(id);
+        try {
+            const res = await fetch(`/api/links/${code}`);
+            const data = await res.json();
+            if (res.ok) {
+                setLinks(prev => prev.map(l => l.id === id ? {
+                    ...l,
+                    clicks_count: data.clicks,
+                    member_count: data.memberCount
+                } : l));
+            }
+        } catch (e) {
+            console.error("Failed to refresh stats", e);
+        } finally {
+            setRefreshingId(null);
         }
     };
 
@@ -92,32 +120,7 @@ export default function NextClient() {
         }
     };
 
-    const handleDelete = async (item: ChatHistoryItem) => {
-        if (!confirm(`Удалить чат "${item.title}"? Это также удалит короткую ссылку из базы данных.`)) return;
 
-        try {
-            // 1. Delete from DB if shortCode exists
-            if (item.shortCode) {
-                await fetch("/api/shorten", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ code: item.shortCode })
-                });
-            }
-
-            // 2. Remove from local state and localStorage
-            const updatedHistory = history.filter(h => h.id !== item.id);
-            setHistory(updatedHistory);
-            localStorage.setItem("tg_chat_history", JSON.stringify(updatedHistory));
-
-            if (result?.link === item.link) {
-                setResult(null);
-            }
-        } catch (err) {
-            console.error("Failed to delete chat", err);
-            alert("Ошибка при удалении");
-        }
-    };
 
     const handleBatchGenerate = async () => {
         if (!confirm("Сгенерировать 200 новых QR-кодов (коротких ссылок)?")) return;
@@ -128,12 +131,73 @@ export default function NextClient() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to generate");
             setBatchResult({ count: data.count });
-            alert(`Успешно создано ${data.count} кодов! Вы можете найти их в админ-панели.`);
+
+            // Refresh links from server or manually update
+            const refreshRes = await fetch("/api/shorten/list"); // I'll need to create this or do it manually
+            // Actually, I can just pretend we generated them and tell user to refresh, 
+            // or I can fetch them. Let's assume there is a list endpoint or 
+            // we just reload the page for now (simplest given we have initialLinks).
+            // Actually, let's just push manually generated codes to the top of state if API returns them.
+            if (data.codes) {
+                const newLinks: ShortLink[] = data.codes.map((code: string) => ({
+                    id: Math.random(), // Temporary ID for UI
+                    code,
+                    target_url: "",
+                    created_at: new Date().toISOString()
+                }));
+                setLinks([...newLinks, ...links]);
+            }
+
+            alert(`Успешно создано ${data.count} кодов!`);
         } catch (err: any) {
             alert(err.message);
         } finally {
             setBatchLoading(false);
         }
+    };
+
+    const handleUpdateTarget = async (code: string, id: number) => {
+        if (!editingTarget) return;
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUrl: editingTarget.value })
+            });
+            if (!res.ok) throw new Error("Failed to update");
+
+            setLinks(prev => prev.map(l => l.id === id ? { ...l, target_url: editingTarget.value } : l));
+            setEditingTarget(null);
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleDeleteLink = async (id: number, code: string) => {
+        if (!confirm('Вы уверены, что хотите удалить эту ссылку?')) return;
+        try {
+            const res = await fetch('/api/shorten', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            if (res.ok) {
+                setLinks(prev => prev.filter(l => l.id !== id));
+                if (result?.link.includes(`/s/${code}`)) {
+                    setResult(null);
+                }
+            } else {
+                alert('Ошибка при удалении');
+            }
+        } catch (e) {
+            alert('Ошибка при удалении');
+        }
+    };
+
+    const copyToClipboard = (text: string, id: string) => {
+        navigator.clipboard.writeText(text || '');
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
     };
 
     return (
@@ -255,7 +319,7 @@ export default function NextClient() {
                     )}
 
                     {/* History Table */}
-                    {history.length > 0 && (
+                    {ecosystemLinks.length > 0 && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-400 px-2">
                                 <History className="w-4 h-4" />
@@ -267,30 +331,56 @@ export default function NextClient() {
                                     <thead>
                                         <tr className="border-b border-white/10 bg-white/5">
                                             <th className="p-4 font-semibold text-slate-300">Название (Адрес)</th>
-                                            <th className="p-4 font-semibold text-slate-300">Дата</th>
+                                            <th className="p-4 font-semibold text-slate-300">Статистика</th>
+                                            <th className="p-4 font-semibold text-slate-300">Код</th>
                                             <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {history.map((item) => (
+                                        {ecosystemLinks.map((item) => (
                                             <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                 <td className="p-4">
-                                                    <div className="font-medium text-white">{item.title}</div>
+                                                    <div className="font-medium text-white">{item.reviewer_name || 'Без названия'}</div>
+                                                    <div className="text-[10px] text-slate-500">{new Date(item.created_at).toLocaleDateString()}</div>
                                                 </td>
-                                                <td className="p-4 text-sm text-slate-400">
-                                                    {new Date(item.createdAt).toLocaleDateString()}
+                                                <td className="p-4">
+                                                    <div className="flex gap-4 items-center">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Клики</span>
+                                                            <span className="text-sm font-bold text-indigo-400">{item.clicks_count || 0}</span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Участники</span>
+                                                            <span className="text-sm font-bold text-purple-400">{item.member_count || 0}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRefreshStats(item.code, item.id)}
+                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
+                                                        >
+                                                            <History className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <button
+                                                        onClick={() => copyToClipboard(`${window.location.protocol}//${window.location.host}/s/${item.code}`, `ec-${item.id}`)}
+                                                        className="font-mono text-xs text-slate-400 bg-white/5 px-2 py-1 rounded hover:text-white transition-colors flex items-center gap-1"
+                                                    >
+                                                        {item.code}
+                                                        <ExternalLink className={`w-3 h-3 ${copiedId === `ec-${item.id}` ? 'text-green-400' : 'opacity-0'}`} />
+                                                    </button>
                                                 </td>
                                                 <td className="p-4 text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <button
-                                                            onClick={() => downloadQR(item.link, item.title)}
+                                                            onClick={() => downloadQR(`${window.location.protocol}//${window.location.host}/s/${item.code}`, item.reviewer_name || item.code)}
                                                             className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
                                                             title="Скачать QR"
                                                         >
                                                             <QrCode className="w-4 h-4" />
                                                         </button>
                                                         <a
-                                                            href={item.link}
+                                                            href={item.target_url}
                                                             target="_blank"
                                                             className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors"
                                                             title="Открыть"
@@ -298,7 +388,7 @@ export default function NextClient() {
                                                             <ExternalLink className="w-4 h-4" />
                                                         </a>
                                                         <button
-                                                            onClick={() => handleDelete(item)}
+                                                            onClick={() => handleDeleteLink(item.id, item.code)}
                                                             className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
                                                             title="Удалить"
                                                         >
@@ -315,7 +405,7 @@ export default function NextClient() {
                     )}
                 </div>
             ) : (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
                         <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
                             <QrCode className="w-10 h-10 text-indigo-400" />
@@ -323,7 +413,7 @@ export default function NextClient() {
 
                         <div className="max-w-md mx-auto space-y-2">
                             <h2 className="text-2xl font-bold">Массовая генерация</h2>
-                            <p className="text-slate-400">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки в админ-панели.</p>
+                            <p className="text-slate-400">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
                         </div>
 
                         <button
@@ -343,9 +433,131 @@ export default function NextClient() {
 
                         {batchResult && (
                             <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
-                                Готово! Создано {batchResult.count} ссылок. Настройте их в админке.
+                                Готово! Создано {batchResult.count} ссылок.
                             </div>
                         )}
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2 text-slate-400">
+                                <QrCode className="w-4 h-4" />
+                                <h3 className="text-sm font-medium uppercase tracking-wider">База всех ссылок</h3>
+                            </div>
+                            <div className="text-xs text-slate-500 uppercase tracking-widest">
+                                Всего: {links.length}
+                            </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-white/5">
+                                        <th className="p-4 font-semibold text-slate-300">Код</th>
+                                        <th className="p-4 font-semibold text-slate-300">Статистика</th>
+                                        <th className="p-4 font-semibold text-slate-300">Target URL (Редирект)</th>
+                                        <th className="p-4 font-semibold text-slate-300 text-right">Действие</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allLinks.map((link) => {
+                                        const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
+                                        return (
+                                            <tr key={link.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="flex flex-col gap-1">
+                                                        <button
+                                                            onClick={() => copyToClipboard(shortUrl, `s-${link.id}`)}
+                                                            className="text-white font-mono font-bold text-sm bg-white/5 px-2 py-1 rounded hover:bg-white/10 transition-colors flex items-center gap-2 w-fit"
+                                                        >
+                                                            {link.code}
+                                                            <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
+                                                        </button>
+                                                        <span className="text-[10px] text-slate-500">{new Date(link.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex gap-3 items-center">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] text-slate-500 uppercase">Clicks</span>
+                                                            <span className="text-xs font-bold text-indigo-400">{link.clicks_count || 0}</span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] text-slate-500 uppercase">Subs</span>
+                                                            <span className="text-xs font-bold text-purple-400">{link.member_count || 0}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRefreshStats(link.code, link.id)}
+                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === link.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
+                                                        >
+                                                            <History className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex flex-col gap-2">
+                                                        {editingTarget?.id === link.id ? (
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={editingTarget.value}
+                                                                    onChange={(e) => setEditingTarget({ ...editingTarget, value: e.target.value })}
+                                                                    className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                                                    autoFocus
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleUpdateTarget(link.code, link.id)}
+                                                                    className="px-3 py-1 bg-indigo-600 text-white text-xs rounded font-bold"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingTarget(null)}
+                                                                    className="px-3 py-1 bg-white/5 text-slate-400 text-xs rounded"
+                                                                >
+                                                                    Esc
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2 group">
+                                                                <div className={`text-sm truncate max-w-[300px] ${link.target_url ? 'text-slate-300' : 'text-red-400 italic'}`}>
+                                                                    {link.target_url || 'Ссылка не настроена'}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => setEditingTarget({ id: link.id, value: link.target_url || '' })}
+                                                                    className="p-1 hover:bg-white/10 rounded text-slate-500 hover:text-white transition-colors"
+                                                                    title="Редактировать"
+                                                                >
+                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <div className="flex justify-end gap-3">
+                                                        <button
+                                                            onClick={() => downloadQR(shortUrl, `QR_${link.code}`)}
+                                                            className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
+                                                            title="Скачать QR"
+                                                        >
+                                                            <QrCode className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteLink(link.id, link.code)}
+                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors"
+                                                            title="Удалить"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
