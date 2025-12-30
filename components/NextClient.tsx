@@ -6,7 +6,10 @@ import {
     Loader2, Send, QrCode, Download, History as HistoryIcon,
     MessageSquare, ExternalLink, Trash2, Search,
     Link as LinkIcon, Link2Off, MapPin, Edit3, CheckCircle2,
-    Clock, AlertCircle, List, Map as MapIcon, Globe, Printer
+    Clock,
+    CheckSquare,
+    X,
+    AlertCircle, List, Map as MapIcon, Globe, Printer
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -64,6 +67,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [batchInput, setBatchInput] = useState("");
     const [batchInterval, setBatchInterval] = useState(15);
     const [scoutedAddresses, setScoutedAddresses] = useState<any[]>([]);
+    const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -625,6 +629,35 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         }
     };
 
+    const handleBulkUpdateStatus = async (newStatus: string) => {
+        if (selectedIds.size === 0 || !newStatus) return;
+        if (!confirm(`Изменить статус для ${selectedIds.size} элементов на "${newStatus}"?`)) return;
+
+        setLoading(true);
+        const selectedLinks = links.filter(l => selectedIds.has(l.id));
+
+        try {
+            await Promise.all(selectedLinks.map(link =>
+                fetch(`/api/links/${link.code}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                })
+            ));
+
+            setLinks(prev => prev.map(l =>
+                selectedIds.has(l.id) ? { ...l, status: newStatus } : l
+            ));
+
+            alert('Статусы обновлены');
+            setSelectedIds(new Set());
+        } catch (e: any) {
+            alert('Ошибка при массовом обновлении: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleDeleteEcosystem = async (tgChatId: string, codes: string[]) => {
         if (!confirm('Отвязать все QR-коды от этой группы? Сами ссылки останутся.')) return;
         try {
@@ -666,6 +699,50 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         } catch (e) {
             alert('Ошибка при удалении');
         }
+    };
+
+    const handleDeleteQueueItem = async (id: number) => {
+        if (!confirm('Удалить этот чат из очереди?')) return;
+        try {
+            const res = await fetch('/api/queue', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            if (res.ok) {
+                setQueue(prev => prev.filter(q => q.id !== id));
+            }
+        } catch (e) {
+            alert('Ошибка при удалении');
+        }
+    };
+
+    const handleUpdateQueueItem = async (item: QueueItem) => {
+        try {
+            const res = await fetch('/api/queue', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: item.id,
+                    title: item.title,
+                    district: item.district
+                })
+            });
+            if (res.ok) {
+                setQueue(prev => prev.map(q => q.id === item.id ? item : q));
+                setEditingQueueItem(null);
+            }
+        } catch (e) {
+            alert('Ошибка при обновлении');
+        }
+    };
+
+    const handleUpdateScouted = (index: number, updates: any) => {
+        setScoutedAddresses(prev => prev.map((a, i) => i === index ? { ...a, ...updates } : a));
+    };
+
+    const handleDeleteScouted = (index: number) => {
+        setScoutedAddresses(prev => prev.filter((_, i) => i !== index));
     };
 
     const copyToClipboard = (text: string, id: string) => {
@@ -988,6 +1065,48 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         </div>
 
                         <MapScout onAddressesFound={setScoutedAddresses} />
+
+                        {scoutedAddresses.length > 0 && (
+                            <div className="mt-8 space-y-4 text-left">
+                                <div className="flex items-center justify-between px-2">
+                                    <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Предпросмотр адресов для очереди</h3>
+                                    <button onClick={() => setScoutedAddresses([])} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition-all">Очистить список</button>
+                                </div>
+                                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {scoutedAddresses.map((addr, idx) => (
+                                        <div key={idx} className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group transition-all hover:border-white/20">
+                                            <div className="flex-1 w-full space-y-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Название / Адрес</span>
+                                                    <input
+                                                        value={addr.title}
+                                                        onChange={(e) => handleUpdateScouted(idx, { title: e.target.value })}
+                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="w-full md:w-64 space-y-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Район</span>
+                                                    <input
+                                                        value={addr.district || ""}
+                                                        onChange={(e) => handleUpdateScouted(idx, { district: e.target.value })}
+                                                        placeholder="Не указан"
+                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteScouted(idx)}
+                                                className="p-3 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all self-end md:self-center"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -1007,7 +1126,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 value={batchInput}
                                 onChange={(e) => setBatchInput(e.target.value)}
                                 placeholder="ЖК Риверсайд | Приморский&#10;ЖК Квартал | Центральный"
-                                className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white"
                             />
 
                             <div className="flex items-center justify-between gap-4">
@@ -1052,36 +1171,56 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 </div>
 
                                 <div className="grid gap-2">
-                                    {queue.slice(0, 5).map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold">{item.title}</span>
-                                                <span className="text-[10px] text-slate-500">{item.district}</span>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex flex-col text-right">
-                                                    <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
-                                                    <span className="text-xs font-mono text-indigo-400">
-                                                        {new Date(item.scheduled_at).toLocaleTimeString()}
-                                                    </span>
+                                    {queue.slice(0, 10).map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group">
+                                            {editingQueueItem?.id === item.id ? (
+                                                <div className="flex-1 flex gap-2">
+                                                    <input
+                                                        className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                        value={editingQueueItem.title}
+                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, title: e.target.value })}
+                                                    />
+                                                    <input
+                                                        className="w-32 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                        value={editingQueueItem.district}
+                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, district: e.target.value })}
+                                                    />
+                                                    <button onClick={() => handleUpdateQueueItem(editingQueueItem)} className="text-green-500 hover:text-green-400 p-1"><CheckSquare className="w-4 h-4" /></button>
+                                                    <button onClick={() => setEditingQueueItem(null)} className="text-slate-500 hover:text-slate-400 p-1"><X className="w-4 h-4" /></button>
                                                 </div>
-                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
-                                                    item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                        'bg-slate-500/20 text-slate-500'
-                                                    }`}>
-                                                    {item.status === 'pending' ? 'ОЖИДАЕТ' : item.status === 'processing' ? 'В РАБОТЕ' : 'ОШИБКА'}
-                                                </span>
-                                                {item.status === 'failed' && (
-                                                    <div title={item.error}>
-                                                        <AlertCircle className="w-4 h-4 text-red-500" />
+                                            ) : (
+                                                <>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-white">{item.title}</span>
+                                                        <span className="text-[10px] text-slate-500">{item.district}</span>
                                                     </div>
-                                                )}
-                                            </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex flex-col text-right">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
+                                                            <span className="text-xs font-mono text-indigo-400">
+                                                                {new Date(item.scheduled_at).toLocaleTimeString()}
+                                                            </span>
+                                                        </div>
+                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
+                                                            item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                                'bg-slate-500/20 text-slate-500'
+                                                            }`}>
+                                                            {item.status}
+                                                        </span>
+                                                        {item.status === 'pending' && (
+                                                            <div className="hidden group-hover:flex items-center gap-1">
+                                                                <button onClick={() => setEditingQueueItem(item)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
+                                                                <button onClick={() => handleDeleteQueueItem(item.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
-                                    {queue.length > 5 && (
+                                    {queue.length > 10 && (
                                         <div className="text-center text-[10px] text-slate-600 uppercase tracking-widest pt-2">
-                                            И еще {queue.length - 5} чатов впереди...
+                                            И еще {queue.length - 10} чатов впереди...
                                         </div>
                                     )}
                                 </div>
@@ -1116,13 +1255,33 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                             </button>
 
                             {selectedIds.size > 0 && (
-                                <button
-                                    onClick={handlePrintSelected}
-                                    className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
-                                >
-                                    <Printer className="w-6 h-6" />
-                                    Печать ({selectedIds.size})
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative group">
+                                        <select
+                                            onChange={(e) => handleBulkUpdateStatus(e.target.value)}
+                                            value=""
+                                            className="h-16 px-6 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-sm border-none outline-none appearance-none cursor-pointer"
+                                        >
+                                            <option value="" disabled>Сменить статус ({selectedIds.size})</option>
+                                            <option value="не распечатан">не распечатан</option>
+                                            <option value="распечатан">распечатан</option>
+                                            <option value="не подключен">не подключен</option>
+                                            <option value="подключен">подключен</option>
+                                            <option value="архив">архив</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
+                                            <Edit3 className="w-4 h-4" />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handlePrintSelected}
+                                        className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
+                                    >
+                                        <Printer className="w-6 h-6" />
+                                        Печать
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -1144,7 +1303,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
@@ -1185,7 +1344,6 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
                                                         </button>
 
-                                                        {/* Status Selector */}
                                                         <div className="flex items-center gap-2">
                                                             <select
                                                                 value={link.status || 'не распечатан'}
@@ -1212,29 +1370,29 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
-                                                    <div className="flex flex-col gap-1.5">
+                                                    <div className="flex flex-col gap-1.5 text-left">
                                                         {editingGroup?.id === link.id ? (
                                                             <div className="space-y-2 p-3 bg-slate-900/50 rounded-xl border border-indigo-500/30">
                                                                 <input
                                                                     placeholder="Chat ID (напр: -100...)"
                                                                     value={editingGroup.tgChatId}
                                                                     onChange={(e) => setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <input
                                                                     placeholder="Название группы"
                                                                     value={editingGroup.title}
                                                                     onChange={(e) => setEditingGroup({ ...editingGroup, title: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <input
                                                                     placeholder="Район"
                                                                     value={editingGroup.district}
                                                                     onChange={(e) => setEditingGroup({ ...editingGroup, district: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none"
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <div className="flex gap-2">
-                                                                    <button onClick={() => handleUpdateGroup(link.code, link.id)} className="flex-1 py-1 px-2 bg-indigo-600 text-white text-[10px] rounded font-bold">Safe</button>
+                                                                    <button onClick={() => handleUpdateGroup(link.code, link.id)} className="flex-1 py-1 px-2 bg-indigo-600 text-white text-[10px] rounded font-bold">Save</button>
                                                                     <button onClick={() => setEditingGroup(null)} className="py-1 px-3 bg-white/5 text-slate-500 text-[10px] rounded">Cancel</button>
                                                                 </div>
                                                             </div>
@@ -1267,14 +1425,14 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
-                                                    <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-2 text-left">
                                                         {editingTarget?.id === link.id ? (
                                                             <div className="flex gap-2">
                                                                 <input
                                                                     type="text"
                                                                     value={editingTarget.value}
                                                                     onChange={(e) => setEditingTarget({ ...editingTarget, value: e.target.value })}
-                                                                    className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                                                    className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-white"
                                                                     autoFocus
                                                                 />
                                                                 <button

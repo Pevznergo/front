@@ -57,4 +57,55 @@ export async function GET(req: NextRequest) {
     }
 }
 
+export async function PATCH(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.email !== "pevznergo@gmail.com") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id, title, district, scheduledAt } = await req.json();
+
+    if (!id) {
+        return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    await initDatabase();
+
+    try {
+        await sql`
+            UPDATE chat_creation_queue 
+            SET 
+                title = COALESCE(${title}, title),
+                district = COALESCE(${district}, district),
+                scheduled_at = COALESCE(${scheduledAt}, scheduled_at)
+            WHERE id = ${id}
+        `;
+        return NextResponse.json({ success: true });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.email !== "pevznergo@gmail.com") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await req.json();
+
+    if (!id) {
+        return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    await initDatabase();
+
+    try {
+        await sql`DELETE FROM chat_creation_queue WHERE id = ${id}`;
+        return NextResponse.json({ success: true });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
 export const dynamic = "force-dynamic";
