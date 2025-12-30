@@ -68,6 +68,8 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [batchInterval, setBatchInterval] = useState(15);
     const [scoutedAddresses, setScoutedAddresses] = useState<any[]>([]);
     const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
+    const [nextTask, setNextTask] = useState<{ title: string, scheduled_at: string } | null>(null);
+    const [countdown, setCountdown] = useState<string | null>(null);
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -139,12 +141,45 @@ export default function NextClient({ initialLinks }: NextClientProps) {
             const res = await fetch("/api/queue");
             if (res.ok) {
                 const data = await res.json();
-                setQueue(data);
+                if (data.items) {
+                    setQueue(data.items);
+                    setNextTask(data.nextTask);
+                } else {
+                    setQueue(data); // Fallback for old API if any
+                }
             }
         } catch (e) {
             console.error("Failed to fetch queue", e);
         }
     };
+
+    // Countdown logic
+    useEffect(() => {
+        if (!nextTask) {
+            setCountdown(null);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            const now = new Date();
+            const scheduled = new Date(nextTask.scheduled_at);
+            const diffMs = scheduled.getTime() - now.getTime();
+
+            if (diffMs <= 0) {
+                setCountdown("в обработке...");
+                // Fetch queue to see if it moved
+                fetchQueue();
+                clearInterval(timer);
+            } else {
+                const totalSeconds = Math.floor(diffMs / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                setCountdown(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [nextTask]);
 
     // We no longer use localStorage history since we have DB-backed initialLinks
     useEffect(() => {
@@ -922,7 +957,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 </div>
                                 <div className="flex-1 text-left space-y-4">
                                     <div>
-                                        <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center justify-between mb-2">
                                             <h3 className="text-sm font-semibold text-slate-400">Очередь создания ({queue.length})</h3>
                                             <button
                                                 onClick={handleProcessQueue}
@@ -933,6 +968,12 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                 Обработать сейчас
                                             </button>
                                         </div>
+                                        {countdown && (
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-4 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                                Следующий чат ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                            </div>
+                                        )}
                                         <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
                                     </div>
 
@@ -1232,10 +1273,26 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         {queue.length > 0 && (
                             <div className="max-w-4xl mx-auto mt-12 space-y-4 text-left">
                                 <div className="flex items-center justify-between px-2">
-                                    <div className="flex items-center gap-2 text-slate-400">
-                                        <Clock className="w-4 h-4" />
-                                        <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 text-slate-400">
+                                            <Clock className="w-4 h-4" />
+                                            <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
+                                        </div>
+                                        {countdown && (
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                                Следующий ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                            </div>
+                                        )}
                                     </div>
+                                    <button
+                                        onClick={handleProcessQueue}
+                                        disabled={batchLoading}
+                                        className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold rounded-xl transition-all flex items-center gap-2"
+                                    >
+                                        {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                        Обработать сейчас
+                                    </button>
                                 </div>
 
                                 <div className="grid gap-2">

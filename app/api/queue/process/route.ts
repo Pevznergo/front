@@ -19,51 +19,68 @@ export async function GET(req: NextRequest) {
     const force = req.nextUrl.searchParams.get("force") === "true";
 
     try {
-        // 1. Find the oldest pending task
-        // If force is true, we ignore scheduled_at
         const now = new Date();
-        let pendingTasks: any[];
 
-        if (force) {
-            pendingTasks = await sql`
-                SELECT * FROM chat_creation_queue 
-                WHERE status = 'pending' 
-                ORDER BY scheduled_at ASC 
-                LIMIT 1
-            `;
-        } else {
-            pendingTasks = await sql`
-                SELECT * FROM chat_creation_queue 
-                WHERE status = 'pending' 
-                AND scheduled_at <= ${now} 
-                ORDER BY scheduled_at ASC 
-                LIMIT 1
-            `;
-        }
+        // 1. Find the oldest pending task
+        const pendingTasks = await sql`
+            SELECT * FROM chat_creation_queue 
+            WHERE status = 'pending' 
+            ORDER BY scheduled_at ASC 
+            LIMIT 1
+        `;
 
         if (pendingTasks.length === 0) {
-            return NextResponse.json({ message: "No pending tasks due" });
+            return NextResponse.json({ message: "No pending tasks" });
         }
 
         const task = pendingTasks[0];
-
-        // 2. Mark as processing
-        await sql`UPDATE chat_creation_queue SET status = 'processing' WHERE id = ${task.id}`;
+        const scheduledTime = new Date(task.scheduled_at);
+        const diffMs = scheduledTime.getTime() - now.getTime();
 
         const protocol = req.headers.get("x-forwarded-proto") || "http";
         const host = req.headers.get("host");
         const baseUrl = `${protocol}://${host}`;
-        const triggerNext = () => {
-            const secretParam = secret ? `?secret=${secret}` : "";
-            fetch(`${baseUrl}/api/queue/process${secretParam}`).catch(e => console.error("Self-trigger error:", e));
+
+        const triggerNext = (delayMs = 0) => {
+            const secretParam = secret ? `&secret=${secret}` : "";
+            // Use a cache-busting timestamp
+            const url = `${baseUrl}/api/queue/process?t=${Date.now()}${secretParam}`;
+
+            if (delayMs > 0) {
+                console.log(`Scheduling next run in ${delayMs}ms`);
+                setTimeout(() => {
+                    fetch(url).catch(e => console.error("Self-trigger error:", e));
+                }, delayMs);
+            } else {
+                fetch(url).catch(e => console.error("Self-trigger error:", e));
+            }
         };
 
+        // 2. Decide what to do based on timing
+        if (!force && diffMs > 0) {
+            if (diffMs < 15000) {
+                // Short wait: server-side sleep
+                await new Promise(resolve => setTimeout(resolve, diffMs));
+            } else {
+                // Long wait: return and wake up later
+                triggerNext(diffMs + 1000);
+                return NextResponse.json({
+                    message: `Next task scheduled for later`,
+                    nextTaskIn: Math.round(diffMs / 1000),
+                    status: "waiting",
+                    title: task.title
+                });
+            }
+        }
+
+        // 3. Process the task
+        await sql`UPDATE chat_creation_queue SET status = 'processing' WHERE id = ${task.id}`;
+
         try {
-            // 2.5 Just-in-time duplication check
             const alreadyExists = await sql`SELECT id FROM short_links WHERE reviewer_name = ${task.title}`;
             if (alreadyExists.length > 0) {
                 await sql`UPDATE chat_creation_queue SET status = 'completed', error = 'Already exists in short_links' WHERE id = ${task.id}`;
-                triggerNext(); // Check for next task since this one was skipped
+                triggerNext(1000);
                 return NextResponse.json({
                     success: true,
                     message: "Skipped: already exists",
@@ -71,17 +88,15 @@ export async function GET(req: NextRequest) {
                 });
             }
 
-            // 3. Execute creation
             const result = await createEcosystem(task.title, task.district);
 
-            // 4. Mark as completed
             await sql`
                 UPDATE chat_creation_queue 
                 SET status = 'completed', error = NULL 
                 WHERE id = ${task.id}
             `;
 
-            triggerNext(); // Successfully finished one, check if more are due
+            triggerNext(3000); // 3s pause before next
 
             return NextResponse.json({
                 success: true,
@@ -91,14 +106,12 @@ export async function GET(req: NextRequest) {
 
         } catch (error: any) {
             console.error(`Queue processing error for task ${task.id}:`, error);
-
-            // 5. Mark as failed
             await sql`
                 UPDATE chat_creation_queue 
                 SET status = 'failed', error = ${error.message} 
                 WHERE id = ${task.id}
             `;
-
+            triggerNext(10000); // 10s pause after error
             return NextResponse.json({
                 success: false,
                 taskId: task.id,

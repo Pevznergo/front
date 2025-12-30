@@ -79,7 +79,18 @@ export async function GET(req: NextRequest) {
             WHERE status != 'completed' 
             ORDER BY scheduled_at ASC
         `;
-        return NextResponse.json(queue);
+
+        const nextTask = await sql`
+            SELECT title, scheduled_at FROM chat_creation_queue 
+            WHERE status = 'pending' 
+            ORDER BY scheduled_at ASC 
+            LIMIT 1
+        `;
+
+        return NextResponse.json({
+            items: queue,
+            nextTask: nextTask[0] || null
+        });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
