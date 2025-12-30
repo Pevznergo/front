@@ -48,6 +48,23 @@ export async function createEcosystem(title: string, district: string | null) {
 
     await client.invoke(new Api.channels.CreateForumTopic({ channel, title: "🛠 Услуги" }));
 
+    const adminTopicResult = await client.invoke(
+        new Api.channels.CreateForumTopic({
+            channel: channel,
+            title: "‼️ ВЫБОР АДМИНА",
+        })
+    ) as any;
+
+    const adminTopicId = adminTopicResult?.updates?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id
+        || adminTopicResult?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id;
+
+    if (adminTopicId) {
+        await client.sendMessage(channel, {
+            message: "Кто пригласит больше всех соседей в чат, тот станет Администратором! 🏆\n\nПриглашать можно в настройках группы (нажмите на название чата -> Добавить участников). \n\nМы отслеживаем количество приглашенных и объявим результат!",
+            replyTo: adminTopicId
+        });
+    }
+
     // 4. Generate Invite Link
     const inviteLinkResult = await client.invoke(
         new Api.messages.ExportChatInvite({ peer: channel })

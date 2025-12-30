@@ -42,6 +42,14 @@ function MapEvents({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLngBounds
     return null;
 }
 
+function ChangeView({ center }: { center: [number, number] }) {
+    const map = useMap();
+    useEffect(() => {
+        map.setView(center, map.getZoom());
+    }, [center, map]);
+    return null;
+}
+
 export default function MapScout({ onAddressesFound }: MapScoutProps) {
     const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
     const [loading, setLoading] = useState(false);
@@ -105,43 +113,84 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
         setDeselected(new Set());
     };
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searching, setSearching] = useState(false);
+    const [mapCenter, setMapCenter] = useState<[number, number]>([59.9343, 30.3351]);
+
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) return;
+        setSearching(true);
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const { lat, lon } = data[0];
+                setMapCenter([parseFloat(lat), parseFloat(lon)]);
+            }
+        } catch (e) {
+            console.error("Search error:", e);
+        } finally {
+            setSearching(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-[600px] border border-white/10 rounded-3xl overflow-hidden bg-slate-900/50">
             {/* Control Panel */}
-            <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between gap-4">
-                <div className="flex-1 max-w-sm relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                        placeholder="Название района для очереди (напр. Приморский)"
-                        value={selectedDistrict}
-                        onChange={(e) => setSelectedDistrict(e.target.value)}
-                        className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    />
-                </div>
+            <div className="p-4 bg-white/5 border-b border-white/10 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 max-w-sm relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                            placeholder="Поиск адреса (напр. Невский 1)"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                        <button
+                            onClick={handleSearch}
+                            disabled={searching}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-lg text-indigo-400 disabled:opacity-50"
+                        >
+                            {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                        </button>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                    {found.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-tighter bg-indigo-500/10 px-3 py-2 rounded-xl">
-                                Выбрано: {found.length - deselected.size}
-                            </span>
-                            <button
-                                onClick={handleRemoveAll}
-                                className="p-2 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-xl transition-all"
-                                title="Очистить список"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    )}
-                    <button
-                        onClick={handleExtract}
-                        disabled={loading}
-                        className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                        Собрать адреса
-                    </button>
+                    <div className="flex-1 max-w-sm relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                            placeholder="Название района для очереди (напр. Приморский)"
+                            value={selectedDistrict}
+                            onChange={(e) => setSelectedDistrict(e.target.value)}
+                            className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {found.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-indigo-400 uppercase tracking-tighter bg-indigo-500/10 px-3 py-2 rounded-xl">
+                                    Выбрано: {found.length - deselected.size}
+                                </span>
+                                <button
+                                    onClick={handleRemoveAll}
+                                    className="p-2 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-xl transition-all"
+                                    title="Очистить список"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                        <button
+                            onClick={handleExtract}
+                            disabled={loading}
+                            className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                            Собрать адреса
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -179,10 +228,11 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
                 {/* Map */}
                 <div className="flex-1 relative">
                     <MapContainer
-                        center={[59.9343, 30.3351]} // St. Petersburg focal
+                        center={mapCenter}
                         zoom={15}
                         style={{ height: "100%", width: "100%" }}
                     >
+                        <ChangeView center={mapCenter} />
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

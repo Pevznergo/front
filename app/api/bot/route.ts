@@ -12,7 +12,40 @@ function getBot() {
 
     bot = new Bot(token);
 
-    // Bot logic
+    // Bot logic - Invite tracking
+    bot.on("message:new_chat_members", async (ctx) => {
+        const chatId = ctx.chat.id.toString();
+        const inviter = ctx.from;
+        const newMembers = ctx.message.new_chat_members;
+
+        if (!inviter || !newMembers) return;
+
+        // Don't count if someone joined by themselves (though this event usually implies being added)
+        // If they join via link, they are the 'from' and also in 'new_chat_members'.
+        // We want to track ADDITIONS, so if inviter is in newMembers, it's a self-join.
+        const isSelfJoin = newMembers.some(m => m.id === inviter.id);
+        if (isSelfJoin) return;
+
+        try {
+            await initDatabase();
+            const inviterId = inviter.id.toString();
+            const inviterName = inviter.username ? `@${inviter.username}` : `${inviter.first_name || ""} ${inviter.last_name || ""}`.trim() || "User";
+
+            await sql`
+                INSERT INTO invite_stats (chat_id, user_id, user_name, invite_count)
+                VALUES (${chatId}, ${inviterId}, ${inviterName}, ${newMembers.length})
+                ON CONFLICT (chat_id, user_id) 
+                DO UPDATE SET 
+                    invite_count = invite_stats.invite_count + EXCLUDED.invite_count,
+                    user_name = EXCLUDED.user_name,
+                    updated_at = CURRENT_TIMESTAMP
+            `;
+        } catch (e) {
+            console.error("Invite tracking error:", e);
+        }
+    });
+
+    // Bot logic - Forwarding
     bot.on("message", async (ctx) => {
         const topicId = ctx.message.message_thread_id;
         const chatId = ctx.chat.id.toString();
