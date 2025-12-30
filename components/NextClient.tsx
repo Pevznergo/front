@@ -9,6 +9,7 @@ import {
     Clock,
     CheckSquare,
     X,
+    ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play
 } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -70,25 +71,53 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
     const [nextTask, setNextTask] = useState<{ title: string, scheduled_at: string } | null>(null);
     const [countdown, setCountdown] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен'>('all');
+    const [groupSearchTerm, setGroupSearchTerm] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 50;
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
-        if (!searchTerm) return list;
-        const low = searchTerm.toLowerCase();
-        return list.filter(l =>
-            l.code.toLowerCase().includes(low) ||
-            (l.reviewer_name || "").toLowerCase().includes(low) ||
-            (l.district || "").toLowerCase().includes(low) ||
-            (l.target_url || "").toLowerCase().includes(low)
-        );
+        let filtered = list;
+
+        // 1. Text search (code, title, district, url)
+        if (searchTerm) {
+            const low = searchTerm.toLowerCase();
+            filtered = filtered.filter(l =>
+                l.code.toLowerCase().includes(low) ||
+                (l.reviewer_name || "").toLowerCase().includes(low) ||
+                (l.district || "").toLowerCase().includes(low) ||
+                (l.target_url || "").toLowerCase().includes(low)
+            );
+        }
+
+        // 2. Status filter
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(l => l.status === statusFilter);
+        }
+
+        // 3. Group Search (filter by ecosystem title)
+        if (groupSearchTerm) {
+            const lowGroup = groupSearchTerm.toLowerCase();
+            filtered = filtered.filter(l => (l.reviewer_name || "").toLowerCase().includes(lowGroup));
+        }
+
+        return filtered;
     };
 
     const allLinks = filterLinks(links);
 
     const filterByStuck = (list: any[]) => {
-        if (stuckFilter === 'all') return list;
-        return list.filter(l => stuckFilter === 'stuck' ? l.is_stuck : !l.is_stuck);
+        let filtered = list;
+        if (stuckFilter !== 'all') {
+            filtered = filtered.filter(l => stuckFilter === 'stuck' ? l.is_stuck : !l.is_stuck);
+        }
+        return filtered;
     };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, stuckFilter, statusFilter, groupSearchTerm]);
 
     // Grouping logic for Ecosystems
     const ecosystemMap: Record<string, {
@@ -131,10 +160,13 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         codes: e.codes,
         target_url: links.find(l => l.tg_chat_id === e.tg_chat_id)?.target_url || '',
         is_stuck: links.some(l => l.tg_chat_id === e.tg_chat_id && l.is_stuck),
+        status: links.find(l => l.tg_chat_id === e.tg_chat_id)?.status || 'активен', // Added status for ecosystem
         created_at: new Date().toISOString()
     } as any)) as any);
 
     const filteredEcosystems = filterByStuck(ecosystemLinks);
+    const totalPages = Math.ceil(filteredEcosystems.length / ITEMS_PER_PAGE);
+    const paginatedEcosystems = filteredEcosystems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const fetchQueue = async () => {
         try {
@@ -341,9 +373,9 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                         Чат нашего дома
                                     </h1>
                                     <ul class="features">
-                                        <li>• Без УК</li>
-                                        <li>• Барахолка района</li>
-                                        <li>• Скидки района</li>
+                                        <li>Без УК</li>
+                                        <li>Барахолка района</li>
+                                        <li>Скидки района</li>
                                     </ul>
                                     <div class="cta">
                                         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -428,7 +460,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     .main-title {
                         margin: 0;
                         padding: 0;
-                        font-size: 13px;
+                        font-size: 11.5px;
                         font-weight: 800;
                         line-height: 1;
                         text-transform: uppercase;
@@ -447,8 +479,8 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         margin: 0;
                         padding: 0;
                         list-style: none;
-                        font-size: 9px;
-                        line-height: 1.4;
+                        font-size: 11px;
+                        line-height: 1.2;
                         font-weight: 600;
                         color: #333;
                         margin-bottom: 2mm;
@@ -1020,25 +1052,60 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     <HistoryIcon className="w-4 h-4" />
                                     <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
                                 </div>
-                                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter">
+                                <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
                                     <button
                                         onClick={() => setStuckFilter('all')}
-                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
+                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                                     >
                                         Все
                                     </button>
                                     <button
                                         onClick={() => setStuckFilter('stuck')}
-                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'stuck' ? 'bg-green-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
+                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'stuck' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20' : 'text-slate-500 hover:text-slate-300'}`}
                                     >
                                         Оклеены
                                     </button>
                                     <button
                                         onClick={() => setStuckFilter('not_stuck')}
-                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'not_stuck' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
+                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'not_stuck' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/20' : 'text-slate-500 hover:text-slate-300'}`}
                                     >
                                         Не оклеены
                                     </button>
+                                </div>
+
+                                <div className="flex flex-1 items-center gap-2">
+                                    <div className="relative flex-1 group">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                                        <input
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            placeholder="Поиск по коду/адресу..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                        />
+                                    </div>
+
+                                    <div className="relative w-48 group">
+                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                                        <input
+                                            value={groupSearchTerm}
+                                            onChange={(e) => setGroupSearchTerm(e.target.value)}
+                                            placeholder="По Группе..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                        />
+                                    </div>
+
+                                    <div className="relative shrink-0">
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider outline-none cursor-pointer hover:bg-white/10"
+                                        >
+                                            <option value="all" className="bg-slate-900">СТАТУС: ЛЮБОЙ</option>
+                                            <option value="активен" className="bg-slate-900">АКТИВЕН</option>
+                                            <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
+                                            <option value="приклеен" className="bg-slate-900">ПРИКЛЕЕН</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1053,7 +1120,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredEcosystems.map((item: any) => (
+                                        {paginatedEcosystems.map((item: any) => (
                                             <tr key={item.tg_chat_id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1">
@@ -1163,6 +1230,32 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     </tbody >
                                 </table >
                             </div >
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
+                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                                        Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalPages}</span>
+                                        <span className="ml-2 text-slate-600">({filteredEcosystems.length} всего)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                            className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div >
                     )}
                 </div >
