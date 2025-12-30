@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, useMap, Marker, Popup, Rectangle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Search, MapPin, Loader2, Send, Check } from "lucide-react";
+import { Search, MapPin, Loader2, Send, Check, X, Square, CheckSquare, Trash2 } from "lucide-react";
 
 // Fix Leaflet marker icons
 if (typeof window !== "undefined") {
@@ -46,6 +46,7 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
     const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
     const [loading, setLoading] = useState(false);
     const [found, setFound] = useState<Address[]>([]);
+    const [deselected, setDeselected] = useState<Set<string>>(new Set());
     const [selectedDistrict, setSelectedDistrict] = useState("");
 
     const handleExtract = async () => {
@@ -67,6 +68,7 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
             const data = await res.json();
             if (res.ok) {
                 setFound(data.addresses);
+                setDeselected(new Set()); // Reset on new extract
                 onAddressesFound(data.addresses.map((a: Address) => ({
                     ...a,
                     district: selectedDistrict
@@ -77,6 +79,30 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
         } finally {
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        const filtered = found.filter(a => !deselected.has(a.title));
+        onAddressesFound(filtered.map(a => ({ ...a, district: selectedDistrict })));
+    }, [selectedDistrict, found, deselected, onAddressesFound]);
+
+    const toggleAddress = (title: string) => {
+        const newDeselected = new Set(deselected);
+        if (newDeselected.has(title)) {
+            newDeselected.delete(title);
+        } else {
+            newDeselected.add(title);
+        }
+        setDeselected(newDeselected);
+    };
+
+    const handleClearDeselected = () => {
+        setDeselected(new Set());
+    };
+
+    const handleRemoveAll = () => {
+        setFound([]);
+        setDeselected(new Set());
     };
 
     return (
@@ -95,9 +121,18 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
 
                 <div className="flex items-center gap-3">
                     {found.length > 0 && (
-                        <span className="text-xs font-bold text-indigo-400 uppercase tracking-tighter bg-indigo-500/10 px-3 py-2 rounded-xl">
-                            Найдено: {found.length} адресов
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-tighter bg-indigo-500/10 px-3 py-2 rounded-xl">
+                                Выбрано: {found.length - deselected.size}
+                            </span>
+                            <button
+                                onClick={handleRemoveAll}
+                                className="p-2 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-xl transition-all"
+                                title="Очистить список"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
                     )}
                     <button
                         onClick={handleExtract}
@@ -105,37 +140,90 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
                         className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
                     >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                        Собрать адреса в этой области
+                        Собрать адреса
                     </button>
                 </div>
             </div>
 
-            {/* Map */}
-            <div className="flex-1 relative">
-                <MapContainer
-                    center={[59.9343, 30.3351]} // St. Petersburg focal
-                    zoom={15}
-                    style={{ height: "100%", width: "100%" }}
-                >
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <MapEvents onBoundsChange={setBounds} />
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Scrollable List */}
+                {found.length > 0 && (
+                    <div className="w-64 border-r border-white/10 bg-black/20 flex flex-col z-10">
+                        <div className="p-3 border-b border-white/10 text-[10px] uppercase font-bold text-slate-500 flex justify-between items-center">
+                            <span>Список домов</span>
+                            {deselected.size > 0 && (
+                                <button onClick={handleClearDeselected} className="text-indigo-400 hover:text-white transition-colors">Выбрать все</button>
+                            )}
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                            {found.map((addr) => {
+                                const isDeselected = deselected.has(addr.title);
+                                return (
+                                    <div
+                                        key={addr.title}
+                                        onClick={() => toggleAddress(addr.title)}
+                                        className={`p-2 rounded-lg cursor-pointer flex items-center gap-2 transition-all ${isDeselected ? 'opacity-40 grayscale hover:opacity-60' : 'bg-white/5 hover:bg-white/10'}`}
+                                    >
+                                        {isDeselected ? <Square className="w-3 h-3 text-slate-500" /> : <CheckSquare className="w-3 h-3 text-indigo-400" />}
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[11px] font-medium text-white truncate">{addr.street}</span>
+                                            <span className="text-[10px] text-slate-500">{addr.house}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
-                    {found.map((addr, idx) => (
-                        <Marker key={idx} position={[addr.lat, addr.lon]}>
-                            <Popup>
-                                <div className="text-xs font-bold text-slate-900">{addr.title}</div>
-                            </Popup>
-                        </Marker>
-                    ))}
-                </MapContainer>
-            </div>
+                {/* Map */}
+                <div className="flex-1 relative">
+                    <MapContainer
+                        center={[59.9343, 30.3351]} // St. Petersburg focal
+                        zoom={15}
+                        style={{ height: "100%", width: "100%" }}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <MapEvents onBoundsChange={setBounds} />
 
-            {/* Hint */}
-            <div className="p-2 bg-slate-950 text-[10px] text-center text-slate-500 uppercase tracking-widest font-medium">
-                Перемещайте карту и нажимайте «Собрать адреса», чтобы выгрузить дома в этой зоне
+                        {found.map((addr, idx) => {
+                            const isDeselected = deselected.has(addr.title);
+                            return (
+                                <Marker
+                                    key={idx}
+                                    position={[addr.lat, addr.lon]}
+                                    opacity={isDeselected ? 0.4 : 1}
+                                    eventHandlers={{
+                                        click: () => toggleAddress(addr.title)
+                                    }}
+                                >
+                                    <Popup>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="text-xs font-bold text-slate-900">{addr.title}</div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleAddress(addr.title);
+                                                }}
+                                                className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${isDeselected ? 'bg-indigo-600 text-white' : 'bg-red-500 text-white'}`}
+                                            >
+                                                {isDeselected ? 'Выбрать' : 'Удалить'}
+                                            </button>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
+                    </MapContainer>
+                </div>
+
+                {/* Hint Overlay */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-950/80 backdrop-blur border border-white/10 rounded-full text-[10px] text-slate-500 uppercase tracking-widest font-medium z-[1000] pointer-events-none">
+                    Нажимайте на дома или список для выбора
+                </div>
             </div>
         </div>
     );
