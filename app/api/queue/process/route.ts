@@ -32,6 +32,17 @@ export async function GET(req: NextRequest) {
         await sql`UPDATE chat_creation_queue SET status = 'processing' WHERE id = ${task.id}`;
 
         try {
+            // 2.5 Just-in-time duplication check
+            const alreadyExists = await sql`SELECT id FROM short_links WHERE reviewer_name = ${task.title}`;
+            if (alreadyExists.length > 0) {
+                await sql`UPDATE chat_creation_queue SET status = 'completed', error = 'Already exists in short_links' WHERE id = ${task.id}`;
+                return NextResponse.json({
+                    success: true,
+                    message: "Skipped: already exists",
+                    taskId: task.id
+                });
+            }
+
             // 3. Execute creation
             const result = await createEcosystem(task.title, task.district);
 

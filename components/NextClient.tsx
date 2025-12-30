@@ -9,7 +9,7 @@ import {
     Clock,
     CheckSquare,
     X,
-    AlertCircle, List, Map as MapIcon, Globe, Printer
+    AlertCircle, List, Map as MapIcon, Globe, Printer, Play
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -156,6 +156,17 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const onSubmit = async (data: { title: string, district: string }) => {
         setLoading(true);
         setError(null);
+
+        // Duplicate check
+        const normalizedTitle = data.title.toLowerCase().trim();
+        const isDuplicate = links.some(l => l.reviewer_name?.toLowerCase().trim() === normalizedTitle) ||
+            queue.some(q => q.title.toLowerCase().trim() === normalizedTitle && q.status !== 'failed');
+
+        if (isDuplicate) {
+            setError("Чат с таким адресом уже существует или находится в очереди.");
+            setLoading(false);
+            return;
+        }
         setResult(null);
 
         try {
@@ -472,23 +483,48 @@ export default function NextClient({ initialLinks }: NextClientProps) {
 
     const handlePushScoutedToQueue = async () => {
         if (scoutedAddresses.length === 0) return;
-
         setBatchLoading(true);
+
+        const normalizedExisting = new Set([
+            ...links.map(l => l.reviewer_name?.toLowerCase().trim()),
+            ...queue.filter(q => q.status !== 'failed').map(q => q.title.toLowerCase().trim())
+        ]);
+
+        const filteredScouted = scoutedAddresses.filter(a => {
+            const title = `${a.street}, ${a.house}`.toLowerCase().trim();
+            return !normalizedExisting.has(title);
+        });
+
+        if (filteredScouted.length === 0) {
+            alert("Все выбранные адреса уже существуют в базе или очереди.");
+            setBatchLoading(false);
+            return;
+        }
+
+        if (filteredScouted.length < scoutedAddresses.length) {
+            if (!confirm(`Будет добавлено ${filteredScouted.length} новых адресов. ${(scoutedAddresses.length - filteredScouted.length)} дубликатов будут пропущены. Продолжить?`)) {
+                setBatchLoading(false);
+                return;
+            }
+        }
+
         try {
-            const batch = scoutedAddresses.map(a => ({
-                title: a.title,
-                district: a.district || ""
+            const now = new Date();
+            const items = filteredScouted.map((addr, idx) => ({
+                title: `${addr.street}, ${addr.house}`,
+                district: addr.district || "",
+                scheduled_at: new Date(now.getTime() + (idx + 1) * 60000).toISOString()
             }));
 
             const res = await fetch("/api/queue", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ batch, intervalMinutes: batchInterval })
+                body: JSON.stringify({ batch: items })
             });
 
             if (!res.ok) throw new Error("Failed to add to queue");
 
-            alert(`Добавлено в очередь: ${batch.length} адресов`);
+            alert(`Добавлено в очередь: ${items.length} адресов`);
             setScoutedAddresses([]);
             fetchQueue();
             setActiveTab('qr_batch'); // Switch to batch tab to see queue
@@ -631,7 +667,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
 
     const handleBulkUpdateStatus = async (newStatus: string) => {
         if (selectedIds.size === 0 || !newStatus) return;
-        if (!confirm(`Изменить статус для ${selectedIds.size} элементов на "${newStatus}"?`)) return;
+        if (!confirm(`Изменить статус для ${selectedIds.size} элементов на "${newStatus}" ? `)) return;
 
         setLoading(true);
         const selectedLinks = links.filter(l => selectedIds.has(l.id));
@@ -690,7 +726,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
             });
             if (res.ok) {
                 setLinks(prev => prev.filter(l => l.id !== id));
-                if (result?.link.includes(`/s/${code}`)) {
+                if (result?.link.includes(`/ s / ${code}`)) {
                     setResult(null);
                 }
             } else {
@@ -714,6 +750,26 @@ export default function NextClient({ initialLinks }: NextClientProps) {
             }
         } catch (e) {
             alert('Ошибка при удалении');
+        }
+    };
+
+    const handleProcessQueue = async () => {
+        setBatchLoading(true);
+        try {
+            const res = await fetch("/api/queue/process");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to process");
+
+            if (data.success) {
+                alert(`Процесс запущен: создан чат ${data.chatId || ""}`);
+            } else {
+                alert(data.message || "Очередь пуста или нет задач к выполнению");
+            }
+            fetchQueue();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
         }
     };
 
@@ -758,7 +814,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
                     <button
                         onClick={() => setActiveTab('ecosystem')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
+                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'ecosystem'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
@@ -768,20 +824,20 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     </button>
                     <button
                         onClick={() => setActiveTab('qr_batch')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
+                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'qr_batch'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            } `}
                     >
                         <QrCode className="w-4 h-4" />
                         QR Генератор
                     </button>
                     <button
                         onClick={() => setActiveTab('map')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'map'
+                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'map'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            } `}
                     >
                         <MapIcon className="w-4 h-4" />
                         Разведчик
@@ -866,7 +922,17 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 </div>
                                 <div className="flex-1 text-left space-y-4">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-white">Готово! 🚀</h3>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-semibold text-slate-400">Очередь создания ({queue.length})</h3>
+                                            <button
+                                                onClick={handleProcessQueue}
+                                                disabled={batchLoading}
+                                                className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs rounded-lg transition-all flex items-center gap-2"
+                                            >
+                                                {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                                Обработать сейчас
+                                            </button>
+                                        </div>
                                         <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
                                     </div>
 
@@ -903,19 +969,19 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter">
                                     <button
                                         onClick={() => setStuckFilter('all')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
                                     >
                                         Все
                                     </button>
                                     <button
                                         onClick={() => setStuckFilter('stuck')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'stuck' ? 'bg-green-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'stuck' ? 'bg-green-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
                                     >
                                         Оклеены
                                     </button>
                                     <button
                                         onClick={() => setStuckFilter('not_stuck')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'not_stuck' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                        className={`px - 3 py - 1.5 rounded - lg transition - all ${stuckFilter === 'not_stuck' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'} `}
                                     >
                                         Не оклеены
                                     </button>
@@ -990,7 +1056,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                         )}
                                                         <button
                                                             onClick={() => handleRefreshStats(item.codes[0], item.id)}
-                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
+                                                            className={`p - 1 hover: bg - white / 10 rounded transition - all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'} `}
                                                         >
                                                             <HistoryIcon className="w-3 h-3" />
                                                         </button>
@@ -1005,11 +1071,13 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                                 className="font-mono text-[9px] text-slate-400 bg-white/5 px-2 py-0.5 rounded hover:text-white hover:bg-white/10 transition-all flex items-center gap-1"
                                                             >
                                                                 {code}
-                                                                <ExternalLink className={`w-2.5 h-2.5 ${copiedId === code ? 'text-green-400' : 'opacity-30'}`} />
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </td>
+                                                                < ExternalLink className={`w-2.5 h-2.5 ${copiedId === code ? 'text-green-400' : 'opacity-30'}`
+                                                                } />
+                                                            </button >
+                                                        ))
+                                                        }
+                                                    </div >
+                                                </td >
                                                 <td className="p-4 text-right">
                                                     <div className="flex justify-end gap-2 text-slate-400">
                                                         <button
@@ -1036,14 +1104,14 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                         </button>
                                                     </div>
                                                 </td>
-                                            </tr>
+                                            </tr >
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                    </tbody >
+                                </table >
+                            </div >
+                        </div >
                     )}
-                </div>
+                </div >
             ) : activeTab === 'map' ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
@@ -1484,6 +1552,6 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 }

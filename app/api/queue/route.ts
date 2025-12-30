@@ -15,23 +15,50 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Batch is empty" }, { status: 400 });
     }
 
-    await initDatabase();
-
     const now = new Date();
+    let addedCount = 0;
     try {
+        // Check if there are any active tasks in the queue
+        const activeTasks = await sql`SELECT id FROM chat_creation_queue WHERE status IN ('pending', 'processing')`;
+        const isQueueEmpty = activeTasks.length === 0;
+
         for (let i = 0; i < batch.length; i++) {
             const item = batch[i];
-            // Spasmodic scheduling: base interval + some randomness
-            const offsetMs = (i * intervalMinutes * 60 * 1000) + (Math.random() * 5 * 60 * 1000);
-            const scheduledAt = new Date(now.getTime() + offsetMs);
+            const title = item.title.trim();
+
+            const existingLinks = await sql`SELECT id FROM short_links WHERE reviewer_name = ${title}`;
+            if (existingLinks.length > 0) continue;
+
+            const existingQueue = await sql`SELECT id FROM chat_creation_queue WHERE title = ${title} AND status IN ('pending', 'processing', 'completed')`;
+            if (existingQueue.length > 0) continue;
+
+            // If queue is empty, schedule the first added item immediately
+            let scheduledAt: Date;
+            if (isQueueEmpty && addedCount === 0) {
+                scheduledAt = new Date(now.getTime() - 1000); // 1 second in the past to ensure it's due
+            } else {
+                const offsetMs = (addedCount * intervalMinutes * 60 * 1000) + (Math.random() * 5 * 60 * 1000);
+                scheduledAt = new Date(now.getTime() + offsetMs);
+            }
 
             await sql`
                 INSERT INTO chat_creation_queue (title, district, scheduled_at, status)
-                VALUES (${item.title}, ${item.district || null}, ${scheduledAt}, 'pending')
+                VALUES (${title}, ${item.district || null}, ${scheduledAt}, 'pending')
             `;
+            addedCount++;
         }
 
-        return NextResponse.json({ success: true, count: batch.length });
+        // Trigger processing in the background (non-blocking)
+        if (addedCount > 0) {
+            const protocol = req.headers.get("x-forwarded-proto") || "http";
+            const host = req.headers.get("host");
+            const baseUrl = `${protocol}://${host}`;
+            const secret = process.env.APP_SECRET_KEY || "";
+
+            fetch(`${baseUrl}/api/queue/process?secret=${secret}`).catch(e => console.error("Trigger error:", e));
+        }
+
+        return NextResponse.json({ success: true, count: addedCount, skipped: batch.length - addedCount });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
