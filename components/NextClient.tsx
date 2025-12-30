@@ -286,11 +286,17 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 <div class="content-box">
                                     <h1 class="main-title">Чат нашего дома</h1>
                                     <ul class="features">
-                                        <li>Барахолка района</li>
-                                        <li>Скидки района</li>
-                                        <li>Решение проблем</li>
+                                        <li>• Барахолка района</li>
+                                        <li>• Скидки района</li>
+                                        <li>• Решение проблем</li>
                                     </ul>
-                                    <div class="code-label">${link.code}</div>
+                                    <div class="cta">
+                                        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                                            <polyline points="12 19 5 12 12 5"></polyline>
+                                        </svg>
+                                        <span>Сканируй QR-код</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -301,6 +307,12 @@ export default function NextClient({ initialLinks }: NextClientProps) {
             }
             fullHtml += `<div class="page">${stickersHtml}</div>`;
         }
+
+        // Update statuses after printing
+        for (const link of selectedLinksToPrint) {
+            handleUpdateStatus(link.code, link.id, 'распечатан');
+        }
+        setSelectedIds(new Set());
 
         printWindow.document.write(`
             <html>
@@ -332,18 +344,17 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         box-sizing: border-box;
                         width: 70mm;
                         height: 37mm;
-                        border: 0.1mm dashed #eee; /* Light cutting guides */
-                        padding: 2mm;
+                        padding: 4mm 2mm;
                         overflow: hidden;
                     }
                     .sticker-inner {
                         display: flex;
-                        gap: 3mm;
+                        gap: 2mm;
                         height: 100%;
                         align-items: center;
                     }
                     .qr-box {
-                        width: 32mm;
+                        width: 25mm;
                         flex-shrink: 0;
                     }
                     .qr-box img {
@@ -356,28 +367,45 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
-                        font-family: Arial, sans-serif;
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                         text-align: left;
                     }
                     .main-title {
                         margin: 0;
                         padding: 0;
-                        font-size: 14px;
-                        font-weight: 900;
-                        line-height: 1.1;
+                        font-size: 13px;
+                        font-weight: 800;
+                        line-height: 1;
                         text-transform: uppercase;
-                        margin-bottom: 1mm;
+                        margin-bottom: 2mm;
+                        white-space: nowrap;
                     }
                     .features {
                         margin: 0;
                         padding: 0;
                         list-style: none;
                         font-size: 9px;
-                        line-height: 1.2;
+                        line-height: 1.4;
                         font-weight: 600;
+                        color: #333;
+                        margin-bottom: 2mm;
                     }
-                    .features li {
-                        white-space: nowrap;
+                    .cta {
+                        display: flex;
+                        align-items: center;
+                        gap: 1.5mm;
+                        font-size: 9px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        color: #000;
+                        background: #f0f0f0;
+                        padding: 1mm 2mm;
+                        border-radius: 1mm;
+                        width: fit-content;
+                    }
+                    .arrow {
+                        width: 3.5mm;
+                        height: 3.5mm;
                     }
                     .code-label {
                         margin-top: 1mm;
@@ -388,7 +416,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     }
                     @media print {
                         .no-print { display: none; }
-                        .sticker { border: 0.1mm dashed #ddd; } /* Guides visible but very light */
+                        .sticker { border: none; }
                     }
                 </style>
             </head>
