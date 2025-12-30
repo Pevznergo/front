@@ -6,7 +6,7 @@ import {
     Loader2, Send, QrCode, Download, History as HistoryIcon,
     MessageSquare, ExternalLink, Trash2, Search,
     Link as LinkIcon, Link2Off, MapPin, Edit3, CheckCircle2,
-    Clock, AlertCircle, List, Map as MapIcon, Globe
+    Clock, AlertCircle, List, Map as MapIcon, Globe, Printer
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -48,6 +48,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const { register, handleSubmit, reset, formState: { errors } } = useForm<{ title: string, district: string }>();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map'>('ecosystem');
@@ -223,6 +224,189 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         }
     };
 
+    const handleToggleSelect = (id: number) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === links.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(links.map(l => l.id)));
+        }
+    };
+
+    const handlePrintSelected = async () => {
+        if (selectedIds.size === 0) {
+            alert("Выберите QR-коды для печати.");
+            return;
+        }
+
+        const selectedLinksToPrint = links.filter(link => selectedIds.has(link.id));
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Не удалось открыть окно печати. Разрешите всплывающие окна.");
+            return;
+        }
+
+        // Chunk into pages of 24 (3 cols * 8 rows)
+        const PAGESIZE = 24;
+        const pages = [];
+        for (let i = 0; i < selectedLinksToPrint.length; i += PAGESIZE) {
+            pages.push(selectedLinksToPrint.slice(i, i + PAGESIZE));
+        }
+
+        let fullHtml = '';
+        for (const pageItems of pages) {
+            let stickersHtml = '';
+            for (const link of pageItems) {
+                const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
+                try {
+                    const qrData = await QRCodeLib.toDataURL(shortUrl, {
+                        width: 200,
+                        margin: 2,
+                        color: { dark: '#000000', light: '#ffffff' }
+                    });
+
+                    stickersHtml += `
+                        <div class="sticker">
+                            <div class="sticker-inner">
+                                <div class="qr-box">
+                                    <img src="${qrData}" alt="QR" />
+                                </div>
+                                <div class="content-box">
+                                    <h1 class="main-title">Чат нашего дома</h1>
+                                    <ul class="features">
+                                        <li>Барахолка района</li>
+                                        <li>Скидки района</li>
+                                        <li>Решение проблем</li>
+                                    </ul>
+                                    <div class="code-label">${link.code}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (err) {
+                    console.error(`Failed to generate QR for ${link.code}`, err);
+                }
+            }
+            fullHtml += `<div class="page">${stickersHtml}</div>`;
+        }
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Печать наклеек A4 (70x37mm)</title>
+                <style>
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        background: white;
+                        color: black;
+                        -webkit-print-color-adjust: exact;
+                    }
+                    .page {
+                        width: 210mm;
+                        height: 297mm;
+                        display: grid;
+                        grid-template-columns: repeat(3, 70mm);
+                        grid-template-rows: repeat(8, 37.125mm); /* 297/8 = 37.125 */
+                        position: relative;
+                        overflow: hidden;
+                        page-break-after: always;
+                    }
+                    .sticker {
+                        box-sizing: border-box;
+                        width: 70mm;
+                        height: 37mm;
+                        border: 0.1mm dashed #eee; /* Light cutting guides */
+                        padding: 2mm;
+                        overflow: hidden;
+                    }
+                    .sticker-inner {
+                        display: flex;
+                        gap: 3mm;
+                        height: 100%;
+                        align-items: center;
+                    }
+                    .qr-box {
+                        width: 32mm;
+                        flex-shrink: 0;
+                    }
+                    .qr-box img {
+                        width: 100%;
+                        height: auto;
+                        display: block;
+                    }
+                    .content-box {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        font-family: Arial, sans-serif;
+                        text-align: left;
+                    }
+                    .main-title {
+                        margin: 0;
+                        padding: 0;
+                        font-size: 14px;
+                        font-weight: 900;
+                        line-height: 1.1;
+                        text-transform: uppercase;
+                        margin-bottom: 1mm;
+                    }
+                    .features {
+                        margin: 0;
+                        padding: 0;
+                        list-style: none;
+                        font-size: 9px;
+                        line-height: 1.2;
+                        font-weight: 600;
+                    }
+                    .features li {
+                        white-space: nowrap;
+                    }
+                    .code-label {
+                        margin-top: 1mm;
+                        font-family: monospace;
+                        font-size: 8px;
+                        color: #666;
+                        text-transform: uppercase;
+                    }
+                    @media print {
+                        .no-print { display: none; }
+                        .sticker { border: 0.1mm dashed #ddd; } /* Guides visible but very light */
+                    }
+                </style>
+            </head>
+            <body>
+                ${fullHtml}
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                            // window.close(); // Optional: user may want to re-print
+                        }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
 
 
     const handleAddToQueue = async () => {
@@ -680,7 +864,18 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                         </div>
                                                         <div className="flex flex-col px-2 border-l border-white/10 ml-2">
                                                             <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Статус</span>
-                                                            <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">ПОДКЛЮЧЕН</span>
+                                                            <select
+                                                                value={links.find(l => l.tg_chat_id === item.tg_chat_id)?.status || 'подключен'}
+                                                                onChange={(e) => {
+                                                                    const code = item.codes[0];
+                                                                    if (code) handleUpdateStatus(code, item.id, e.target.value);
+                                                                }}
+                                                                className="bg-transparent text-[10px] font-bold text-green-400 uppercase tracking-widest outline-none cursor-pointer hover:text-green-300"
+                                                            >
+                                                                <option value="не подключен" className="bg-slate-900 text-[10px]">НЕ ПОДКЛЮЧЕН</option>
+                                                                <option value="подключен" className="bg-slate-900 text-[10px]">ПОДКЛЮЧЕН</option>
+                                                                <option value="архив" className="bg-slate-900 text-[10px]">АРХИВ</option>
+                                                            </select>
                                                         </div>
                                                         {item.is_stuck && (
                                                             <div className="flex flex-col px-2 border-l border-white/10 ml-2">
@@ -876,20 +1071,32 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                             <p className="text-slate-400 text-sm">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
                         </div>
 
-                        <button
-                            onClick={handleBatchGenerate}
-                            disabled={batchLoading}
-                            className="h-16 px-12 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl mx-auto text-lg"
-                        >
-                            {batchLoading ? (
-                                <Loader2 className="w-6 h-6 animate-spin" />
-                            ) : (
-                                <>
-                                    <Send className="w-5 h-5" />
-                                    Сгенерировать 200 кодов
-                                </>
+                        <div className="flex items-center justify-between gap-4">
+                            <button
+                                onClick={handleBatchGenerate}
+                                disabled={batchLoading}
+                                className="flex-1 h-16 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl text-lg"
+                            >
+                                {batchLoading ? (
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Send className="w-5 h-5" />
+                                        Сгенерировать 200 кодов
+                                    </>
+                                )}
+                            </button>
+
+                            {selectedIds.size > 0 && (
+                                <button
+                                    onClick={handlePrintSelected}
+                                    className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
+                                >
+                                    <Printer className="w-6 h-6" />
+                                    Печать ({selectedIds.size})
+                                </button>
                             )}
-                        </button>
+                        </div>
 
                         {batchResult && (
                             <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
@@ -913,6 +1120,14 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
+                                        <th className="p-4 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.size === links.length && links.length > 0}
+                                                onChange={handleSelectAll}
+                                                className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                            />
+                                        </th>
                                         <th className="p-4 font-semibold">Код</th>
                                         <th className="p-4 font-semibold">Группа / Привязка</th>
                                         <th className="p-4 font-semibold">Редирект</th>
@@ -923,7 +1138,15 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     {allLinks.map((link) => {
                                         const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
                                         return (
-                                            <tr key={link.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <tr key={link.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedIds.has(link.id) ? 'bg-indigo-500/10' : ''}`}>
+                                                <td className="p-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.has(link.id)}
+                                                        onChange={() => handleToggleSelect(link.id)}
+                                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                    />
+                                                </td>
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1.5">
                                                         <button
@@ -934,24 +1157,24 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
                                                         </button>
 
-                                                        {/* Status Badge & Actions */}
+                                                        {/* Status Selector */}
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${link.status === 'подключен' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                                                                link.status === 'не подключен' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
-                                                                    link.status === 'распечатан' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                                        'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                                                                }`}>
-                                                                {link.status || 'не распечатан'}
-                                                            </span>
-
-                                                            {(!link.status || link.status === 'не распечатан') && (
-                                                                <button
-                                                                    onClick={() => handleUpdateStatus(link.code, link.id, 'распечатан')}
-                                                                    className="text-[9px] text-slate-600 hover:text-white transition-colors underline"
-                                                                >
-                                                                    Печать...
-                                                                </button>
-                                                            )}
+                                                            <select
+                                                                value={link.status || 'не распечатан'}
+                                                                onChange={(e) => handleUpdateStatus(link.code, link.id, e.target.value)}
+                                                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter border bg-transparent outline-none cursor-pointer transition-all ${link.status === 'подключен' ? 'border-green-500/20 text-green-500 bg-green-500/5' :
+                                                                    link.status === 'не подключен' ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
+                                                                        link.status === 'распечатан' ? 'border-blue-500/20 text-blue-400 bg-blue-500/5' :
+                                                                            link.status === 'архив' ? 'border-slate-500/20 text-slate-400 bg-slate-500/5' :
+                                                                                'border-slate-500/20 text-slate-500 bg-slate-500/5'
+                                                                    }`}
+                                                            >
+                                                                <option value="не распечатан" className="bg-slate-900">не распечатан</option>
+                                                                <option value="распечатан" className="bg-slate-900">распечатан</option>
+                                                                <option value="не подключен" className="bg-slate-900">не подключен</option>
+                                                                <option value="подключен" className="bg-slate-900">подключен</option>
+                                                                <option value="архив" className="bg-slate-900">архив</option>
+                                                            </select>
                                                         </div>
 
                                                         <div className="flex gap-2 text-[8px] text-slate-600 uppercase">
