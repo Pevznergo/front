@@ -334,11 +334,16 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     <img src="${qrData}" alt="QR" />
                                 </div>
                                 <div class="content-box">
-                                    <h1 class="main-title">Чат нашего дома</h1>
+                                    <h1 class="main-title">
+                                        <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                                        </svg>
+                                        Чат нашего дома
+                                    </h1>
                                     <ul class="features">
+                                        <li>• Без УК</li>
                                         <li>• Барахолка района</li>
                                         <li>• Скидки района</li>
-                                        <li>• Решение проблем</li>
                                     </ul>
                                     <div class="cta">
                                         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -429,6 +434,14 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         text-transform: uppercase;
                         margin-bottom: 2mm;
                         white-space: nowrap;
+                        display: flex;
+                        align-items: center;
+                        gap: 1.5mm;
+                    }
+                    .tg-icon {
+                        width: 4mm;
+                        height: 4mm;
+                        flex-shrink: 0;
                     }
                     .features {
                         margin: 0;
