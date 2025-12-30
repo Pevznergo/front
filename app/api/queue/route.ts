@@ -54,8 +54,9 @@ export async function POST(req: NextRequest) {
             const host = req.headers.get("host");
             const baseUrl = `${protocol}://${host}`;
             const secret = process.env.APP_SECRET_KEY || "";
+            const secretParam = secret ? `?secret=${secret}` : "";
 
-            fetch(`${baseUrl}/api/queue/process?secret=${secret}`).catch(e => console.error("Trigger error:", e));
+            fetch(`${baseUrl}/api/queue/process${secretParam}`).catch(e => console.error("Trigger error:", e));
         }
 
         return NextResponse.json({ success: true, count: addedCount, skipped: batch.length - addedCount });

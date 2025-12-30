@@ -756,7 +756,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const handleProcessQueue = async () => {
         setBatchLoading(true);
         try {
-            const res = await fetch("/api/queue/process");
+            const res = await fetch("/api/queue/process?force=true");
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to process");
 
