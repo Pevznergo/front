@@ -120,3 +120,15 @@ export async function setTopicClosed(chatId: string, topicId: number, closed: bo
         closed: closed
     }));
 }
+
+export async function updateChatTitle(chatId: string, title: string) {
+    const client = await getTelegramClient();
+    const entity = await client.getEntity(chatId);
+
+    await client.invoke(
+        new Api.channels.EditTitle({
+            channel: entity,
+            title: title
+        })
+    );
+}

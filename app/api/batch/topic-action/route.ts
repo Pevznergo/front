@@ -37,9 +37,12 @@ export async function POST(req: NextRequest) {
                 limit: 100
             })) as any;
 
+            console.log(`[TopicAction] Chat ${chatId} topics:`, forumTopics.topics.map((t: any) => t.title));
+
             const topic = forumTopics.topics.find((t: any) => t.title === topicName);
 
             if (!topic) {
+                console.warn(`[TopicAction] Topic '${topicName}' not found in chat ${chatId}`);
                 results.push({ chatId, success: false, error: "Topic not found" });
                 continue;
             }

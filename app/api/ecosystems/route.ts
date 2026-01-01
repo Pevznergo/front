@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { sql, initDatabase } from "@/lib/db";
+import { updateChatTitle } from "@/lib/chat";
 
 export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -44,6 +45,17 @@ export async function PATCH(req: NextRequest) {
                 last_updated = CURRENT_TIMESTAMP
             WHERE tg_chat_id = ${tgChatId}
         `;
+
+        // Update Telegram Group Title
+        if (title) {
+            try {
+                await updateChatTitle(tgChatId, title);
+            } catch (tgError: any) {
+                console.error("Failed to update Telegram chat title:", tgError);
+                // We don't fail the request, but log it.
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
