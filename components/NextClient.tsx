@@ -1236,7 +1236,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1">
-                                                        {editingGroup?.tgChatId === item.tg_chat_id ? (
+                                                        {editingGroup && editingGroup.tgChatId === item.tg_chat_id ? (
                                                             <div className="space-y-1.5 bg-slate-900/50 p-2 rounded-xl border border-indigo-500/30">
                                                                 <input
                                                                     value={editingGroup.title}
