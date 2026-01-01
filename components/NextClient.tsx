@@ -1236,23 +1236,56 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2 group/title">
-                                                            <div className="font-medium text-white">{item.title}</div>
-                                                            <button
-                                                                onClick={() => setEditingGroup({
-                                                                    tgChatId: item.tg_chat_id,
-                                                                    title: item.title,
-                                                                    district: item.district
-                                                                })}
-                                                                className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500"
-                                                            >
-                                                                <Edit3 className="w-3 h-3" />
-                                                            </button>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                                                            <MapPin className="w-3 h-3" />
-                                                            {item.district || 'Район не указан'}
-                                                        </div>
+                                                        {editingGroup?.tgChatId === item.tg_chat_id ? (
+                                                            <div className="space-y-1.5 bg-slate-900/50 p-2 rounded-xl border border-indigo-500/30">
+                                                                <input
+                                                                    value={editingGroup.title}
+                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1 text-xs outline-none text-white focus:ring-1 focus:ring-indigo-500/50"
+                                                                    placeholder="Название"
+                                                                />
+                                                                <input
+                                                                    value={editingGroup.district}
+                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
+                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1 text-xs outline-none text-white focus:ring-1 focus:ring-indigo-500/50"
+                                                                    placeholder="Район"
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() => handleUpdateEcosystem(item.tg_chat_id)}
+                                                                        className="flex-1 py-1 bg-indigo-600 text-[10px] font-bold rounded text-white hover:bg-indigo-500 transition-colors"
+                                                                    >
+                                                                        Сохранить
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setEditingGroup(null)}
+                                                                        className="py-1 px-3 bg-white/5 text-[10px] font-bold rounded text-slate-400 hover:bg-white/10 transition-colors"
+                                                                    >
+                                                                        Отмена
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div className="flex items-center gap-2 group/title">
+                                                                    <div className="font-medium text-white">{item.title}</div>
+                                                                    <button
+                                                                        onClick={() => setEditingGroup({
+                                                                            tgChatId: item.tg_chat_id,
+                                                                            title: item.title,
+                                                                            district: item.district
+                                                                        })}
+                                                                        className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500"
+                                                                    >
+                                                                        <Edit3 className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                                                    <MapPin className="w-3 h-3" />
+                                                                    {item.district || 'Район не указан'}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
@@ -1554,80 +1587,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         )}
                     </div>
 
-                    {/* Topic Action Modal */}
-                    {showTopicModal && (
-                        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                            <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
-                                    <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
-                                </div>
 
-                                <div className="space-y-4 text-left">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
-                                        <select
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                            value={topicActionData.topicName}
-                                            onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
-                                        >
-                                            <option value="📢 Новости">📢 Новости</option>
-                                            <option value="🗣 Флудилка">🗣 Флудилка</option>
-                                            <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
-                                            <option value="🛠 Услуги">🛠 Услуги</option>
-                                            <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
-                                        <textarea
-                                            className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                            placeholder="Введите текст сообщения..."
-                                            value={topicActionData.message}
-                                            onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
-                                        />
-                                        <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={topicActionData.pin}
-                                                onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
-                                                className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
-                                            />
-                                            <span className="text-xs text-slate-400">Закрепить сообщение</span>
-                                        </label>
-                                    </div>
-
-                                    <div className="flex flex-col gap-1.5 pt-2">
-                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
-                                            >
-                                                Закрыть (Read-Only)
-                                            </button>
-                                            <button
-                                                onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
-                                                className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
-                                            >
-                                                Открыть
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={handleBatchTopicAction}
-                                    disabled={batchLoading || (!topicActionData.message && !topicActionData.closedAction)}
-                                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
-                                >
-                                    {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                    Применить к {selectedGroupIds.size} группам
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
                         <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
@@ -1972,6 +1932,81 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     </div>
                 </div>
             )}
+            {/* Topic Action Modal - Moved to global scope */}
+            {showTopicModal && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
+                            <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                        </div>
+
+                        <div className="space-y-4 text-left">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
+                                <select
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    value={topicActionData.topicName}
+                                    onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
+                                >
+                                    <option value="📢 Новости">📢 Новости</option>
+                                    <option value="🗣 Флудилка">🗣 Флудилка</option>
+                                    <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
+                                    <option value="🛠 Услуги">🛠 Услуги</option>
+                                    <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
+                                <textarea
+                                    className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="Введите текст сообщения..."
+                                    value={topicActionData.message}
+                                    onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
+                                />
+                                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={topicActionData.pin}
+                                        onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
+                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                    />
+                                    <span className="text-xs text-slate-400">Закрепить сообщение</span>
+                                </label>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 pt-2">
+                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
+                                        className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                    >
+                                        Закрыть (Read-Only)
+                                    </button>
+                                    <button
+                                        onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
+                                        className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                    >
+                                        Открыть
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleBatchTopicAction}
+                            disabled={batchLoading || (!topicActionData.message && !topicActionData.closedAction)}
+                            className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                        >
+                            {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                            Применить к {selectedGroupIds.size} группам
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Bulk Actions Fixed Bar */}
             {selectedGroupIds.size > 0 && (
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
