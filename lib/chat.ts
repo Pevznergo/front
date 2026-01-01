@@ -6,10 +6,11 @@ export async function createEcosystem(title: string, district: string | null) {
     const client = await getTelegramClient();
 
     // 1. Create Supergroup
+    const chatTitle = `Дом ${title}${district ? `, ${district}` : ""}`;
     const createResult = await client.invoke(
         new Api.channels.CreateChannel({
-            title: title,
-            about: `Автоматически созданная экосистема для ${title}${district ? ` (${district})` : ""}`,
+            title: chatTitle,
+            about: `Официальный чат: ${chatTitle}. Присоединяйтесь к соседям!`,
             megagroup: true,
         })
     ) as any;
@@ -72,38 +73,50 @@ export async function createEcosystem(title: string, district: string | null) {
 
     const inviteLink = inviteLinkResult.link;
 
-    // 5. Generate Short Code
-    const generateCode = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let res = '';
-        for (let i = 0; i < 6; i++) {
-            res += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return res;
-    };
-
-    let shortCode = generateCode();
-    let isUnique = false;
-    let attempts = 0;
-    while (!isUnique && attempts < 5) {
-        const existing = await sql`SELECT id FROM short_links WHERE code = ${shortCode}`;
-        if (existing.length === 0) {
-            isUnique = true;
-        } else {
-            shortCode = generateCode();
-            attempts++;
-        }
-    }
-
-    // 6. Save to database
+    // 5. Save to database (Ecosystems table)
     await sql`
-        INSERT INTO short_links (code, target_url, tg_chat_id, district, marketplace_topic_id, reviewer_name, status)
-        VALUES (${shortCode}, ${inviteLink}, ${channelId.toString()}, ${district || null}, ${marketplaceTopicId || null}, ${title}, 'подключен')
+        INSERT INTO ecosystems (tg_chat_id, title, district, marketplace_topic_id, admin_topic_id, invite_link)
+        VALUES (${channelId.toString()}, ${title}, ${district || null}, ${marketplaceTopicId || null}, ${adminTopicId || null}, ${inviteLink})
+        ON CONFLICT (tg_chat_id) DO UPDATE SET
+            title = EXCLUDED.title,
+            district = EXCLUDED.district,
+            invite_link = EXCLUDED.invite_link,
+            marketplace_topic_id = EXCLUDED.marketplace_topic_id,
+            admin_topic_id = EXCLUDED.admin_topic_id,
+            last_updated = CURRENT_TIMESTAMP
     `;
 
     return {
         inviteLink,
-        shortCode,
         chatId: channelId.toString()
     };
+}
+
+export async function sendTopicMessage(chatId: string, topicId: number, message: string, pin: boolean = false) {
+    const client = await getTelegramClient();
+    const entity = await client.getEntity(chatId);
+
+    const result = await client.sendMessage(entity, {
+        message,
+        replyTo: topicId
+    });
+
+    if (pin && result.id) {
+        await client.invoke(new Api.messages.UpdatePinnedMessage({
+            peer: entity,
+            id: result.id
+        }));
+    }
+    return result;
+}
+
+export async function setTopicClosed(chatId: string, topicId: number, closed: boolean) {
+    const client = await getTelegramClient();
+    const entity = await client.getEntity(chatId);
+
+    await client.invoke(new Api.channels.EditForumTopic({
+        channel: entity,
+        topicId: topicId,
+        closed: closed
+    }));
 }

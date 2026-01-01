@@ -16,18 +16,26 @@ export default async function NextPage() {
         redirect('/login?callbackUrl=/next');
     }
 
-    // Ensure DB is ready and fetch links
+    // Ensure DB is ready and fetch links and ecosystems
     await initDatabase();
     let links: any[] = [];
+    let ecosystems: any[] = [];
     try {
         links = await sql`SELECT * FROM short_links ORDER BY created_at DESC`;
+        ecosystems = await sql`SELECT * FROM ecosystems ORDER BY created_at DESC`;
     } catch (e) {
-        console.error("Failed to fetch links", e);
+        console.error("Failed to fetch data", e);
     }
 
     const serializedLinks = links.map(l => ({
         ...l,
         created_at: l.created_at?.toISOString() || new Date().toISOString()
+    }));
+
+    const serializedEcosystems = ecosystems.map(e => ({
+        ...e,
+        created_at: e.created_at?.toISOString() || new Date().toISOString(),
+        last_updated: e.last_updated?.toISOString() || new Date().toISOString()
     }));
 
     return (
@@ -55,7 +63,7 @@ export default async function NextPage() {
                     </p>
                 </div>
 
-                <NextClient initialLinks={serializedLinks} />
+                <NextClient initialLinks={serializedLinks} initialEcosystems={serializedEcosystems} />
 
                 <div className="flex flex-col items-center gap-4 mt-12">
                     <Link href="/market" className="group relative px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-medium hover:bg-white/10 transition-all flex items-center gap-3">

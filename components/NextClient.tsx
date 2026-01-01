@@ -35,6 +35,19 @@ interface ShortLink {
     is_stuck?: boolean;
 }
 
+interface Ecosystem {
+    id: number;
+    tg_chat_id: string;
+    title: string;
+    district: string;
+    invite_link: string;
+    marketplace_topic_id?: number;
+    admin_topic_id?: number;
+    member_count: number;
+    last_updated: string;
+    created_at: string;
+}
+
 interface QueueItem {
     id: number;
     title: string;
@@ -46,20 +59,30 @@ interface QueueItem {
 
 interface NextClientProps {
     initialLinks: ShortLink[];
+    initialEcosystems: Ecosystem[];
 }
 
-export default function NextClient({ initialLinks }: NextClientProps) {
+export default function NextClient({ initialLinks, initialEcosystems }: NextClientProps) {
     const { register, handleSubmit, reset, formState: { errors } } = useForm<{ title: string, district: string }>();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ link: string; title: string } | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
+    const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map'>('ecosystem');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
-    const [editingGroup, setEditingGroup] = useState<{ id: number; tgChatId: string; title: string; district: string } | null>(null);
+    const [editingGroup, setEditingGroup] = useState<{ id?: number; tgChatId: string; title: string; district: string } | null>(null);
+    const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+    const [showTopicModal, setShowTopicModal] = useState(false);
+    const [topicActionData, setTopicActionData] = useState({
+        topicName: "📢 Новости",
+        message: "",
+        pin: true,
+        closedAction: undefined as 'close' | 'open' | undefined
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [refreshingId, setRefreshingId] = useState<number | null>(null);
@@ -71,7 +94,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
     const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
     const [nextTask, setNextTask] = useState<{ title: string, scheduled_at: string } | null>(null);
     const [countdown, setCountdown] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен' | 'не распечатан' | 'не подключен' | 'подключен' | 'архив'>('all');
     const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 50;
@@ -105,8 +128,6 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         return filtered;
     };
 
-    const allLinks = filterLinks(links);
-
     const filterByStuck = (list: any[]) => {
         let filtered = list;
         if (stuckFilter !== 'all') {
@@ -115,56 +136,85 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         return filtered;
     };
 
+    const filteredAllLinks = filterByStuck(filterLinks(links));
+    const totalQrPages = Math.ceil(filteredAllLinks.length / ITEMS_PER_PAGE);
+    const paginatedLinks = filteredAllLinks.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, stuckFilter, statusFilter, groupSearchTerm]);
 
-    // Grouping logic for Ecosystems
-    const ecosystemMap: Record<string, {
-        id: number;
-        tg_chat_id: string;
-        title: string;
-        district: string;
-        total_clicks: number;
-        member_count: number;
-        codes: string[];
-    }> = {};
+    const handleToggleGroupSelect = (tgChatId: string) => {
+        setSelectedGroupIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(tgChatId)) {
+                newSet.delete(tgChatId);
+            } else {
+                newSet.add(tgChatId);
+            }
+            return newSet;
+        });
+    };
 
-    links.forEach(l => {
-        if (!l.tg_chat_id) return;
-        const key = l.tg_chat_id;
-        if (!ecosystemMap[key]) {
-            ecosystemMap[key] = {
-                id: l.id,
-                tg_chat_id: l.tg_chat_id,
-                title: l.reviewer_name || 'Без названия',
-                district: l.district || '',
-                total_clicks: 0,
-                member_count: l.member_count || 0,
-                codes: []
-            };
+    const handleSelectAllGroups = () => {
+        if (selectedGroupIds.size === paginatedEcosystems.length) {
+            setSelectedGroupIds(new Set());
+        } else {
+            setSelectedGroupIds(new Set(paginatedEcosystems.map(e => e.tg_chat_id)));
         }
-        ecosystemMap[key].total_clicks += (l.clicks_count || 0);
-        ecosystemMap[key].codes.push(l.code);
-        // Sync title/district if they differ within the same group (optional, we take first found)
+    };
+
+    const handleBatchTopicAction = async () => {
+        if (selectedGroupIds.size === 0) return;
+        setBatchLoading(true);
+        try {
+            const res = await fetch("/api/batch/topic-action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chatIds: Array.from(selectedGroupIds),
+                    ...topicActionData
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to perform actions");
+
+            alert(`Действие выполнено для ${selectedGroupIds.size} групп. \nРезультаты: ${data.results.filter((r: any) => r.success).length} ок, ${data.results.filter((r: any) => !r.success).length} ошибок.`);
+            setShowTopicModal(false);
+            setSelectedGroupIds(new Set());
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
+    // Ecosystem rendering logic
+    const ecosystemTableData = ecosystems.map(eco => {
+        const associatedLinks = links.filter(l => l.tg_chat_id === eco.tg_chat_id);
+        const codes = associatedLinks.map(l => l.code);
+        const totalClicks = associatedLinks.reduce((sum, l) => sum + (l.clicks_count || 0), 0);
+
+        return {
+            ...eco,
+            codes,
+            total_clicks: totalClicks,
+            // For searchability by code:
+            code: codes.join(', ')
+        };
     });
 
-    const ecosystemLinks = filterLinks(Object.values(ecosystemMap).map(e => ({
-        id: e.id,
-        tg_chat_id: e.tg_chat_id,
-        reviewer_name: e.title,
-        district: e.district,
-        clicks_count: e.total_clicks,
-        member_count: e.member_count,
-        code: e.codes.join(', '), // for searchability
-        codes: e.codes,
-        target_url: links.find(l => l.tg_chat_id === e.tg_chat_id)?.target_url || '',
-        is_stuck: links.some(l => l.tg_chat_id === e.tg_chat_id && l.is_stuck),
-        status: links.find(l => l.tg_chat_id === e.tg_chat_id)?.status || 'активен', // Added status for ecosystem
-        created_at: new Date().toISOString()
-    } as any)) as any);
+    const filterEcosystems = (list: any[]) => {
+        if (!groupSearchTerm) return list;
+        const low = groupSearchTerm.toLowerCase();
+        return list.filter(e =>
+            e.title.toLowerCase().includes(low) ||
+            e.district.toLowerCase().includes(low) ||
+            e.codes.some((c: string) => c.toLowerCase().includes(low))
+        );
+    };
 
-    const filteredEcosystems = filterByStuck(ecosystemLinks);
+    const filteredEcosystems = filterByStuck(filterEcosystems(ecosystemTableData));
     const totalPages = Math.ceil(filteredEcosystems.length / ITEMS_PER_PAGE);
     const paginatedEcosystems = filteredEcosystems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -226,7 +276,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
 
         // Duplicate check
         const normalizedTitle = data.title.toLowerCase().trim();
-        const isDuplicate = links.some(l => l.reviewer_name?.toLowerCase().trim() === normalizedTitle) ||
+        const isDuplicate = ecosystems.some(e => e.title.toLowerCase().trim() === normalizedTitle) ||
             queue.some(q => q.title.toLowerCase().trim() === normalizedTitle && q.status !== 'failed');
 
         if (isDuplicate) {
@@ -252,24 +302,71 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                 throw new Error(resultData.error || "Failed to create chat");
             }
 
-            const newItem: ShortLink = {
-                id: resultData.chatId || Math.random().toString(36).substr(2, 9),
-                code: resultData.shortCode,
-                target_url: resultData.link,
-                reviewer_name: data.title,
+            const newEco: Ecosystem = {
+                id: resultData.id || 0, // Server should return ID
+                tg_chat_id: resultData.chatId,
+                title: data.title,
                 district: data.district,
-                created_at: new Date().toISOString(),
-                clicks_count: 0,
-                member_count: 0
+                invite_link: resultData.link,
+                member_count: 0,
+                last_updated: new Date().toISOString(),
+                created_at: new Date().toISOString()
             };
 
-            setLinks([newItem, ...links]);
+            setEcosystems([newEco, ...ecosystems]);
             setResult({ link: resultData.link, title: data.title });
             reset();
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteEcosystem = async (tgChatId: string, codes: string[]) => {
+        if (!confirm(`Удалить экосистему и все связанные ссылки (${codes.length})?`)) return;
+
+        try {
+            const res = await fetch('/api/ecosystems', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tgChatId })
+            });
+
+            if (res.ok) {
+                setEcosystems(prev => prev.filter(e => e.tg_chat_id !== tgChatId));
+                // Optionally delete linked short links too, but the API presently only deletes the ecosystem.
+                // The user might want to keep the short links but unlink them.
+                // For now, just remove from state.
+                setLinks(prev => prev.map(l => l.tg_chat_id === tgChatId ? { ...l, tg_chat_id: undefined } : l));
+            }
+        } catch (e) {
+            alert('Ошибка при удалении');
+        }
+    };
+
+    const handleUpdateEcosystem = async (tgChatId: string) => {
+        if (!editingGroup) return;
+        try {
+            const res = await fetch('/api/ecosystems', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tgChatId,
+                    title: editingGroup.title,
+                    district: editingGroup.district
+                })
+            });
+            if (res.ok) {
+                setEcosystems(prev => prev.map(e => e.tg_chat_id === tgChatId ? {
+                    ...e,
+                    title: editingGroup.title,
+                    district: editingGroup.district
+                } : e));
+                setEditingGroup(null);
+            }
+        } catch (e) {
+            alert('Ошибка при обновлении');
         }
     };
 
@@ -774,7 +871,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
         }
     };
 
-    const handleDeleteEcosystem = async (tgChatId: string, codes: string[]) => {
+    const handleUnlinkEcosystem = async (tgChatId: string, codes: string[]) => {
         if (!confirm('Отвязать все QR-коды от этой группы? Сами ссылки останутся.')) return;
         try {
             await Promise.all(codes.map(code =>
@@ -792,7 +889,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                 status: 'не подключен'
             } : l));
         } catch (e: any) {
-            alert('Ошибка при удалении экосистемы');
+            alert('Ошибка при отвязке экосистемы');
         }
     };
 
@@ -894,7 +991,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
                     <button
                         onClick={() => setActiveTab('ecosystem')}
-                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'ecosystem'
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
@@ -904,7 +1001,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     </button>
                     <button
                         onClick={() => setActiveTab('qr_batch')}
-                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'qr_batch'
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             } `}
@@ -914,7 +1011,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     </button>
                     <button
                         onClick={() => setActiveTab('map')}
-                        className={`px - 6 py - 2.5 rounded - xl text - sm font - semibold transition - all flex items - center gap - 2 ${activeTab === 'map'
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'map'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             } `}
@@ -1045,7 +1142,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                     )}
 
                     {/* History Table */}
-                    {ecosystemLinks.length > 0 && (
+                    {filteredEcosystems.length > 0 && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-2 text-slate-400">
@@ -1113,24 +1210,38 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
+                                            <th className="p-4 w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedGroupIds.size === paginatedEcosystems.length && paginatedEcosystems.length > 0}
+                                                    onChange={handleSelectAllGroups}
+                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                />
+                                            </th>
                                             <th className="p-4 font-semibold">Группа / Район</th>
                                             <th className="p-4 font-semibold">Суммарная Статистика</th>
-                                            <th className="p-4 font-semibold">Связанные QR</th>
                                             <th className="p-4 font-semibold text-right">Действие</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {paginatedEcosystems.map((item: any) => (
-                                            <tr key={item.tg_chat_id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <tr key={item.tg_chat_id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedGroupIds.has(item.tg_chat_id) ? 'bg-indigo-500/10' : ''}`}>
+                                                <td className="p-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedGroupIds.has(item.tg_chat_id)}
+                                                        onChange={() => handleToggleGroupSelect(item.tg_chat_id)}
+                                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                    />
+                                                </td>
                                                 <td className="p-4">
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2 group/title">
-                                                            <div className="font-medium text-white">{item.reviewer_name}</div>
+                                                            <div className="font-medium text-white">{item.title}</div>
                                                             <button
                                                                 onClick={() => setEditingGroup({
-                                                                    id: item.id,
                                                                     tgChatId: item.tg_chat_id,
-                                                                    title: item.reviewer_name,
+                                                                    title: item.title,
                                                                     district: item.district
                                                                 })}
                                                                 className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500"
@@ -1177,28 +1288,12 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                         )}
                                                         <button
                                                             onClick={() => handleRefreshStats(item.codes[0], item.id)}
-                                                            className={`p - 1 hover: bg - white / 10 rounded transition - all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'} `}
+                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
                                                         >
                                                             <HistoryIcon className="w-3 h-3" />
                                                         </button>
                                                     </div>
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="flex flex-wrap gap-2 max-w-[200px]">
-                                                        {item.codes.map((code: string) => (
-                                                            <button
-                                                                key={code}
-                                                                onClick={() => copyToClipboard(`${window.location.protocol}//${window.location.host}/s/${code}`, code)}
-                                                                className="font-mono text-[9px] text-slate-400 bg-white/5 px-2 py-0.5 rounded hover:text-white hover:bg-white/10 transition-all flex items-center gap-1"
-                                                            >
-                                                                {code}
-                                                                < ExternalLink className={`w-2.5 h-2.5 ${copiedId === code ? 'text-green-400' : 'opacity-30'}`
-                                                                } />
-                                                            </button >
-                                                        ))
-                                                        }
-                                                    </div >
-                                                </td >
                                                 <td className="p-4 text-right">
                                                     <div className="flex justify-end gap-2 text-slate-400">
                                                         <button
@@ -1225,7 +1320,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                         </button>
                                                     </div>
                                                 </td>
-                                            </tr >
+                                            </tr>
                                         ))}
                                     </tbody >
                                 </table >
@@ -1256,9 +1351,9 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     </div>
                                 </div>
                             )}
-                        </div >
+                        </div>
                     )}
-                </div >
+                </div>
             ) : activeTab === 'map' ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
@@ -1459,6 +1554,81 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                         )}
                     </div>
 
+                    {/* Topic Action Modal */}
+                    {showTopicModal && (
+                        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                            <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
+                                    <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                                </div>
+
+                                <div className="space-y-4 text-left">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
+                                        <select
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            value={topicActionData.topicName}
+                                            onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
+                                        >
+                                            <option value="📢 Новости">📢 Новости</option>
+                                            <option value="🗣 Флудилка">🗣 Флудилка</option>
+                                            <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
+                                            <option value="🛠 Услуги">🛠 Услуги</option>
+                                            <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
+                                        <textarea
+                                            className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            placeholder="Введите текст сообщения..."
+                                            value={topicActionData.message}
+                                            onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
+                                        />
+                                        <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={topicActionData.pin}
+                                                onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
+                                                className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                            />
+                                            <span className="text-xs text-slate-400">Закрепить сообщение</span>
+                                        </label>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5 pt-2">
+                                        <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
+                                                className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                            >
+                                                Закрыть (Read-Only)
+                                            </button>
+                                            <button
+                                                onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
+                                                className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                            >
+                                                Открыть
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleBatchTopicAction}
+                                    disabled={batchLoading || (!topicActionData.message && !topicActionData.closedAction)}
+                                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                                >
+                                    {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                    Применить к {selectedGroupIds.size} группам
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
                         <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
                             <QrCode className="w-10 h-10 text-indigo-400" />
@@ -1529,8 +1699,69 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 <QrCode className="w-4 h-4" />
                                 <h3 className="text-sm font-medium uppercase tracking-wider">База всех ссылок</h3>
                             </div>
-                            <div className="text-xs text-slate-500 uppercase tracking-widest">
-                                Всего: {links.length}
+
+                            <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
+                                <button
+                                    onClick={() => setStuckFilter('all')}
+                                    className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    Все
+                                </button>
+                                <button
+                                    onClick={() => setStuckFilter('stuck')}
+                                    className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'stuck' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    Оклеены
+                                </button>
+                                <button
+                                    onClick={() => setStuckFilter('not_stuck')}
+                                    className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'not_stuck' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    Не оклеены
+                                </button>
+                            </div>
+
+                            <div className="flex flex-1 items-center gap-2 max-w-2xl ml-4">
+                                <div className="relative flex-1 group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                                    <input
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Поиск по коду/адресу..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                    />
+                                </div>
+
+                                <div className="relative w-48 group">
+                                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                                    <input
+                                        value={groupSearchTerm}
+                                        onChange={(e) => setGroupSearchTerm(e.target.value)}
+                                        placeholder="По Группе..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                    />
+                                </div>
+
+                                <div className="relative shrink-0">
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider outline-none cursor-pointer hover:bg-white/10"
+                                    >
+                                        <option value="all" className="bg-slate-900">СТАТУС: ЛЮБОЙ</option>
+                                        <option value="не распечатан" className="bg-slate-900">НЕ РАСПЕЧАТАН</option>
+                                        <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
+                                        <option value="не подключен" className="bg-slate-900">НЕ ПОДКЛЮЧЕН</option>
+                                        <option value="подключен" className="bg-slate-900">ПОДКЛЮЧЕН</option>
+                                        <option value="активен" className="bg-slate-900">АКТИВЕН</option>
+                                        <option value="приклеен" className="bg-slate-900">ПРИКЛЕЕН</option>
+                                        <option value="архив" className="bg-slate-900">АРХИВ</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="text-xs text-slate-500 uppercase tracking-widest ml-4">
+                                Всего: {filteredAllLinks.length}
                             </div>
                         </div>
 
@@ -1553,7 +1784,7 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {allLinks.map((link) => {
+                                    {paginatedLinks.map((link) => {
                                         const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
                                         return (
                                             <tr key={link.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedIds.has(link.id) ? 'bg-indigo-500/10' : ''}`}>
@@ -1606,20 +1837,20 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             <div className="space-y-2 p-3 bg-slate-900/50 rounded-xl border border-indigo-500/30">
                                                                 <input
                                                                     placeholder="Chat ID (напр: -100...)"
-                                                                    value={editingGroup.tgChatId}
-                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
+                                                                    value={editingGroup?.tgChatId || ''}
+                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
                                                                     className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <input
                                                                     placeholder="Название группы"
-                                                                    value={editingGroup.title}
-                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                                                    value={editingGroup?.title || ''}
+                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
                                                                     className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <input
                                                                     placeholder="Район"
-                                                                    value={editingGroup.district}
-                                                                    onChange={(e) => setEditingGroup({ ...editingGroup, district: e.target.value })}
+                                                                    value={editingGroup?.district || ''}
+                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
                                                                     className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
                                                                 />
                                                                 <div className="flex gap-2">
@@ -1661,8 +1892,8 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                                             <div className="flex gap-2">
                                                                 <input
                                                                     type="text"
-                                                                    value={editingTarget.value}
-                                                                    onChange={(e) => setEditingTarget({ ...editingTarget, value: e.target.value })}
+                                                                    value={editingTarget?.value || ''}
+                                                                    onChange={(e) => editingTarget && setEditingTarget({ ...editingTarget, value: e.target.value })}
                                                                     className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-white"
                                                                     autoFocus
                                                                 />
@@ -1712,9 +1943,58 @@ export default function NextClient({ initialLinks }: NextClientProps) {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Controls for QR Links */}
+                        {totalQrPages > 1 && (
+                            <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
+                                <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                                    Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalQrPages}</span>
+                                    <span className="ml-2 text-slate-600">({filteredAllLinks.length} всего)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(totalQrPages, prev + 1))}
+                                        disabled={currentPage === totalQrPages}
+                                        className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
-        </div >
+            {/* Bulk Actions Fixed Bar */}
+            {selectedGroupIds.size > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
+                        <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+                    </div>
+                    <div className="w-px h-8 bg-white/10 mx-2" />
+                    <button
+                        onClick={() => setShowTopicModal(true)}
+                        className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Управление топиками
+                    </button>
+                    <button
+                        onClick={() => setSelectedGroupIds(new Set())}
+                        className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

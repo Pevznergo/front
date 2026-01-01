@@ -25,13 +25,10 @@ export async function POST(req: NextRequest) {
 
     try {
         const result = await createEcosystem(title, district);
-        const shortUrl = `https://aporto.tech/r/${result.shortCode}`;
 
         return NextResponse.json({
             success: true,
             link: result.inviteLink,
-            shortUrl: shortUrl,
-            shortCode: result.shortCode,
             chatId: result.chatId
         });
     } catch (error: any) {

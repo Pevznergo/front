@@ -141,6 +141,33 @@ export async function initDatabase() {
       )
     `;
 
+    // Ecosystems table (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS ecosystems (
+        id SERIAL PRIMARY KEY,
+        tg_chat_id VARCHAR(100) UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        district VARCHAR(255),
+        invite_link TEXT,
+        marketplace_topic_id INTEGER,
+        admin_topic_id INTEGER,
+        member_count INTEGER DEFAULT 0,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Migration: Populate ecosystems from short_links if empty
+    const existingEcosystems = await sqlConnection`SELECT id FROM ecosystems LIMIT 1`;
+    if (existingEcosystems.length === 0) {
+      await sqlConnection`
+        INSERT INTO ecosystems (tg_chat_id, title, district, marketplace_topic_id, member_count, created_at)
+        SELECT DISTINCT ON (tg_chat_id) tg_chat_id, reviewer_name, district, marketplace_topic_id, member_count, created_at
+        FROM short_links
+        WHERE tg_chat_id IS NOT NULL
+      `;
+    }
+
     // Market Ads table (New)
     await sqlConnection`
       CREATE TABLE IF NOT EXISTS market_ads (
