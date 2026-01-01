@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { sendTopicMessage, setTopicClosed } from "@/lib/chat";
+import { sendTopicMessage, setTopicClosed, getChatEntity } from "@/lib/chat";
 import { sql } from "@/lib/db";
 import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     for (const chatId of chatIds) {
         try {
-            const entity = await client.getEntity(chatId);
+            const entity = await getChatEntity(client, chatId);
 
             // 1. Resolve topic ID by name
             const forumTopics = await client.invoke(new Api.channels.GetForumTopics({

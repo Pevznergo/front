@@ -92,9 +92,40 @@ export async function createEcosystem(title: string, district: string | null) {
     };
 }
 
+// Helper to robustly resolve entity (handles session cache issues)
+export async function getChatEntity(client: any, chatId: string) {
+    try {
+        // Try direct resolution first
+        // If chatId is "naked" (no -100), GramJS might think it's a User.
+        // If it's a channel, it usually needs to be found in cache or passed as PeerChannel.
+        return await client.getEntity(chatId);
+    } catch (e: any) {
+        if (e.message && (e.message.includes("Could not find the input entity") || e.message.includes("PeerUser"))) {
+            console.log(`[Telegram] Entity ${chatId} not found in cache, fetching dialogs...`);
+            // Fetch dialogs to populate cache
+            const dialogs = await client.getDialogs({ limit: 100 });
+
+            // Try to find manually to be sure
+            const found = dialogs.find((d: any) => {
+                const id = d.entity?.id?.toString();
+                // Match exact ID, or ID with/without -100 prefix
+                return id === chatId ||
+                    `-100${id}` === chatId ||
+                    id === chatId.replace('-100', '');
+            });
+
+            if (found && found.entity) {
+                console.log(`[Telegram] Found entity via dialogs: ${found.entity.title} (${found.entity.id})`);
+                return found.entity;
+            }
+        }
+        throw e;
+    }
+}
+
 export async function sendTopicMessage(chatId: string, topicId: number, message: string, pin: boolean = false) {
     const client = await getTelegramClient();
-    const entity = await client.getEntity(chatId);
+    const entity = await getChatEntity(client, chatId);
 
     const result = await client.sendMessage(entity, {
         message,
@@ -112,7 +143,7 @@ export async function sendTopicMessage(chatId: string, topicId: number, message:
 
 export async function setTopicClosed(chatId: string, topicId: number, closed: boolean) {
     const client = await getTelegramClient();
-    const entity = await client.getEntity(chatId);
+    const entity = await getChatEntity(client, chatId);
 
     await client.invoke(new Api.channels.EditForumTopic({
         channel: entity,
@@ -123,7 +154,7 @@ export async function setTopicClosed(chatId: string, topicId: number, closed: bo
 
 export async function updateChatTitle(chatId: string, title: string) {
     const client = await getTelegramClient();
-    const entity = await client.getEntity(chatId);
+    const entity = await getChatEntity(client, chatId);
 
     await client.invoke(
         new Api.channels.EditTitle({
