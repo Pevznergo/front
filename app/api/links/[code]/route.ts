@@ -107,7 +107,11 @@ export async function PATCH(
             await sql`UPDATE short_links SET target_url = ${targetUrl} WHERE code = ${code}`;
         }
         if (tgChatId) {
-            await sql`UPDATE short_links SET tg_chat_id = ${tgChatId}, status = 'подключен' WHERE code = ${code}`;
+            // Robustness: Fetch the official invite link from ecosystems table
+            const eco = await sql`SELECT invite_link FROM ecosystems WHERE tg_chat_id = ${tgChatId}`;
+            const officialUrl = eco.length > 0 ? eco[0].invite_link : targetUrl;
+
+            await sql`UPDATE short_links SET tg_chat_id = ${tgChatId}, target_url = ${officialUrl}, status = 'подключен' WHERE code = ${code}`;
             // Also update ecosystem status
             await sql`UPDATE ecosystems SET status = 'подключен' WHERE tg_chat_id = ${tgChatId}`;
         }
