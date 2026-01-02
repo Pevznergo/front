@@ -10,7 +10,8 @@ import {
     CheckSquare,
     X,
     ChevronLeft, ChevronRight,
-    AlertCircle, List, Map as MapIcon, Globe, Printer, Play
+    AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
+    Clipboard as ClipboardIcon
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -205,7 +206,6 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен' | 'не распечатан' | 'не подключен' | 'подключен' | 'архив'>('all');
     const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [topicActionProgress, setTopicActionProgress] = useState<{ current: number, total: number } | null>(null);
     const ITEMS_PER_PAGE = 20;
@@ -1443,7 +1443,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                     className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
                                                                 >
                                                                     {code}
-                                                                    {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3 opacity-50" />}
+                                                                    {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <ClipboardIcon className="w-3 h-3 opacity-50" />}
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -1515,8 +1515,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
 
                                                         <div className="flex items-center gap-2">
                                                             <div className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${item.status === 'подключен'
-                                                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                                    : 'bg-slate-800 text-slate-500 border-slate-700'
+                                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                : 'bg-slate-800 text-slate-500 border-slate-700'
                                                                 }`}>
                                                                 {item.status || 'не подключен'}
                                                             </div>
@@ -1542,8 +1542,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                         <button
                                                             onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck)}
                                                             className={`p-2.5 rounded-xl transition-all border ${item.is_stuck
-                                                                    ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
-                                                                    : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
+                                                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
+                                                                : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
                                                                 }`}
                                                             title={item.is_stuck ? "Снять метку оклеен" : "Отметить оклеенным"}
                                                         >
@@ -2206,31 +2206,37 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
                                         className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
                                     >
-                                        Открыть
-
-                                        {/* Bulk Actions Fixed Bar */}
-                                        {selectedGroupIds.size > 0 && (
-                                            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
-                                                    <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
-                                                </div>
-                                                <div className="w-px h-8 bg-white/10 mx-2" />
-                                                <button
-                                                    onClick={() => setShowTopicModal(true)}
-                                                    className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
-                                                >
-                                                    <MessageSquare className="w-4 h-4" />
-                                                    Управление топиками
-                                                </button>
-                                                <button
-                                                    onClick={() => setSelectedGroupIds(new Set())}
-                                                    className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
-                                                >
-                                                    <X className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        )}
+                                    </button>
                                 </div>
-                                );
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Actions Fixed Bar */}
+            {selectedGroupIds.size > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
+                        <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+                    </div>
+                    <div className="w-px h-8 bg-white/10 mx-2" />
+                    <button
+                        onClick={() => setShowTopicModal(true)}
+                        className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Управление топиками
+                    </button>
+                    <button
+                        onClick={() => setSelectedGroupIds(new Set())}
+                        className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 }
