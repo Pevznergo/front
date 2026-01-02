@@ -205,6 +205,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен' | 'не распечатан' | 'не подключен' | 'подключен' | 'архив'>('all');
     const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const ITEMS_PER_PAGE = 50;
 
     // Filter logic
@@ -1171,59 +1172,86 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             {activeTab === 'ecosystem' ? (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Creation Form */}
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                                <MessageSquare className="w-5 h-5 text-indigo-400" />
-                            </div>
-                            <div className="text-left">
-                                <h2 className="text-xl font-semibold">Создание экосистемы</h2>
-                                <p className="text-sm text-slate-400">Введите адрес дома для создания чата с топиками</p>
+                    {/* Creation Button & Modal */}
+                    <div className="flex justify-end">
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
+                        >
+                            <MessageSquare className="w-5 h-5" />
+                            Создать чат
+                        </button>
+                    </div>
+
+                    {showCreateModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+                            <div className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+                                <button
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                            <MessageSquare className="w-5 h-5 text-indigo-400" />
+                                        </div>
+                                        <div className="text-left">
+                                            <h2 className="text-xl font-semibold text-white">Создание экосистемы</h2>
+                                            <p className="text-sm text-slate-400">Введите адрес дома для создания чата</p>
+                                        </div>
+                                    </div>
+
+                                    <form onSubmit={handleSubmit(async (data) => {
+                                        await onSubmit(data);
+                                        setShowCreateModal(false);
+                                    })} className="space-y-4">
+                                        <div className="relative">
+                                            <input
+                                                {...register("title", { required: "Адрес дома обязателен" })}
+                                                placeholder="Напр: ул. Пушкина, д. 10"
+                                                className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
+                                            />
+                                            {errors.title && (
+                                                <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="relative">
+                                            <input
+                                                {...register("district")}
+                                                placeholder="Район (напр: Хамовники)"
+                                                className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 text-white"
+                                        >
+                                            {loading ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Send className="w-5 h-5" />
+                                                    ⚡ Создать экосистему
+                                                </>
+                                            )}
+                                        </button>
+
+                                        {error && (
+                                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                                                {error}
+                                            </div>
+                                        )}
+                                    </form>
+                                </div>
                             </div>
                         </div>
-
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="relative">
-                                <input
-                                    {...register("title", { required: "Адрес дома обязателен" })}
-                                    placeholder="Напр: ул. Пушкина, д. 10"
-                                    className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                                />
-                                {errors.title && (
-                                    <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
-                                )}
-                            </div>
-
-                            <div className="relative">
-                                <input
-                                    {...register("district")}
-                                    placeholder="Район (напр: Хамовники)"
-                                    className="w-full h-14 bg-slate-900/50 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
-                            >
-                                {loading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Send className="w-5 h-5" />
-                                        ⚡ Создать экосистему
-                                    </>
-                                )}
-                            </button>
-
-                            {error && (
-                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                                    {error}
-                                </div>
-                            )}
-                        </form>
-                    </div>
+                    )}
 
                     {/* Result Block */}
                     {result && (

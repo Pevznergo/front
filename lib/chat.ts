@@ -33,6 +33,30 @@ export async function createEcosystem(title: string, district: string | null) {
         })
     );
 
+    // 2.5 Set Default Permissions
+    // Allow: Invite Users (inviteUsers: false)
+    // Block: Change Info, Pin Messages (create topics)
+    await client.invoke(
+        new Api.messages.EditChatDefaultBannedRights({
+            peer: channel,
+            bannedRights: new Api.ChatBannedRights({
+                untilDate: 0,
+                viewMessages: false,
+                sendMessages: false,
+                sendMedia: false,
+                sendStickers: false,
+                sendGifs: false,
+                sendGames: false,
+                sendInline: false,
+                embedLinks: false,
+                sendPolls: false,
+                changeInfo: true, // BANNED: Cannot change info (or create topics)
+                inviteUsers: false, // ALLOWED: Can invite users
+                pinMessages: true, // BANNED: Cannot pin
+            }),
+        })
+    );
+
     // 3. Create Topics
     await client.invoke(new Api.channels.CreateForumTopic({ channel, title: "🗣 Флудилка" }));
     await client.invoke(new Api.channels.CreateForumTopic({ channel, title: "📢 Новости" }));

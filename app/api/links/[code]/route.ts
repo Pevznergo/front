@@ -56,6 +56,13 @@ export async function GET(
                     SET member_count = ${memberCount}, last_count_update = ${now} 
                     WHERE id = ${link.id}
                 `;
+
+                // Also update ecosystems table
+                await sql`
+                    UPDATE ecosystems 
+                    SET member_count = ${memberCount}, last_updated = ${now}
+                    WHERE tg_chat_id = ${link.tg_chat_id}
+                `;
             } catch (tgError) {
                 console.error("Error fetching Telegram member count:", tgError);
                 // Don't fail the whole request if TG fetch fails, use cached value
