@@ -313,13 +313,29 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     });
 
     const filterEcosystems = (list: any[]) => {
-        if (!groupSearchTerm) return list;
-        const low = groupSearchTerm.toLowerCase();
-        return list.filter(e =>
-            e.title.toLowerCase().includes(low) ||
-            e.district.toLowerCase().includes(low) ||
-            e.codes.some((c: string) => c.toLowerCase().includes(low))
-        );
+        let filtered = list;
+
+        // Global Search
+        if (searchTerm) {
+            const low = searchTerm.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.title.toLowerCase().includes(low) ||
+                (e.district || "").toLowerCase().includes(low) ||
+                e.codes.some((c: string) => c.toLowerCase().includes(low))
+            );
+        }
+
+        // Specific Group Search
+        if (groupSearchTerm) {
+            const low = groupSearchTerm.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.title.toLowerCase().includes(low) ||
+                (e.district || "").toLowerCase().includes(low) ||
+                e.codes.some((c: string) => c.toLowerCase().includes(low))
+            );
+        }
+
+        return filtered;
     };
 
     const filteredEcosystems = filterByStuck(filterEcosystems(ecosystemTableData));
