@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
 
     try {
         // Fetch all links that have a tg_chat_id (ecosystems)
+        // Fetch all ecosystems to allow linking
         const groups = await sql`
-            SELECT id, code, tg_chat_id, reviewer_name as title, district, target_url
-            FROM short_links
-            WHERE tg_chat_id IS NOT NULL OR reviewer_name IS NOT NULL
+            SELECT id, tg_chat_id, title, district, invite_link as target_url
+            FROM ecosystems
             ORDER BY created_at DESC
         `;
         return NextResponse.json(groups);
