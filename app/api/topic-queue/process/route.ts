@@ -66,18 +66,9 @@ export async function GET(req: NextRequest) {
                     }));
                 }
             } else if (action_type === 'close') {
-                await setTopicClosed(client, entity, topicId);
+                await setTopicClosed(chat_id, topicId, true);
             } else if (action_type === 'open') {
-                // For open, we might need a different function or pass false if supported.
-                // Checking lib/chat.ts definition first implies setTopicClosed usually takes (client, entity, topicId).
-                // To OPEN, we likely need to check how setTopicClosed is implemented or use raw API.
-                // Assuming setTopicClosed toggles or sets to closed.
-                // If the library function only closes, we need raw API for open.
-                await client.invoke(new Api.channels.EditForumTopic({
-                    channel: entity,
-                    topicId: topicId,
-                    closed: false
-                }));
+                await setTopicClosed(chat_id, topicId, false);
             }
 
             // 4. Mark completed
