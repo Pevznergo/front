@@ -47,6 +47,7 @@ interface Ecosystem {
     member_count: number;
     last_updated: string;
     created_at: string;
+    status?: string;
 }
 
 interface QueueItem {
@@ -417,7 +418,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 invite_link: resultData.link,
                 member_count: 0,
                 last_updated: new Date().toISOString(),
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                status: 'не подключен'
             };
 
             setEcosystems([newEco, ...ecosystems]);
@@ -1415,21 +1417,11 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                             <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Участники</span>
                                                             <span className="text-sm font-bold text-purple-400">{item.member_count}</span>
                                                         </div>
-                                                        <div className="flex flex-col px-2 border-l border-white/10 ml-2">
-                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Статус</span>
-                                                            <select
-                                                                value={links.find(l => l.tg_chat_id === item.tg_chat_id)?.status || 'подключен'}
-                                                                onChange={(e) => {
-                                                                    const code = item.codes[0];
-                                                                    if (code) handleUpdateStatus(code, item.id, e.target.value);
-                                                                }}
-                                                                className="bg-transparent text-[10px] font-bold text-green-400 uppercase tracking-widest outline-none cursor-pointer hover:text-green-300"
-                                                            >
-                                                                <option value="не подключен" className="bg-slate-900 text-[10px]">НЕ ПОДКЛЮЧЕН</option>
-                                                                <option value="подключен" className="bg-slate-900 text-[10px]">ПОДКЛЮЧЕН</option>
-                                                                <option value="архив" className="bg-slate-900 text-[10px]">АРХИВ</option>
-                                                            </select>
+                                                        <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Статус</span>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-widest ${item.status === 'подключен' ? 'text-green-400' : 'text-slate-500'}`}>
+                                                            {item.status || 'не подключен'}
                                                         </div>
+                                                        {/* We remove the manual select for now as status is automated by linking */}
                                                         {item.is_stuck && (
                                                             <div className="flex flex-col px-2 border-l border-white/10 ml-2">
                                                                 <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Физика</span>

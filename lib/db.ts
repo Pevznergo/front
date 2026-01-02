@@ -153,9 +153,15 @@ export async function initDatabase() {
         admin_topic_id INTEGER,
         member_count INTEGER DEFAULT 0,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'не подключен'
       )
     `;
+
+    // Migration: Add status column if not exists
+    try {
+      await sqlConnection`ALTER TABLE ecosystems ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'не подключен'`;
+    } catch (e) { }
 
     // Migration: Populate ecosystems from short_links if empty
     const existingEcosystems = await sqlConnection`SELECT id FROM ecosystems LIMIT 1`;

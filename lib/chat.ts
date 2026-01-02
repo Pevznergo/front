@@ -61,7 +61,7 @@ export async function createEcosystem(title: string, district: string | null) {
 
     if (adminTopicId) {
         await client.sendMessage(channel, {
-            message: "Кто пригласит больше всех соседей в чат, тот станет Администратором! 🏆\n\nПриглашать можно в настройках группы (нажмите на название чата -> Добавить участников). \n\nМы отслеживаем количество приглашенных и объявим результат!",
+            message: "Чтобы участвовать в голосовании - отправьте + в этом чате.",
             replyTo: adminTopicId
         });
     }
@@ -91,8 +91,8 @@ export async function createEcosystem(title: string, district: string | null) {
 
     // 5. Save to database (Ecosystems table)
     await sql`
-        INSERT INTO ecosystems (tg_chat_id, title, district, marketplace_topic_id, admin_topic_id, invite_link)
-        VALUES (${channelId.toString()}, ${title}, ${district || null}, ${marketplaceTopicId || null}, ${adminTopicId || null}, ${inviteLink})
+        INSERT INTO ecosystems (tg_chat_id, title, district, marketplace_topic_id, admin_topic_id, invite_link, status)
+        VALUES (${channelId.toString()}, ${title}, ${district || null}, ${marketplaceTopicId || null}, ${adminTopicId || null}, ${inviteLink}, 'не подключен')
         ON CONFLICT (tg_chat_id) DO UPDATE SET
             title = EXCLUDED.title,
             district = EXCLUDED.district,

@@ -101,6 +101,8 @@ export async function PATCH(
         }
         if (tgChatId) {
             await sql`UPDATE short_links SET tg_chat_id = ${tgChatId}, status = 'подключен' WHERE code = ${code}`;
+            // Also update ecosystem status
+            await sql`UPDATE ecosystems SET status = 'подключен' WHERE tg_chat_id = ${tgChatId}`;
         }
         if (title) {
             await sql`UPDATE short_links SET reviewer_name = ${title} WHERE code = ${code}`;
