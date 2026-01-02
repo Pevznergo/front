@@ -206,7 +206,9 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const ITEMS_PER_PAGE = 50;
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [topicActionProgress, setTopicActionProgress] = useState<{ current: number, total: number } | null>(null);
+    const ITEMS_PER_PAGE = 20;
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -277,7 +279,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         if (selectedGroupIds.size === 0) return;
         setBatchLoading(true);
         try {
-            const res = await fetch("/api/batch/topic-action", {
+            const res = await fetch("/api/topic-queue/add", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -286,18 +288,55 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to perform actions");
+            if (!res.ok) throw new Error(data.error || "Failed to enqueue");
 
-            alert(`Действие выполнено для ${selectedGroupIds.size} групп. \nРезультаты: ${data.results.filter((r: any) => r.success).length} ок, ${data.results.filter((r: any) => !r.success).length} ошибок.`);
-            setShowTopicModal(false);
+            alert(`Добавлено ${data.count} задач в очередь. Запустите обработчик или настройте Cron.`);
             setSelectedGroupIds(new Set());
         } catch (e: any) {
-            alert(e.message);
+            alert("Ошибка при добавлении в очередь: " + e.message);
         } finally {
             setBatchLoading(false);
         }
     };
 
+    const handleProcessTopicQueue = async () => {
+        setBatchLoading(true);
+        try {
+            // Process loop 
+            // We loop until no pending tasks or stopped
+            let processing = true;
+            let processedCount = 0;
+
+            while (processing) {
+                const res = await fetch("/api/topic-queue/process");
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    if (data.message === "No pending tasks") {
+                        alert("Очередь пуста или все задачи выполнены.");
+                    } else {
+                        console.error("Task failed:", data.error);
+                    }
+                    processing = false;
+                    break;
+                }
+
+                processedCount++;
+                // Update UI feedback if needed (using topicActionProgress state perhaps)
+                setTopicActionProgress({ current: processedCount, total: 999 }); // optimizing since we don't know total easily without extra call
+
+                // Delay 30-60s
+                const delay = Math.floor(Math.random() * 30000) + 30000;
+                await new Promise(r => setTimeout(r, delay));
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert("Ошибка обработчика");
+        } finally {
+            setBatchLoading(false);
+            setTopicActionProgress(null);
+        }
+    };
     // Ecosystem rendering logic
     const ecosystemTableData = ecosystems.map(eco => {
         const associatedLinks = links.filter(l => l.tg_chat_id === eco.tg_chat_id);
@@ -1157,32 +1196,29 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     </button>
                 </div>
 
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Поиск по коду, адресу или району..."
-                        className="w-full h-12 bg-slate-900/50 border border-white/10 rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                    />
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Поиск по коду, адресу или району..."
+                            className="w-full h-12 bg-slate-900/50 border border-white/10 rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20 whitespace-nowrap"
+                    >
+                        <MessageSquare className="w-5 h-5" />
+                        <span className="hidden md:inline">Создать чат</span>
+                    </button>
                 </div>
             </div>
 
             {activeTab === 'ecosystem' ? (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {/* Creation Form */}
-                    {/* Creation Button & Modal */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
-                        >
-                            <MessageSquare className="w-5 h-5" />
-                            Создать чат
-                        </button>
-                    </div>
-
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {showCreateModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
                             <div className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -1368,149 +1404,173 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+                            {/* Ecosystems Table */}
+                            <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
-                                            <th className="p-4 w-10">
+                                        <tr className="border-b border-slate-800 bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                            <th className="p-5 w-14 text-center">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedGroupIds.size === paginatedEcosystems.length && paginatedEcosystems.length > 0}
                                                     onChange={handleSelectAllGroups}
-                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
                                                 />
                                             </th>
-                                            <th className="p-4 font-semibold">Группа / Район</th>
-                                            <th className="p-4 font-semibold">Суммарная Статистика</th>
-                                            <th className="p-4 font-semibold text-right">Действие</th>
+                                            <th className="p-5">Код / Экосистема</th>
+                                            <th className="p-5">Статистика</th>
+                                            <th className="p-5 text-right">Действия</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-slate-800/50">
                                         {paginatedEcosystems.map((item: any) => (
-                                            <tr key={item.tg_chat_id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedGroupIds.has(item.tg_chat_id) ? 'bg-indigo-500/10' : ''}`}>
-                                                <td className="p-4">
+                                            <tr key={item.tg_chat_id} className={`group hover:bg-slate-800/30 transition-all ${selectedGroupIds.has(item.tg_chat_id) ? 'bg-indigo-500/5' : ''}`}>
+                                                <td className="p-5 text-center align-top pt-6">
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedGroupIds.has(item.tg_chat_id)}
                                                         onChange={() => handleToggleGroupSelect(item.tg_chat_id)}
-                                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                        className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
                                                     />
                                                 </td>
-                                                <td className="p-4">
-                                                    <div className="flex flex-col gap-1">
+                                                <td className="p-5 align-top">
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            {item.codes.map((code: string) => (
+                                                                <button
+                                                                    key={code}
+                                                                    onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
+                                                                    className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
+                                                                >
+                                                                    {code}
+                                                                    {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3 opacity-50" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+
                                                         {editingGroup && editingGroup.tgChatId === item.tg_chat_id ? (
-                                                            <div className="space-y-1.5 bg-slate-900/50 p-2 rounded-xl border border-indigo-500/30">
+                                                            <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-indigo-500/30 shadow-lg mt-2">
                                                                 <input
                                                                     value={editingGroup.title}
                                                                     onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1 text-xs outline-none text-white focus:ring-1 focus:ring-indigo-500/50"
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
                                                                     placeholder="Название"
                                                                 />
                                                                 <input
                                                                     value={editingGroup.district}
                                                                     onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1 text-xs outline-none text-white focus:ring-1 focus:ring-indigo-500/50"
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
                                                                     placeholder="Район"
                                                                 />
-                                                                <div className="flex gap-2">
+                                                                <div className="flex gap-2 pt-1">
                                                                     <button
                                                                         onClick={() => handleUpdateEcosystem(item.tg_chat_id)}
-                                                                        className="flex-1 py-1 bg-indigo-600 text-[10px] font-bold rounded text-white hover:bg-indigo-500 transition-colors"
+                                                                        className="flex-1 py-2 bg-indigo-600 text-xs font-bold rounded-xl text-white hover:bg-indigo-500 transition-colors shadow-md"
                                                                     >
                                                                         Сохранить
                                                                     </button>
                                                                     <button
                                                                         onClick={() => setEditingGroup(null)}
-                                                                        className="py-1 px-3 bg-white/5 text-[10px] font-bold rounded text-slate-400 hover:bg-white/10 transition-colors"
+                                                                        className="py-2 px-4 bg-slate-700 text-xs font-bold rounded-xl text-slate-300 hover:bg-slate-600 transition-colors"
                                                                     >
                                                                         Отмена
                                                                     </button>
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <>
+                                                            <div className="mt-1">
                                                                 <div className="flex items-center gap-2 group/title">
-                                                                    <div className="font-medium text-white">{item.title}</div>
+                                                                    <h3 className="font-semibold text-base text-white">{item.title}</h3>
                                                                     <button
                                                                         onClick={() => setEditingGroup({
                                                                             tgChatId: item.tg_chat_id,
                                                                             title: item.title,
                                                                             district: item.district
                                                                         })}
-                                                                        className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500"
+                                                                        className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
                                                                     >
-                                                                        <Edit3 className="w-3 h-3" />
+                                                                        <Edit3 className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 </div>
-                                                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                                                                    <MapPin className="w-3 h-3" />
+                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                                                                    <MapPin className="w-3.5 h-3.5" />
                                                                     {item.district || 'Район не указан'}
                                                                 </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex gap-4 items-center">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Всего кликов</span>
-                                                            <span className="text-sm font-bold text-indigo-400">{item.clicks_count}</span>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Участники</span>
-                                                            <span className="text-sm font-bold text-purple-400">{item.member_count}</span>
-                                                        </div>
-                                                        <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Статус</span>
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest ${item.status === 'подключен' ? 'text-green-400' : 'text-slate-500'}`}>
-                                                            {item.status || 'не подключен'}
-                                                        </div>
-                                                        {/* We remove the manual select for now as status is automated by linking */}
-                                                        {item.is_stuck && (
-                                                            <div className="flex flex-col px-2 border-l border-white/10 ml-2">
-                                                                <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Физика</span>
-                                                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">ОКЛЕЕН</span>
                                                             </div>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleRefreshStats(item.codes[0], item.id)}
-                                                            className={`p-1 hover:bg-white/10 rounded transition-all ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600'}`}
-                                                        >
-                                                            <HistoryIcon className="w-3 h-3" />
-                                                        </button>
                                                     </div>
                                                 </td>
-                                                <td className="p-4 text-right">
-                                                    <div className="flex justify-end gap-2 text-slate-400">
+                                                <td className="p-5 align-top">
+                                                    <div className="flex flex-col gap-3">
+                                                        <div className="flex gap-6">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Клики</span>
+                                                                <span className="text-base font-bold text-slate-200">{item.clicks_count}</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Люди</span>
+                                                                <span className="text-base font-bold text-slate-200">{item.member_count}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${item.status === 'подключен'
+                                                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                    : 'bg-slate-800 text-slate-500 border-slate-700'
+                                                                }`}>
+                                                                {item.status || 'не подключен'}
+                                                            </div>
+
+                                                            {item.is_stuck && (
+                                                                <div className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                                    ОКЛЕЕН
+                                                                </div>
+                                                            )}
+
+                                                            <button
+                                                                onClick={() => handleRefreshStats(item.codes[0], item.id)}
+                                                                className={`p-1 hover:bg-slate-800 rounded-lg transition-all ml-auto ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600 hover:text-indigo-400'}`}
+                                                                title="Обновить статистику"
+                                                            >
+                                                                <HistoryIcon className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-5 align-top">
+                                                    <div className="flex justify-end gap-2">
                                                         <button
                                                             onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck)}
-                                                            className={`p-2.5 rounded-xl transition-all ${item.is_stuck ? 'bg-emerald-500/10 text-emerald-400' : 'hover:bg-white/10 text-slate-400 hover:text-emerald-400'}`}
-                                                            title={item.is_stuck ? "Отметить как НЕ оклеен" : "Отметить как ОКЛЕЕН"}
+                                                            className={`p-2.5 rounded-xl transition-all border ${item.is_stuck
+                                                                    ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
+                                                                    : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
+                                                                }`}
+                                                            title={item.is_stuck ? "Снять метку оклеен" : "Отметить оклеенным"}
                                                         >
-                                                            <CheckCircle2 className={`w-4.5 h-4.5 ${item.is_stuck ? 'fill-emerald-400/20' : ''}`} />
+                                                            <CheckCircle2 className={`w-5 h-5 ${item.is_stuck ? 'fill-indigo-500/20' : ''}`} />
                                                         </button>
                                                         <a
                                                             href={links.find(l => l.tg_chat_id === item.tg_chat_id)?.target_url}
                                                             target="_blank"
-                                                            className="p-2.5 hover:bg-white/10 rounded-xl text-indigo-400 transition-all"
-                                                            title="Открыть группу"
+                                                            className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-transparent"
+                                                            title="Открыть в Telegram"
                                                         >
-                                                            <ExternalLink className="w-4.5 h-4.5" />
+                                                            <ExternalLink className="w-5 h-5" />
                                                         </a>
                                                         <button
                                                             onClick={() => handleDeleteEcosystem(item.tg_chat_id, item.codes)}
-                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl text-red-500/50 hover:text-red-500 transition-all"
+                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl text-slate-400 hover:text-red-400 transition-all border border-transparent"
                                                             title="Удалить экосистему"
                                                         >
-                                                            <Trash2 className="w-4.5 h-4.5" />
+                                                            <Trash2 className="w-5 h-5" />
                                                         </button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))}
-                                    </tbody >
-                                </table >
-                            </div >
+                                    </tbody>
+                                </table>
+                            </div>
 
                             {/* Pagination Controls */}
                             {totalPages > 1 && (
@@ -2147,46 +2207,30 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
                                     >
                                         Открыть
-                                    </button>
+
+                                        {/* Bulk Actions Fixed Bar */}
+                                        {selectedGroupIds.size > 0 && (
+                                            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
+                                                    <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+                                                </div>
+                                                <div className="w-px h-8 bg-white/10 mx-2" />
+                                                <button
+                                                    onClick={() => setShowTopicModal(true)}
+                                                    className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                                                >
+                                                    <MessageSquare className="w-4 h-4" />
+                                                    Управление топиками
+                                                </button>
+                                                <button
+                                                    onClick={() => setSelectedGroupIds(new Set())}
+                                                    className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
                                 </div>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleBatchTopicAction}
-                            disabled={batchLoading || (!topicActionData.message && !topicActionData.closedAction)}
-                            className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
-                        >
-                            {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                            Применить к {selectedGroupIds.size} группам
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Bulk Actions Fixed Bar */}
-            {selectedGroupIds.size > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
-                        <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
-                    </div>
-                    <div className="w-px h-8 bg-white/10 mx-2" />
-                    <button
-                        onClick={() => setShowTopicModal(true)}
-                        className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                        Управление топиками
-                    </button>
-                    <button
-                        onClick={() => setSelectedGroupIds(new Set())}
-                        className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+                                );
 }

@@ -203,6 +203,20 @@ export async function initDatabase() {
       )
     `;
 
+    // Topic Actions Queue (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS topic_actions_queue (
+        id SERIAL PRIMARY KEY,
+        chat_id VARCHAR(100) NOT NULL,
+        action_type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        error TEXT,
+        scheduled_for TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
