@@ -15,6 +15,7 @@ import {
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
 import dynamic from "next/dynamic";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const MapScout = dynamic(() => import("./MapScout"), {
     ssr: false,
@@ -57,6 +58,112 @@ interface QueueItem {
     error?: string;
 }
 
+
+
+interface StatisticsTabProps {
+    // No props needed as it fetches its own data
+}
+
+function StatisticsTab() {
+    const [data, setData] = useState<{
+        timeline: { date: string, count: number }[],
+        summary: { totalChats: number, totalQr: number, totalClicks: number, totalSubscribers: number }
+    } | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('/api/stats')
+            .then(res => res.json())
+            .then(data => {
+                setData(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Failed to load stats", err);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center p-20">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!data) return null;
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-4 gap-4">
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего чатов</div>
+                    <div className="text-3xl font-bold text-white">{data.summary.totalChats}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">QR Кодов</div>
+                    <div className="text-3xl font-bold text-indigo-400">{data.summary.totalQr}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего кликов</div>
+                    <div className="text-3xl font-bold text-emerald-400">{data.summary.totalClicks}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Подписчиков</div>
+                    <div className="text-3xl font-bold text-purple-400">{data.summary.totalSubscribers}</div>
+                </div>
+            </div>
+
+            {/* Charts */}
+            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                <div className="mb-6">
+                    <h3 className="text-lg font-bold text-white">Динамика создания чатов</h3>
+                    <p className="text-slate-500 text-xs">Количество новых экосистем по дням</p>
+                </div>
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data.timeline}>
+                            <defs>
+                                <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                            <XAxis
+                                dataKey="date"
+                                stroke="rgba(255,255,255,0.3)"
+                                tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                                tickFormatter={(str) => {
+                                    const date = new Date(str);
+                                    return `${date.getDate()}.${date.getMonth() + 1}`;
+                                }}
+                            />
+                            <YAxis
+                                stroke="rgba(255,255,255,0.3)"
+                                tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                            />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                itemStyle={{ color: '#fff' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#6366f1"
+                                fillOpacity={1}
+                                fill="url(#colorCount)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 interface NextClientProps {
     initialLinks: ShortLink[];
     initialEcosystems: Ecosystem[];
@@ -70,7 +177,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map'>('ecosystem');
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats'>('ecosystem');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -1019,6 +1126,16 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         <MapIcon className="w-4 h-4" />
                         Разведчик
                     </button>
+                    <button
+                        onClick={() => setActiveTab('stats')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'stats'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            } `}
+                    >
+                        <BarChart className="w-4 h-4" />
+                        Статистика
+                    </button>
                 </div>
 
                 <div className="relative w-full md:w-80">
@@ -1451,6 +1568,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             </div>
                         )}
                     </div>
+                </div>
+            ) : activeTab === 'stats' ? (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <StatisticsTab />
                 </div>
             ) : (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">

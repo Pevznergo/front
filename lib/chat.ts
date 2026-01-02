@@ -10,7 +10,7 @@ export async function createEcosystem(title: string, district: string | null) {
     const createResult = await client.invoke(
         new Api.channels.CreateChannel({
             title: chatTitle,
-            about: `Официальный чат: ${chatTitle}. Присоединяйтесь к соседям!`,
+            about: `Чат жильцов дома ${title}${district ? `, ${district}` : ""}`,
             megagroup: true,
         })
     ) as any;
@@ -64,6 +64,22 @@ export async function createEcosystem(title: string, district: string | null) {
             message: "Кто пригласит больше всех соседей в чат, тот станет Администратором! 🏆\n\nПриглашать можно в настройках группы (нажмите на название чата -> Добавить участников). \n\nМы отслеживаем количество приглашенных и объявим результат!",
             replyTo: adminTopicId
         });
+    }
+
+    // 3.5 Invite Bots
+    const bots = ['aportopost_bot', 'justaskmari_bot', 'aportomessage_bot', 'aportostats_bot'];
+    for (const bot of bots) {
+        try {
+            await client.invoke(
+                new Api.channels.InviteToChannel({
+                    channel: channel,
+                    users: [bot]
+                })
+            );
+            console.log(`Invited bot ${bot} to chat`);
+        } catch (e) {
+            console.warn(`Failed to invite bot ${bot}:`, e);
+        }
     }
 
     // 4. Generate Invite Link

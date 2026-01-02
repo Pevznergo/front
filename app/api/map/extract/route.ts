@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
             if (tags["addr:street"] && tags["addr:housenumber"]) {
                 const street = tags["addr:street"];
                 const house = tags["addr:housenumber"];
-                const fullAddress = `${street}, ${house}`;
+                const fullAddress = `${house}, ${street}`;
 
                 // Use coordinates or tags for better uniqueness if needed
                 addressMap.set(fullAddress, {
