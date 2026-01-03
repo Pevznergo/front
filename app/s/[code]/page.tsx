@@ -1,28 +1,42 @@
-
 import { sql, initDatabase } from '@/lib/db';
 import { redirect } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 export const dynamic = "force-dynamic";
 
-export default async function ShortLinkPage({ params }: { params: { code: string } }) {
+// Cached data fetcher
+const getCachedLink = async (code: string) => {
     await initDatabase();
+    return unstable_cache(
+        async () => {
+            const result = await sql`
+                SELECT id, target_url, tg_chat_id FROM short_links WHERE code = ${code}
+`;
+            return result.length > 0 ? result[0] : null;
+        },
+        [`link-${code}`], // Key parts
+        {
+            tags: [`link-${code}`], // Revalidation tags
+            revalidate: 3600 // Auto-revalidate every hour just in case
+        }
+    )();
+};
 
-    // Fetch target URL and related fields
-    const rows = await sql`
-        SELECT id, target_url, tg_chat_id FROM short_links WHERE code = ${params.code}
-    `;
+export default async function ShortLinkPage({ params }: { params: { code: string } }) {
+    const link = await getCachedLink(params.code);
 
-    console.log(`[ShortLink] Code: ${params.code}, Found: ${rows.length}, Target: ${rows[0]?.target_url}`);
+    // Legacy support: if uncached result was array, this handles single item logic
+    const rows = link ? [link] : [];
 
-    if (rows.length > 0) {
-        const link = rows[0];
+    console.log(`[ShortLink] Code: ${params.code}, Found: ${rows.length}, Target: ${link?.target_url}`);
 
+    if (link) {
         // Increment click count (best effort)
         try {
             await sql`
                 UPDATE short_links 
                 SET clicks_count = COALESCE(clicks_count, 0) + 1 
                 WHERE code = ${params.code}
-            `;
+`;
         } catch (e) {
             console.error("Failed to increment clicks:", e);
         }
@@ -31,11 +45,11 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         if (!link.target_url) {
             // Lazy Repair: If tg_chat_id is present, try to recover the link from ecosystems
             if (link.tg_chat_id) {
-                const eco = await sql`SELECT invite_link FROM ecosystems WHERE tg_chat_id = ${link.tg_chat_id}`;
+                const eco = await sql`SELECT invite_link FROM ecosystems WHERE tg_chat_id = ${link.tg_chat_id} `;
                 if (eco.length > 0 && eco[0].invite_link) {
                     const inviteLink = eco[0].invite_link;
                     // Repair the short_link record
-                    await sql`UPDATE short_links SET target_url = ${inviteLink} WHERE id = ${link.id}`;
+                    await sql`UPDATE short_links SET target_url = ${inviteLink} WHERE id = ${link.id} `;
                     redirect(inviteLink);
                 } else if (eco.length > 0) {
                     // Ecosystem exists but has no link. Try to generate one via Telegram API.
@@ -59,8 +73,8 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                         if (result && result.link) {
                             const newLink = result.link;
                             // Save to DB
-                            await sql`UPDATE ecosystems SET invite_link = ${newLink}, status = 'подключен' WHERE tg_chat_id = ${link.tg_chat_id}`;
-                            await sql`UPDATE short_links SET target_url = ${newLink} WHERE id = ${link.id}`;
+                            await sql`UPDATE ecosystems SET invite_link = ${newLink}, status = 'подключен' WHERE tg_chat_id = ${link.tg_chat_id} `;
+                            await sql`UPDATE short_links SET target_url = ${newLink} WHERE id = ${link.id} `;
                             redirect(newLink);
                         }
                     } catch (tgErr) {
@@ -112,7 +126,7 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                     INSERT INTO short_links (code, status) 
                     VALUES (${params.code}, 'не распечатан') 
                     ON CONFLICT (code) DO NOTHING
-                `;
+    `;
                 redirect(`/setup/${params.code}`);
             } catch (e) {
                 console.error("Auto-create failed", e);

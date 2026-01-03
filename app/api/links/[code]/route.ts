@@ -4,6 +4,7 @@ import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,9 @@ export async function PATCH(
         if (body.tgChatId === null) {
             await sql`UPDATE short_links SET tg_chat_id = NULL, target_url = NULL, reviewer_name = NULL, member_count = 0, status = 'не подключен', is_stuck = FALSE WHERE code = ${code}`;
         }
+
+        // Invalid cache for this link so redirections update immediately
+        revalidateTag(`link-${code}`);
 
         return NextResponse.json({ success: true });
 
