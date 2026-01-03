@@ -98,7 +98,7 @@ export async function PATCH(
     const body = await req.json();
     const { targetUrl, tgChatId, title, district, status, isStuck } = body;
 
-    if (!targetUrl && !tgChatId && !title && !district && !status && isStuck === undefined) {
+    if (targetUrl === undefined && tgChatId === undefined && title === undefined && district === undefined && status === undefined && isStuck === undefined) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
