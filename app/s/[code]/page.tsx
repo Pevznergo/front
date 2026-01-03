@@ -1,6 +1,7 @@
 
 import { sql, initDatabase } from '@/lib/db';
 import { redirect } from 'next/navigation';
+export const dynamic = "force-dynamic";
 
 export default async function ShortLinkPage({ params }: { params: { code: string } }) {
     await initDatabase();
@@ -87,6 +88,14 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                     <p className="text-slate-400 max-w-sm">
                         Наши специалисты уже работают над этим районом. <br /> Скоро здесь появится чат вашего дома!
                     </p>
+                    {/* Debug Info for Admin */}
+                    <div className="mt-8 p-4 bg-slate-900 rounded-xl text-xs font-mono text-slate-500 text-left w-full max-w-md overflow-hidden">
+                        <p>DEBUG INFO:</p>
+                        <p>Code: {params.code}</p>
+                        <p>TargetURL: {JSON.stringify(link.target_url)}</p>
+                        <p>ChatID: {link.tg_chat_id}</p>
+                        <p>ID: {link.id}</p>
+                    </div>
                 </div>
             );
         }
