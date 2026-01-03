@@ -952,13 +952,14 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
-    const handleToggleStuck = async (tgChatId: string, currentState: boolean) => {
+    const handleToggleStuck = async (tgChatId: string, currentState: boolean, codes: string[]) => {
         const newState = !currentState;
         try {
-            // Find all links with this chat ID
-            const affectedLinks = links.filter(l => l.tg_chat_id === tgChatId);
-            await Promise.all(affectedLinks.map(l =>
-                fetch(`/api/links/${l.code}`, {
+            // Use explicit codes if provided, otherwise filter
+            const targetCodes = codes && codes.length > 0 ? codes : links.filter(l => l.tg_chat_id === tgChatId).map(l => l.code);
+
+            await Promise.all(targetCodes.map(code =>
+                fetch(`/api/links/${code}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ isStuck: newState })
@@ -968,6 +969,32 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             setLinks(prev => prev.map(l => l.tg_chat_id === tgChatId ? { ...l, is_stuck: newState } : l));
         } catch (e: any) {
             alert('Ошибка при обновлении статуса');
+        }
+    };
+
+    const handleEcosystemStatusChange = async (tgChatId: string, codes: string[], newStatus: string) => {
+        try {
+            // Use explicit codes if provided, otherwise filter
+            const targetCodes = codes && codes.length > 0 ? codes : links.filter(l => l.tg_chat_id === tgChatId).map(l => l.code);
+
+            await Promise.all(targetCodes.map(code =>
+                fetch(`/api/links/${code}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                })
+            ));
+
+            // Also invoke API to update the ecosystem record status explicitly if present
+            await fetch('/api/ecosystems', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tgChatId, status: newStatus })
+            });
+
+            setLinks(prev => prev.map(l => l.tg_chat_id === tgChatId ? { ...l, status: newStatus } : l));
+        } catch (e: any) {
+            alert('Ошибка при обновлении статуса экосистемы');
         }
     };
 
@@ -1567,12 +1594,21 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                         </div>
 
                                                         <div className="flex items-center gap-2">
-                                                            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${item.status === 'подключен'
-                                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                                : 'bg-slate-800 text-slate-500 border-slate-700'
-                                                                }`}>
-                                                                {item.status || 'не подключен'}
-                                                            </div>
+                                                            <select
+                                                                value={item.status || 'не подключен'}
+                                                                onChange={(e) => handleEcosystemStatusChange(item.tg_chat_id, item.codes, e.target.value)}
+                                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border appearance-none cursor-pointer outline-none ${item.status === 'подключен'
+                                                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                    : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'
+                                                                    }`}
+                                                            >
+                                                                <option value="активен" className="bg-slate-900 text-slate-400">АКТИВЕН</option>
+                                                                <option value="не подключен" className="bg-slate-900 text-slate-400">НЕ ПОДКЛЮЧЕН</option>
+                                                                <option value="подключен" className="bg-slate-900 text-emerald-400">ПОДКЛЮЧЕН</option>
+                                                                <option value="не распечатан" className="bg-slate-900 text-slate-400">НЕ РАСПЕЧАТАН</option>
+                                                                <option value="распечатан" className="bg-slate-900 text-slate-400">РАСПЕЧАТАН</option>
+                                                                <option value="приклеен" className="bg-slate-900 text-indigo-400">ПРИКЛЕЕН</option>
+                                                            </select>
 
                                                             {item.is_stuck && (
                                                                 <div className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -1593,7 +1629,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 <td className="p-5 align-top">
                                                     <div className="flex justify-end gap-2">
                                                         <button
-                                                            onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck)}
+                                                            onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck, item.codes)}
                                                             className={`p-2.5 rounded-xl transition-all border ${item.is_stuck
                                                                 ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
                                                                 : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
