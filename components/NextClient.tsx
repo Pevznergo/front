@@ -952,6 +952,74 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
+    const handleDeleteQueueItem = async (id: number) => {
+        if (!confirm('Удалить этот чат из очереди?')) return;
+        try {
+            const res = await fetch('/api/queue', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            if (res.ok) {
+                setQueue(prev => prev.filter(q => q.id !== id));
+            }
+        } catch (e) {
+            alert('Ошибка при удалении');
+        }
+    };
+
+    const handleProcessQueue = async () => {
+        setBatchLoading(true);
+        try {
+            const res = await fetch("/api/queue/process?force=true");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to process");
+
+            if (data.success) {
+                alert(`Процесс запущен: создан чат ${data.chatId || ""}`);
+            } else {
+                alert(data.message || "Очередь пуста или нет задач к выполнению");
+            }
+            fetchQueue();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
+    const handleUpdateQueueItem = async (item: QueueItem) => {
+        try {
+            const res = await fetch('/api/queue', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+            if (res.ok) {
+                setQueue(prev => prev.map(q => q.id === item.id ? item : q));
+                setEditingQueueItem(null);
+            }
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleRefreshData = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/data');
+            if (res.ok) {
+                const data = await res.json();
+                setLinks(data.links);
+                setEcosystems(data.ecosystems);
+            }
+        } catch (e) {
+            console.error("Refresh failed", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleToggleStuck = async (tgChatId: string, currentState: boolean, codes: string[]) => {
         const newState = !currentState;
         try {
@@ -967,6 +1035,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             ));
 
             setLinks(prev => prev.map(l => l.tg_chat_id === tgChatId ? { ...l, is_stuck: newState } : l));
+            // FIXED: Update Ecosystems state too so the checkbox reflects change immediately
+            setEcosystems(prev => prev.map(e => e.tg_chat_id === tgChatId ? { ...e, is_stuck: newState } : e));
         } catch (e: any) {
             alert('Ошибка при обновлении статуса');
         }
@@ -993,6 +1063,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             });
 
             setLinks(prev => prev.map(l => l.tg_chat_id === tgChatId ? { ...l, status: newStatus } : l));
+            // FIXED: Update Ecosystems state too so the status dropdown reflects change immediately
+            setEcosystems(prev => prev.map(e => e.tg_chat_id === tgChatId ? { ...e, status: newStatus } : e));
         } catch (e: any) {
             alert('Ошибка при обновлении статуса экосистемы');
         }
@@ -1227,10 +1299,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     };
 
     return (
-        <div className="w-full max-w-6xl space-y-12">
+        <div className="w-full max-w-6xl space-y-12" >
             <QueueConsole />
             {/* Tabs & Search */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4" >
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
                     <button
                         onClick={() => setActiveTab('ecosystem')}
@@ -1293,7 +1365,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         <span className="hidden md:inline">Создать чат</span>
                     </button>
                 </div>
-            </div>
+            </div >
 
             {activeTab === 'ecosystem' ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1429,6 +1501,14 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
                                 </div>
                                 <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
+                                    <button
+                                        onClick={handleRefreshData}
+                                        disabled={loading}
+                                        className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1"
+                                        title="Обновить данные"
+                                    >
+                                        <HistoryIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                    </button>
                                     <button
                                         onClick={() => setStuckFilter('all')}
                                         className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
@@ -1607,7 +1687,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                 <option value="подключен" className="bg-slate-900 text-emerald-400">ПОДКЛЮЧЕН</option>
                                                                 <option value="не распечатан" className="bg-slate-900 text-slate-400">НЕ РАСПЕЧАТАН</option>
                                                                 <option value="распечатан" className="bg-slate-900 text-slate-400">РАСПЕЧАТАН</option>
-                                                                <option value="приклеен" className="bg-slate-900 text-indigo-400">ПРИКЛЕЕН</option>
+                                                                <option value="приклеен" className="bg-slate-900 text-indigo-400">ОКЛЕЕН</option>
                                                             </select>
 
                                                             {item.is_stuck && (
@@ -2246,95 +2326,100 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         )}
                     </div>
                 </div>
-            )}
+            )
+            }
             {/* Topic Action Modal - Moved to global scope */}
-            {showTopicModal && (
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                    <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
-                            <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
-                        </div>
-
-                        <div className="space-y-4 text-left">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
-                                <select
-                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                    value={topicActionData.topicName}
-                                    onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
-                                >
-                                    <option value="📢 Новости">📢 Новости</option>
-                                    <option value="🗣 Флудилка">🗣 Флудилка</option>
-                                    <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
-                                    <option value="🛠 Услуги">🛠 Услуги</option>
-                                    <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
-                                </select>
+            {
+                showTopicModal && (
+                    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
+                                <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
                             </div>
 
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
-                                <textarea
-                                    className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                    placeholder="Введите текст сообщения..."
-                                    value={topicActionData.message}
-                                    onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
-                                />
-                                <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={topicActionData.pin}
-                                        onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
-                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                            <div className="space-y-4 text-left">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
+                                    <select
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        value={topicActionData.topicName}
+                                        onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
+                                    >
+                                        <option value="📢 Новости">📢 Новости</option>
+                                        <option value="🗣 Флудилка">🗣 Флудилка</option>
+                                        <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
+                                        <option value="🛠 Услуги">🛠 Услуги</option>
+                                        <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
+                                    <textarea
+                                        className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        placeholder="Введите текст сообщения..."
+                                        value={topicActionData.message}
+                                        onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
                                     />
-                                    <span className="text-xs text-slate-400">Закрепить сообщение</span>
-                                </label>
-                            </div>
+                                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={topicActionData.pin}
+                                            onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
+                                            className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                        />
+                                        <span className="text-xs text-slate-400">Закрепить сообщение</span>
+                                    </label>
+                                </div>
 
-                            <div className="flex flex-col gap-1.5 pt-2">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
-                                        className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
-                                    >
-                                        Закрыть (Read-Only)
-                                    </button>
-                                    <button
-                                        onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
-                                        className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
-                                    >
-                                    </button>
+                                <div className="flex flex-col gap-1.5 pt-2">
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
+                                            className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                            Закрыть (Read-Only)
+                                        </button>
+                                        <button
+                                            onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
+                                            className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Bulk Actions Fixed Bar */}
-            {selectedGroupIds.size > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
-                        <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+            {
+                selectedGroupIds.size > 0 && (
+                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
+                            <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10 mx-2" />
+                        <button
+                            onClick={() => setShowTopicModal(true)}
+                            className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            Управление топиками
+                        </button>
+                        <button
+                            onClick={() => setSelectedGroupIds(new Set())}
+                            className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
-                    <div className="w-px h-8 bg-white/10 mx-2" />
-                    <button
-                        onClick={() => setShowTopicModal(true)}
-                        className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                        Управление топиками
-                    </button>
-                    <button
-                        onClick={() => setSelectedGroupIds(new Set())}
-                        className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
