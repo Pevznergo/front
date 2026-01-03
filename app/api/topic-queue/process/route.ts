@@ -69,6 +69,22 @@ export async function GET(req: NextRequest) {
                 await setTopicClosed(chat_id, topicId, true);
             } else if (action_type === 'open') {
                 await setTopicClosed(chat_id, topicId, false);
+            } else if (action_type === 'update_title') {
+                // Determine if we are renaming a Topic or the Chat itself
+                if (topicId) {
+                    // Update Topic Title
+                    await client.invoke(new Api.channels.EditForumTopic({
+                        channel: entity,
+                        topicId: topicId,
+                        title: payloadObj.title
+                    }));
+                } else {
+                    // Update Chat Title
+                    await client.invoke(new Api.channels.EditTitle({
+                        channel: entity,
+                        title: payloadObj.title
+                    }));
+                }
             }
 
             // 4. Mark completed
@@ -77,6 +93,22 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, taskId: id, action: action_type });
         } catch (execError: any) {
             console.error(`Task ${id} failed:`, execError);
+
+            // Handle FloodWait
+            if (execError.seconds || execError.errorMessage?.startsWith('FLOOD_WAIT_')) {
+                const waitSeconds = execError.seconds || parseInt(execError.errorMessage.split('_')[2], 10) || 60;
+                console.log(`FloodWait triggered. Postponing task ${id} for ${waitSeconds} seconds.`);
+
+                await sql`
+                    UPDATE topic_actions_queue 
+                    SET status = 'pending', 
+                        scheduled_for = NOW() + (${waitSeconds} || ' seconds')::INTERVAL,
+                        error = ${`FloodWait: ${waitSeconds}s`}
+                    WHERE id = ${id}
+                `;
+                return NextResponse.json({ success: false, taskId: id, status: 'postponed', waitSeconds });
+            }
+
             await sql`UPDATE topic_actions_queue SET status = 'failed', error = ${execError.message} WHERE id = ${id}`;
             return NextResponse.json({ success: false, taskId: id, error: execError.message });
         }

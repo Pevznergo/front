@@ -23,6 +23,8 @@ const MapScout = dynamic(() => import("./MapScout"), {
     loading: () => <div className="h-[600px] w-full bg-white/5 animate-pulse rounded-3xl flex items-center justify-center font-bold text-slate-500 uppercase tracking-tighter">Загрузка карты...</div>
 });
 
+const QueueConsole = dynamic(() => import("./QueueConsole"), { ssr: false });
+
 interface ShortLink {
     id: number;
     code: string;
@@ -927,31 +929,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
-    const handleUpdateGroup = async (code: string, id: number) => {
-        if (!editingGroup) return;
-        try {
-            const res = await fetch(`/api/links/${code}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tgChatId: editingGroup.tgChatId || null,
-                    title: editingGroup.title || null,
-                    district: editingGroup.district || null
-                })
-            });
-            if (!res.ok) throw new Error("Failed to update");
 
-            setLinks(prev => prev.map(l => l.id === id ? {
-                ...l,
-                tg_chat_id: editingGroup.tgChatId,
-                reviewer_name: editingGroup.title,
-                district: editingGroup.district
-            } : l));
-            setEditingGroup(null);
-        } catch (e: any) {
-            alert(e.message);
-        }
-    };
 
     const handleDisconnect = async (code: string, id: number) => {
         if (!confirm('Отвязать эту ссылку от группы?')) return;
@@ -1004,6 +982,52 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             setLinks(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
         } catch (e: any) {
             alert(e.message);
+        }
+    };
+
+    const handleUpdateGroup = async (code: string, id: number) => {
+        if (!editingGroup) return;
+        try {
+            // 1. Update DB (local link data)
+            const res = await fetch(`/api/links/${code}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tgChatId: editingGroup.tgChatId,
+                    title: editingGroup.title,
+                    district: editingGroup.district
+                })
+            });
+            if (res.ok) {
+                setLinks(prev => prev.map(l => l.id === id ? {
+                    ...l,
+                    tg_chat_id: editingGroup.tgChatId,
+                    reviewer_name: editingGroup.title, // reviewer_name used as title
+                    district: editingGroup.district
+                } : l));
+
+                // 2. Enqueue Telegram Update (if title changed and Telegram ID exists)
+                // We check if tgChatId is present to know it's a real chat
+                // Ideally we should check if title *actually* changed, but enforcing update is safer.
+                if (editingGroup.tgChatId && editingGroup.title) {
+                    await fetch('/api/topic-queue/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chatIds: [editingGroup.tgChatId],
+                            action: 'update_title',
+                            title: editingGroup.title
+                        })
+                    });
+                    // We don't block UI on this, let it run in background
+                }
+
+                setEditingGroup(null);
+            } else {
+                alert("Ошибка сохранения");
+            }
+        } catch (e) {
+            alert("Ошибка сохранения");
         }
     };
 
@@ -1177,6 +1201,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
 
     return (
         <div className="w-full max-w-6xl space-y-12">
+            <QueueConsole />
             {/* Tabs & Search */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4">
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
@@ -1245,6 +1270,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
 
             {activeTab === 'ecosystem' ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+                    {/* Create Modal */}
                     {showCreateModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
                             <div className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">

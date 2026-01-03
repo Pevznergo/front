@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     try {
         await initDatabase();
-        const { chatIds, action, message, topicName, pin, closedAction } = await req.json(); // topicName is required
+        const { chatIds, action, message, title, topicName, pin, closedAction } = await req.json(); // topicName is required
 
         if (!chatIds || !Array.isArray(chatIds) || chatIds.length === 0) {
             return NextResponse.json({ error: "No chat IDs provided" }, { status: 400 });
@@ -43,6 +43,16 @@ export async function POST(req: NextRequest) {
                     chat_id: chatId,
                     action_type: closedAction === 'open' ? 'open' : 'close',
                     payload: JSON.stringify({ topicName }),
+                    status: 'pending'
+                });
+            }
+
+            // Priority 3: Update Title (Chat or Topic)
+            if (action === 'update_title' && title) {
+                queueItems.push({
+                    chat_id: chatId,
+                    action_type: 'update_title',
+                    payload: JSON.stringify({ title, topicName }), // topicName optional for topic rename
                     status: 'pending'
                 });
             }

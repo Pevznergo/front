@@ -106,6 +106,32 @@ export async function GET(req: NextRequest) {
 
         } catch (error: any) {
             console.error(`Queue processing error for task ${task.id}:`, error);
+
+            // Handle FloodWait
+            if (error.seconds || error.errorMessage?.startsWith('FLOOD_WAIT_')) {
+                const waitSeconds = error.seconds || parseInt(error.errorMessage.split('_')[2], 10) || 60;
+                console.log(`FloodWait triggered for chat creation. Postponing task ${task.id} for ${waitSeconds} seconds.`);
+
+                // Postpone task
+                await sql`
+                    UPDATE chat_creation_queue 
+                    SET status = 'pending', 
+                        scheduled_at = NOW() + (${waitSeconds} || ' seconds')::INTERVAL,
+                        error = ${`FloodWait: ${waitSeconds}s`}
+                    WHERE id = ${task.id}
+                `;
+
+                // Trigger next check after wait time + small buffer
+                triggerNext((waitSeconds * 1000) + 1000);
+
+                return NextResponse.json({
+                    success: false,
+                    taskId: task.id,
+                    status: 'postponed',
+                    waitSeconds
+                });
+            }
+
             await sql`
                 UPDATE chat_creation_queue 
                 SET status = 'failed', error = ${error.message} 
