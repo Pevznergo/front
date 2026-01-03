@@ -24,8 +24,19 @@ export default async function ShortLinkPage({ params }: { params: { code: string
             console.error("Failed to increment clicks:", e);
         }
 
-        // If target_url is missing, it's an unlinked QR
+        // If target_url is missing, it's potentially an unlinked QR or a sync error
         if (!link.target_url) {
+            // Lazy Repair: If tg_chat_id is present, try to recover the link from ecosystems
+            if (link.tg_chat_id) {
+                const eco = await sql`SELECT invite_link FROM ecosystems WHERE tg_chat_id = ${link.tg_chat_id}`;
+                if (eco.length > 0 && eco[0].invite_link) {
+                    const inviteLink = eco[0].invite_link;
+                    // Repair the short_link record for future speed
+                    await sql`UPDATE short_links SET target_url = ${inviteLink} WHERE id = ${link.id}`;
+                    redirect(inviteLink);
+                }
+            }
+
             // Check for admin session to allow setup
             // Note: getServerSession is available in server components
             const { getServerSession } = await import("next-auth");
