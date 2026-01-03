@@ -1228,61 +1228,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
-    const handleDeleteQueueItem = async (id: number) => {
-        if (!confirm('Удалить этот чат из очереди?')) return;
-        try {
-            const res = await fetch('/api/queue', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
-            });
-            if (res.ok) {
-                setQueue(prev => prev.filter(q => q.id !== id));
-            }
-        } catch (e) {
-            alert('Ошибка при удалении');
-        }
-    };
 
-    const handleProcessQueue = async () => {
-        setBatchLoading(true);
-        try {
-            const res = await fetch("/api/queue/process?force=true");
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to process");
-
-            if (data.success) {
-                alert(`Процесс запущен: создан чат ${data.chatId || ""}`);
-            } else {
-                alert(data.message || "Очередь пуста или нет задач к выполнению");
-            }
-            fetchQueue();
-        } catch (e: any) {
-            alert(e.message);
-        } finally {
-            setBatchLoading(false);
-        }
-    };
-
-    const handleUpdateQueueItem = async (item: QueueItem) => {
-        try {
-            const res = await fetch('/api/queue', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: item.id,
-                    title: item.title,
-                    district: item.district
-                })
-            });
-            if (res.ok) {
-                setQueue(prev => prev.map(q => q.id === item.id ? item : q));
-                setEditingQueueItem(null);
-            }
-        } catch (e) {
-            alert('Ошибка при обновлении');
-        }
-    };
 
     const handleUpdateScouted = (index: number, updates: any) => {
         setScoutedAddresses(prev => prev.map((a, i) => i === index ? { ...a, ...updates } : a));
