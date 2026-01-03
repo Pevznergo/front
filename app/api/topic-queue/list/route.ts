@@ -7,18 +7,55 @@ export async function GET(req: NextRequest) {
     try {
         await initDatabase();
 
-        // Fetch tasks: pending/processing first, then completed/failed (limit 50)
-        // We want to see active tasks + recent history
-        const tasks = await sql`
+        // Fetch topic actions
+        const topicTasks = await sql`
             SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
             FROM topic_actions_queue
-            ORDER BY 
-                CASE WHEN status IN ('pending', 'processing') THEN 0 ELSE 1 END,
-                created_at DESC
+            ORDER BY created_at DESC
             LIMIT 50
         `;
 
-        return NextResponse.json({ tasks });
+        // Fetch chat creation tasks
+        const createTasks = await sql`
+            SELECT id, title, status, error, scheduled_at, created_at
+            FROM chat_creation_queue
+            ORDER BY created_at DESC
+            LIMIT 50
+        `;
+
+        // Normalize and merge
+        const unifiedTasks = [
+            ...topicTasks.map(t => ({
+                unique_id: `topic-${t.id}`,
+                id: t.id,
+                chat_id: t.chat_id,
+                action_type: t.action_type,
+                status: t.status,
+                error: t.error,
+                scheduled_for: t.scheduled_for,
+                created_at: t.created_at,
+                source: 'topic'
+            })),
+            ...createTasks.map(t => ({
+                unique_id: `create-${t.id}`,
+                id: t.id,
+                chat_id: 'New Chat',
+                action_type: `CREATE: ${t.title}`,
+                status: t.status,
+                error: t.error,
+                scheduled_for: t.scheduled_at,
+                created_at: t.created_at,
+                source: 'create'
+            }))
+        ].sort((a, b) => {
+            // Sort: Pending/Processing first, then new to old
+            const scoreA = (a.status === 'pending' || a.status === 'processing') ? 0 : 1;
+            const scoreB = (b.status === 'pending' || b.status === 'processing') ? 0 : 1;
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }).slice(0, 50);
+
+        return NextResponse.json({ tasks: unifiedTasks });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

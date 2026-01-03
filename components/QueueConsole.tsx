@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2, AlertCircle, Clock, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
 
 interface QueueTask {
+    unique_id: string;
     id: number;
     chat_id: string;
     action_type: string;
@@ -12,6 +13,7 @@ interface QueueTask {
     scheduled_for?: string;
     created_at: string;
     payload?: any;
+    source?: 'topic' | 'create';
 }
 
 export default function QueueConsole() {
@@ -71,12 +73,12 @@ export default function QueueConsole() {
                             </div>
                         ) : (
                             tasks.map(task => (
-                                <div key={task.id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2">
+                                <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${task.status === 'processing' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
-                                                task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                    task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                                                        'bg-slate-500/20 text-slate-400'
+                                            task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                                    'bg-slate-500/20 text-slate-400'
                                             }`}>
                                             {task.status}
                                         </span>

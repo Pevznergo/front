@@ -217,8 +217,41 @@ export async function initDatabase() {
       )
     `;
 
+    // Flood Control table (New - Global Lock)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS flood_control (
+        key VARCHAR(50) PRIMARY KEY,
+        expires_at TIMESTAMP NOT NULL
+      )
+    `;
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
   }
+}
+
+// Flood Wait Helpers
+export async function getFloodWait(): Promise<number> {
+  const result = await sql`SELECT expires_at FROM flood_control WHERE key = 'telegram_global'`;
+  if (result.length === 0) return 0;
+
+  const now = new Date();
+  const expires = new Date(result[0].expires_at);
+
+  if (expires > now) {
+    return Math.ceil((expires.getTime() - now.getTime()) / 1000);
+  }
+  return 0;
+}
+
+export async function setFloodWait(seconds: number) {
+  // Add small buffer (1s) to be safe
+  const bufferSeconds = seconds + 1;
+  await sql`
+        INSERT INTO flood_control (key, expires_at)
+        VALUES ('telegram_global', NOW() + (${bufferSeconds} || ' seconds')::INTERVAL)
+        ON CONFLICT (key) DO UPDATE SET
+            expires_at = EXCLUDED.expires_at
+    `;
 }

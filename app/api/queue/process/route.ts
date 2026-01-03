@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql, initDatabase } from "@/lib/db";
+import { sql, initDatabase, getFloodWait, setFloodWait } from "@/lib/db";
 import { createEcosystem } from "@/lib/chat";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -15,6 +15,18 @@ export async function GET(req: NextRequest) {
     }
 
     await initDatabase();
+
+    // 0. Check Global Flood Wait
+    const floodWait = await getFloodWait();
+    if (floodWait > 0) {
+        // If locked, just return and maybe schedule next check after lock expires
+        // We will return 'waiting' so client or cron backs off
+        return NextResponse.json({
+            message: `Global FloodWait active for ${floodWait}s`,
+            nextTaskIn: floodWait,
+            status: "waiting"
+        });
+    }
 
     const force = req.nextUrl.searchParams.get("force") === "true";
 
@@ -111,6 +123,9 @@ export async function GET(req: NextRequest) {
             if (error.seconds || error.errorMessage?.startsWith('FLOOD_WAIT_')) {
                 const waitSeconds = error.seconds || parseInt(error.errorMessage.split('_')[2], 10) || 60;
                 console.log(`FloodWait triggered for chat creation. Postponing task ${task.id} for ${waitSeconds} seconds.`);
+
+                // Set Global Lock
+                await setFloodWait(waitSeconds);
 
                 // Postpone task
                 await sql`

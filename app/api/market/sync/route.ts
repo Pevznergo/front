@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
-import { sql, initDatabase } from "@/lib/db";
+import { sql, initDatabase, getFloodWait } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
     try {
         await initDatabase();
+
+        // 0. Check Global Flood Wait
+        const floodWait = await getFloodWait();
+        if (floodWait > 0) {
+            return NextResponse.json({
+                error: `Global FloodWait active for ${floodWait}s`,
+                success: false
+            }, { status: 429 });
+        }
+
         const client = await getTelegramClient();
 
         // 1. Fetch all chats that have a marketplace topic

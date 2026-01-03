@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql, initDatabase } from "@/lib/db";
+import { sql, initDatabase, getFloodWait, setFloodWait } from "@/lib/db";
 import { setTopicClosed, getChatEntity } from "@/lib/chat";
 import { getTelegramClient } from "@/lib/tg";
 import { Api } from "telegram";
@@ -9,6 +9,16 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
     try {
         await initDatabase();
+
+        // 0. Check Global Flood Wait
+        const floodWait = await getFloodWait();
+        if (floodWait > 0) {
+            return NextResponse.json({
+                success: false,
+                message: "Global FloodWait active",
+                waitSeconds: floodWait
+            });
+        }
 
         // 1. Fetch one pending task
         // We use FOR UPDATE SKIP LOCKED to prevent race conditions if multiple workers run
@@ -98,6 +108,9 @@ export async function GET(req: NextRequest) {
             if (execError.seconds || execError.errorMessage?.startsWith('FLOOD_WAIT_')) {
                 const waitSeconds = execError.seconds || parseInt(execError.errorMessage.split('_')[2], 10) || 60;
                 console.log(`FloodWait triggered. Postponing task ${id} for ${waitSeconds} seconds.`);
+
+                // Set Global Lock
+                await setFloodWait(waitSeconds);
 
                 await sql`
                     UPDATE topic_actions_queue 
