@@ -1058,6 +1058,32 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
+    const handleUnlinkLink = async (code: string, id: number) => {
+        if (!confirm('Отвязать QR-код от группы? Он вернется в статус "Новая точка".')) return;
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tgChatId: null })
+            });
+
+            if (res.ok) {
+                setLinks(prev => prev.map(l => l.id === id ? {
+                    ...l,
+                    tg_chat_id: undefined,
+                    reviewer_name: undefined,
+                    member_count: 0,
+                    status: 'не подключен',
+                    target_url: ''
+                } : l));
+            } else {
+                alert('Ошибка при отвязке');
+            }
+        } catch (e) {
+            alert('Ошибка сервера');
+        }
+    };
+
     const handleDeleteLink = async (id: number, code: string) => {
         if (!confirm('Вы уверены, что хотите удалить эту ссылку?')) return;
         try {
@@ -2044,12 +2070,21 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                             <MapPin className="w-2.5 h-2.5" />
                                                                             {link.district || 'Без района'}
                                                                         </div>
-                                                                        <button
-                                                                            onClick={() => setEditingGroup({ id: link.id, tgChatId: link.tg_chat_id || '', title: link.reviewer_name || '', district: link.district || '' })}
-                                                                            className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors w-fit flex items-center gap-1 mt-1"
-                                                                        >
-                                                                            <Edit3 className="w-3 h-3" /> Редактировать привязку
-                                                                        </button>
+                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                            <button
+                                                                                onClick={() => setEditingGroup({ id: link.id, tgChatId: link.tg_chat_id || '', title: link.reviewer_name || '', district: link.district || '' })}
+                                                                                className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                                                                            >
+                                                                                <Edit3 className="w-3 h-3" /> Ред.
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleUnlinkLink(link.code, link.id)}
+                                                                                className="text-[9px] text-red-500/70 hover:text-red-500 transition-colors flex items-center gap-1"
+                                                                                title="Отвязать группу"
+                                                                            >
+                                                                                <Link2Off className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
                                                                     </>
                                                                 ) : (
                                                                     <button

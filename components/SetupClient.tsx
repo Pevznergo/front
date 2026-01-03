@@ -19,9 +19,11 @@ export default function SetupClient({ code }: { code: string }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [savingId, setSavingId] = useState<number | null>(null);
     const [success, setSuccess] = useState(false);
+    const [currentLink, setCurrentLink] = useState<any>(null);
     const router = useRouter();
 
     useEffect(() => {
+        // Fetch groups
         fetch("/api/groups")
             .then(res => res.json())
             .then(data => {
@@ -29,7 +31,40 @@ export default function SetupClient({ code }: { code: string }) {
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, []);
+
+        // Fetch current link status
+        fetch(`/api/links/${code}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) {
+                    setCurrentLink(data);
+                }
+            })
+            .catch(console.error);
+    }, [code]);
+
+    const handleUnlink = async () => {
+        if (!confirm("Вы уверены, что хотите отвязать группу? QR-код перестанет работать.")) return;
+        setSavingId(-1); // Use -1 as indicator for unlinking
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tgChatId: null
+                })
+            });
+            if (res.ok) {
+                alert("Успешно отвязано");
+                setCurrentLink(null);
+                // Optional: reload page or update state
+            }
+        } catch (e) {
+            alert("Ошибка при отвязке");
+        } finally {
+            setSavingId(null);
+        }
+    };
 
     const filteredGroups = groups.filter(g =>
         (g.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,6 +137,23 @@ export default function SetupClient({ code }: { code: string }) {
 
                 <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">Выберите группу для привязки:</div>
 
+                {/* Current Link Status - Unlink Button */}
+                {currentLink && currentLink.targetUrl && (
+                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between mb-4">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase text-indigo-400">Текущая привязка</span>
+                            <span className="text-sm font-semibold truncate max-w-[200px]">{currentLink.targetUrl}</span>
+                        </div>
+                        <button
+                            onClick={handleUnlink}
+                            disabled={savingId !== null}
+                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-xl transition-all"
+                        >
+                            Отвязать
+                        </button>
+                    </div>
+                )}
+
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
                         <Loader2 className="w-6 h-6 animate-spin" />
@@ -115,8 +167,8 @@ export default function SetupClient({ code }: { code: string }) {
                                 onClick={() => handleSelect(group)}
                                 disabled={savingId !== null}
                                 className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between active:scale-[0.98] ${savingId === group.id
-                                        ? 'bg-indigo-500/20 border-indigo-500/50'
-                                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                                    ? 'bg-indigo-500/20 border-indigo-500/50'
+                                    : 'bg-white/5 border-white/10 hover:border-white/20'
                                     }`}
                             >
                                 <div className="space-y-1 flex-1 min-w-0 pr-4">

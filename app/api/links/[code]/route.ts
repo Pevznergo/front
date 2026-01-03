@@ -130,7 +130,7 @@ export async function PATCH(
 
         // Handle unlinking (explicit NULL) - if body contains fields as null
         if (body.tgChatId === null) {
-            await sql`UPDATE short_links SET tg_chat_id = NULL, reviewer_name = NULL, member_count = 0, status = 'не подключен' WHERE code = ${code}`;
+            await sql`UPDATE short_links SET tg_chat_id = NULL, target_url = NULL, reviewer_name = NULL, member_count = 0, status = 'не подключен', is_stuck = FALSE WHERE code = ${code}`;
         }
 
         return NextResponse.json({ success: true });
