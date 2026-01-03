@@ -109,7 +109,14 @@ export async function PATCH(
         if (tgChatId) {
             // Robustness: Fetch the official invite link from ecosystems table
             const eco = await sql`SELECT invite_link FROM ecosystems WHERE tg_chat_id = ${tgChatId}`;
-            const officialUrl = eco.length > 0 ? eco[0].invite_link : targetUrl;
+
+            if (eco.length === 0 || !eco[0].invite_link) {
+                return NextResponse.json({
+                    error: "У этой группы нет ссылки-приглашения (invite_link). Создайте её вручную или обновите запись в БД."
+                }, { status: 400 });
+            }
+
+            const officialUrl = eco[0].invite_link;
 
             await sql`UPDATE short_links SET tg_chat_id = ${tgChatId}, target_url = ${officialUrl}, status = 'подключен' WHERE code = ${code}`;
             // Also update ecosystem status

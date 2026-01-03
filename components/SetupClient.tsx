@@ -87,9 +87,12 @@ export default function SetupClient({ code }: { code: string }) {
             if (res.ok) {
                 setSuccess(true);
                 setTimeout(() => router.push(`/s/${code}`), 1500);
+            } else {
+                const data = await res.json();
+                alert(data.error || "Ошибка при сохранении");
             }
-        } catch (e) {
-            alert("Ошибка при сохранении");
+        } catch (e: any) {
+            alert("Ошибка сети или сервера");
         } finally {
             setSavingId(null);
         }

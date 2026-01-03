@@ -10,6 +10,8 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         SELECT id, target_url, tg_chat_id FROM short_links WHERE code = ${params.code}
     `;
 
+    console.log(`[ShortLink] Code: ${params.code}, Found: ${rows.length}, Target: ${rows[0]?.target_url}`);
+
     if (rows.length > 0) {
         const link = rows[0];
 
@@ -69,7 +71,8 @@ export default async function ShortLinkPage({ params }: { params: { code: string
             // Check for admin session to allow setup
             // Note: getServerSession is available in server components
             const { getServerSession } = await import("next-auth");
-            const session = await getServerSession();
+            const { authOptions } = await import("@/lib/auth");
+            const session = await getServerSession(authOptions);
 
             if (session?.user?.email === "pevznergo@gmail.com") {
                 redirect(`/setup/${params.code}`);
@@ -98,7 +101,8 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         // OR better: import it properly if possible. 
         // Given previous code used no-args, we'll try that first, but standard is with authOptions.
         // Let's rely on the session wrapper if it exists or just generic getServerSession.
-        const session = await getServerSession();
+        const { authOptions } = await import("@/lib/auth");
+        const session = await getServerSession(authOptions);
 
         if (session?.user?.email === "pevznergo@gmail.com") {
             // Auto-create the link
