@@ -49,10 +49,10 @@ export async function GET(req: NextRequest) {
             // For now, we look it up.
 
             const payloadObj = typeof payload === 'string' ? JSON.parse(payload) : payload;
-            const { topicName, message, pin } = payloadObj;
+            const { topicName, message, pin, question, options } = payloadObj;
 
-            let topicId = null;
-            if (topicName) {
+            let topicId = payloadObj.topicId; // Priority to direct ID
+            if (!topicId && topicName) {
                 const forumTopics = await client.invoke(new Api.channels.GetForumTopics({
                     channel: entity,
                     limit: 100
@@ -75,6 +75,26 @@ export async function GET(req: NextRequest) {
                         pmOneside: true
                     }));
                 }
+            } else if (action_type === 'poll') {
+                await client.invoke(new Api.messages.SendMedia({
+                    peer: entity,
+                    media: new Api.InputMediaPoll({
+                        poll: new Api.Poll({
+                            id: BigInt(Math.floor(Math.random() * 1000000)) as any,
+                            question: new Api.TextWithEntities({ text: question, entities: [] }),
+                            answers: options.map((opt: string) => new Api.PollAnswer({
+                                text: new Api.TextWithEntities({ text: opt, entities: [] }),
+                                option: Buffer.from(opt)
+                            })),
+                            closed: false,
+                            publicVoters: true,
+                            multipleChoice: false,
+                            quiz: false,
+                        })
+                    }),
+                    message: "", // Empty message for media (it's a poll)
+                    replyTo: new Api.InputReplyToMessage({ replyToMsgId: topicId })
+                }));
             } else if (action_type === 'close') {
                 await setTopicClosed(chat_id, topicId, true);
             } else if (action_type === 'open') {

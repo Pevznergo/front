@@ -139,6 +139,36 @@ export async function createEcosystem(title: string, district: string | null) {
                 })
             );
             console.log(`Invited bot ${bot} to chat`);
+
+            if (bot === 'justaskmari_bot') {
+                try {
+                    const botEntity = await client.getEntity(bot);
+                    await client.invoke(
+                        new Api.channels.EditBanned({
+                            channel: channel,
+                            participant: botEntity,
+                            bannedRights: new Api.ChatBannedRights({
+                                untilDate: 0,
+                                viewMessages: false,
+                                sendMessages: true, // BANNED: Cannot send messages
+                                sendMedia: true,
+                                sendStickers: true,
+                                sendGifs: true,
+                                sendGames: true,
+                                sendInline: true,
+                                embedLinks: true,
+                                sendPolls: true,
+                                changeInfo: true,
+                                inviteUsers: true,
+                                pinMessages: true,
+                            })
+                        })
+                    );
+                    console.log('Restricted justaskmari_bot (read-only)');
+                } catch (e) {
+                    console.warn('Failed to restrict justaskmari_bot:', e);
+                }
+            }
         } catch (e) {
             console.warn(`Failed to invite bot ${bot}:`, e);
         }
@@ -163,6 +193,47 @@ export async function createEcosystem(title: string, district: string | null) {
             admin_topic_id = EXCLUDED.admin_topic_id,
             last_updated = CURRENT_TIMESTAMP
     `;
+
+    // 6. Schedule Post-Creation Tasks (Async)
+    if (adminTopicId) {
+        try {
+            // Task 1: Welcome Message for Candidates
+            await sql`
+                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, created_at)
+                VALUES (
+                    ${channelId.toString()}, 
+                    'message', 
+                    ${JSON.stringify({
+                topicId: adminTopicId, // Use direct ID
+                message: "‼️ ВЫБОР АДМИНА - Чтобы стать кандидатом в голосовании за выбор Админа Чата, оставьте здесь любое сообщение.",
+                pin: false
+            })},
+                    'pending',
+                    NOW()
+                )
+            `;
+
+            // Task 2: Admin Election Poll
+            await sql`
+                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, created_at)
+                VALUES (
+                    ${channelId.toString()}, 
+                    'poll', 
+                    ${JSON.stringify({
+                topicId: adminTopicId,
+                question: "Выбираем АДмина",
+                options: ["Вариант 1", "Вариант 2"],
+                pin: false
+            })},
+                    'pending',
+                    NOW()
+                )
+            `;
+            console.log("Scheduled post-creation tasks for admin topic.");
+        } catch (e) {
+            console.error("Failed to schedule post-creation tasks:", e);
+        }
+    }
 
     return {
         inviteLink,
