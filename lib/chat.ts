@@ -5,39 +5,50 @@ import { sql } from "@/lib/db";
 export async function createEcosystem(title: string, district: string | null) {
     const client = await getTelegramClient();
 
-    // 1. Process Title (Format: House, Street -> Street House)
-    let addressPart = title;
+    // 1. Process Title
+    let street = title;
+    let house = "";
+
     if (title.includes(',')) {
+        // Handle "Street, House" or "House, Street"
         const parts = title.split(',').map(p => p.trim());
         if (parts.length >= 2) {
             const part1 = parts[0];
             const part2 = parts[1];
 
-            // We expect input "House, Street" (from map extraction)
-            // We want output "Street House"
-
-            const p1IsNum = /^\d/.test(part1);
-            // const p2IsNum = /^\d/.test(part2);
-
-            if (p1IsNum) {
-                // Input is "House, Street", swap to "Street House"
-                addressPart = `${part2} ${part1}`;
+            if (/^\d/.test(part1)) {
+                house = part1;
+                street = part2;
             } else {
-                // Input is "Street, House" (unlikely from map but possible manually), swap to "Street House"
-                // Actually if it's "Street, House", just removing comma and keeping order might be what we want? 
-                // User example "Сергея Акимова 59".
-                addressPart = `${part1} ${part2}`;
+                street = part1;
+                house = part2;
+            }
+        }
+    } else {
+        // Try to handle "Street House" format (e.g. "Lenina 5")
+        // Check if last part is a number
+        const parts = title.split(' ');
+        if (parts.length > 1) {
+            const lastPart = parts[parts.length - 1];
+            if (/^\d/.test(lastPart)) {
+                house = lastPart;
+                street = parts.slice(0, -1).join(' ');
             }
         }
     }
 
     // 1. Create Supergroup
-    // Format: 🏠 Street House | Соседи | City
-    const chatTitle = `🏠 ${addressPart} | Соседи${district ? ` | ${district}` : ""}`;
+    // Format: Соседи д. 59 | Сергея Акимова | Нижний Новгород
+    const chatTitle = house
+        ? `Соседи д. ${house} | ${street}${district ? ` | ${district}` : ""}`
+        : `Соседи | ${street}${district ? ` | ${district}` : ""}`;
+
     const createResult = await client.invoke(
         new Api.channels.CreateChannel({
             title: chatTitle,
-            about: `Чат соседей: ${addressPart}${district ? `, ${district}` : ""}`,
+            about: house
+                ? `Чат соседей дома ${house} по улице ${street}${district ? `, ${district}` : ""}`
+                : `Чат соседей: ${street}${district ? `, ${district}` : ""}`,
             megagroup: true,
         })
     ) as any;
