@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         const topicTasks = await sql`
             SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
             FROM topic_actions_queue
-            WHERE status IN ('pending', 'processing', 'failed') 
+            WHERE status != 'completed' 
                OR (${showCompleted}::boolean = true AND status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
             ORDER BY created_at DESC
             LIMIT 100
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         const createTasks = await sql`
             SELECT id, title, status, error, scheduled_at, created_at
             FROM chat_creation_queue
-            WHERE status IN ('pending', 'processing', 'failed') 
+            WHERE status != 'completed' 
                OR (${showCompleted}::boolean = true AND status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
             ORDER BY created_at DESC
             LIMIT 100
