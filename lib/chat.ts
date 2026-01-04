@@ -5,6 +5,9 @@ import { sql } from "@/lib/db";
 export async function createEcosystem(title: string, district: string | null) {
     const client = await getTelegramClient();
 
+    // 0.5 Check for Duplicates
+    await checkDuplicateEcosystem(title, district);
+
     // 1. Process Title
     let street = title;
     let house = "";
@@ -311,4 +314,59 @@ export async function updateChatTitle(chatId: string, title: string) {
             title: title
         })
     );
+}
+
+export async function checkDuplicateEcosystem(title: string, district: string | null) {
+    let street = title;
+    let house = "";
+
+    // Normalize incoming title
+    if (title.includes(',')) {
+        const parts = title.split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+            if (/^\d/.test(parts[0])) {
+                house = parts[0];
+                street = parts[1];
+            } else {
+                street = parts[0];
+                house = parts[1];
+            }
+        }
+    } else {
+        const parts = title.split(' ');
+        if (parts.length > 1) {
+            const lastPart = parts[parts.length - 1];
+            if (/^\d/.test(lastPart)) {
+                house = lastPart;
+                street = parts.slice(0, -1).join(' ');
+            }
+        }
+    }
+
+    // Prepare search patterns
+    // We want to match existing titles that contain BOTH the street and the house
+    // This is a fuzzy check because existing titles in DB might be formatted differently
+
+    if (house && street) {
+        // Check if there is any ecosystem where title ILIKE %street% AND title ILIKE %house%
+        // This prevents "Street 56" vs "56 Street" vs "Street, 56"
+        const existing = await sql`
+            SELECT id, title FROM ecosystems 
+            WHERE title ILIKE ${'%' + street + '%'} 
+              AND title ILIKE ${'%' + house + '%'}
+              LIMIT 1
+         `;
+
+        if (existing.length > 0) {
+            throw new Error(`Duplicate: Chat for "${existing[0].title}" already exists.`);
+        }
+    } else {
+        // Fallback to exact title match
+        const existing = await sql`
+            SELECT id FROM ecosystems WHERE title = ${title} LIMIT 1
+        `;
+        if (existing.length > 0) {
+            throw new Error(`Duplicate: Chat "${title}" already exists.`);
+        }
+    }
 }
