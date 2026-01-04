@@ -202,7 +202,7 @@ export async function createEcosystem(title: string, district: string | null) {
         try {
             // Task 1: Welcome Message for Candidates
             await sql`
-                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, created_at)
+                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
                 VALUES (
                     ${channelId.toString()}, 
                     'message', 
@@ -212,13 +212,14 @@ export async function createEcosystem(title: string, district: string | null) {
                 pin: false
             })},
                     'pending',
+                    NOW() + INTERVAL '1 MINUTE',
                     NOW()
                 )
             `;
 
             // Task 2: Admin Election Poll
             await sql`
-                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, created_at)
+                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
                 VALUES (
                     ${channelId.toString()}, 
                     'poll', 
@@ -229,6 +230,7 @@ export async function createEcosystem(title: string, district: string | null) {
                 pin: false
             })},
                     'pending',
+                    NOW() + INTERVAL '1 MINUTE',
                     NOW()
                 )
             `;

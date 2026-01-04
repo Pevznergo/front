@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             // If queue is empty, schedule the first added item immediately
             let scheduledAt: Date;
             if (isQueueEmpty && addedCount === 0) {
-                scheduledAt = new Date(now.getTime() - 1000); // 1 second in the past to ensure it's due
+                scheduledAt = new Date(now.getTime() + 10000); // 10 seconds in the future to visualize queue
             } else {
                 const offsetMs = (addedCount * intervalMinutes * 60 * 1000) + (Math.random() * 5 * 60 * 1000);
                 scheduledAt = new Date(now.getTime() + offsetMs);
