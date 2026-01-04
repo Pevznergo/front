@@ -38,10 +38,10 @@ export async function createEcosystem(title: string, district: string | null) {
     }
 
     // 1. Create Supergroup
-    // Format: Соседи д. 59 | Сергея Акимова | Нижний Новгород
+    // Format: 🏠 Соседи д. 59 | Сергея Акимова | Нижний Новгород
     const chatTitle = house
-        ? `Соседи д. ${house} | ${street}${district ? ` | ${district}` : ""}`
-        : `Соседи | ${street}${district ? ` | ${district}` : ""}`;
+        ? `🏠 Соседи д. ${house} | ${street}${district ? ` | ${district}` : ""}`
+        : `🏠 Соседи | ${street}${district ? ` | ${district}` : ""}`;
 
     const createResult = await client.invoke(
         new Api.channels.CreateChannel({
