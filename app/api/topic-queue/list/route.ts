@@ -11,24 +11,46 @@ export async function GET(req: NextRequest) {
         const showCompleted = searchParams.get('show_completed') === 'true';
 
         // Fetch topic actions
-        const topicTasks = await sql`
-            SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
-            FROM topic_actions_queue
-            WHERE status != 'completed' 
-               OR (${showCompleted}::boolean = true AND status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
-            ORDER BY created_at DESC
-            LIMIT 100
-        `;
+        let topicTasks;
+        if (showCompleted) {
+            topicTasks = await sql`
+                SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
+                FROM topic_actions_queue
+                WHERE status != 'completed' 
+                   OR (status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
+                ORDER BY created_at DESC
+                LIMIT 100
+            `;
+        } else {
+            topicTasks = await sql`
+                SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
+                FROM topic_actions_queue
+                WHERE status != 'completed'
+                ORDER BY created_at DESC
+                LIMIT 100
+            `;
+        }
 
         // Fetch chat creation tasks
-        const createTasks = await sql`
-            SELECT id, title, status, error, scheduled_at, created_at
-            FROM chat_creation_queue
-            WHERE status != 'completed' 
-               OR (${showCompleted}::boolean = true AND status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
-            ORDER BY created_at DESC
-            LIMIT 100
-        `;
+        let createTasks;
+        if (showCompleted) {
+            createTasks = await sql`
+                SELECT id, title, status, error, scheduled_at, created_at
+                FROM chat_creation_queue
+                WHERE status != 'completed' 
+                   OR (status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')
+                ORDER BY created_at DESC
+                LIMIT 100
+            `;
+        } else {
+            createTasks = await sql`
+                SELECT id, title, status, error, scheduled_at, created_at
+                FROM chat_creation_queue
+                WHERE status != 'completed'
+                ORDER BY created_at DESC
+                LIMIT 100
+            `;
+        }
 
         // Normalize and merge
         const unifiedTasks = [
