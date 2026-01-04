@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
             if (tags["addr:street"] && tags["addr:housenumber"]) {
                 const street = tags["addr:street"];
                 const house = tags["addr:housenumber"];
+                const city = tags["addr:city"];
                 const fullAddress = `${house}, ${street}`;
 
                 // Use coordinates or tags for better uniqueness if needed
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
                     lat: el.lat || el.center?.lat,
                     lon: el.lon || el.center?.lon,
                     street: street,
-                    house: house
+                    house: house,
+                    city: city
                 });
             }
         });

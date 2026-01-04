@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, AlertCircle, Clock, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Loader2, AlertCircle, Clock, CheckCircle2, ChevronRight, ChevronLeft, Eye, EyeOff } from "lucide-react";
 
 interface QueueTask {
     unique_id: string;
@@ -19,11 +19,12 @@ interface QueueTask {
 export default function QueueConsole() {
     const [tasks, setTasks] = useState<QueueTask[]>([]);
     const [isOpen, setIsOpen] = useState(true);
+    const [showCompleted, setShowCompleted] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const fetchQueue = async () => {
         try {
-            const res = await fetch('/api/topic-queue/list');
+            const res = await fetch(`/api/topic-queue/list?show_completed=${showCompleted}`);
             if (res.ok) {
                 const data = await res.json();
                 setTasks(data.tasks || []);
@@ -35,9 +36,13 @@ export default function QueueConsole() {
 
     useEffect(() => {
         fetchQueue();
+    }, [showCompleted]); // Refetch when showCompleted changes
+
+    useEffect(() => {
+        fetchQueue();
         const interval = setInterval(fetchQueue, 3000); // Poll every 3s
         return () => clearInterval(interval);
-    }, []);
+    }, [showCompleted]);
 
     const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'processing').length;
 
@@ -63,7 +68,16 @@ export default function QueueConsole() {
                             <div className={`w-2 h-2 rounded-full ${pendingCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`} />
                             <h3 className="font-bold text-white text-sm uppercase tracking-wider">Queue Console</h3>
                         </div>
-                        <span className="text-[10px] text-slate-500 font-mono">{pendingCount} Active</span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-slate-500 font-mono">{pendingCount} Active</span>
+                            <button
+                                onClick={() => setShowCompleted(!showCompleted)}
+                                className={`text-slate-400 hover:text-white transition-colors ${showCompleted ? 'text-indigo-400' : ''}`}
+                                title={showCompleted ? "Hide Completed" : "Show Completed (24h)"}
+                            >
+                                {showCompleted ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">

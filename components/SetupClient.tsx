@@ -134,7 +134,7 @@ export default function SetupClient({ code }: { code: string }) {
                         inputMode="decimal" // Shows numeric keyboard on mobile
                         pattern="[0-9]*"
                         autoFocus
-                        placeholder="Введите номер дома..."
+                        placeholder="Поиск..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full h-12 bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium" // Increased font size for better readability
@@ -181,7 +181,7 @@ export default function SetupClient({ code }: { code: string }) {
                                     <div className="font-semibold truncate">{group.title || "Без названия"}</div>
                                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
                                         <MapPin className="w-3 h-3" />
-                                        {group.district || "Район не указан"}
+                                        {group.district || "Город не указан"}
                                     </div>
                                 </div>
                                 {savingId === group.id ? (

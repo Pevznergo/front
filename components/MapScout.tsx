@@ -23,6 +23,7 @@ interface Address {
     lon: number;
     street: string;
     house: string;
+    city?: string;
 }
 
 interface MapScoutProps {
@@ -77,9 +78,16 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
             if (res.ok) {
                 setFound(data.addresses);
                 setDeselected(new Set()); // Reset on new extract
+
+                // Auto-detect city from first address that has it
+                const firstCity = data.addresses.find((a: Address) => a.city)?.city;
+                if (firstCity) {
+                    setSelectedDistrict(firstCity);
+                }
+
                 onAddressesFound(data.addresses.map((a: Address) => ({
                     ...a,
-                    district: selectedDistrict
+                    district: firstCity || selectedDistrict
                 })));
             }
         } catch (e) {
@@ -160,7 +168,7 @@ export default function MapScout({ onAddressesFound }: MapScoutProps) {
                     <div className="flex-1 max-w-sm relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input
-                            placeholder="Название района для очереди (напр. Приморский)"
+                            placeholder="Город (заполнится автоматически)"
                             value={selectedDistrict}
                             onChange={(e) => setSelectedDistrict(e.target.value)}
                             className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500/50"

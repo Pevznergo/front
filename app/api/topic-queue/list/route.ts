@@ -7,20 +7,33 @@ export async function GET(req: NextRequest) {
     try {
         await initDatabase();
 
+        const searchParams = req.nextUrl.searchParams;
+        const showCompleted = searchParams.get('show_completed') === 'true';
+
         // Fetch topic actions
+        // If showCompleted is true, show all pending/failed/processing OR completed in last 24h
+        // If showCompleted is false, show only pending/failed/processing
         const topicTasks = await sql`
             SELECT id, chat_id, action_type, status, error, scheduled_for, created_at, payload
             FROM topic_actions_queue
+            ${showCompleted
+                ? sql`WHERE status IN ('pending', 'processing', 'failed') OR (status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')`
+                : sql`WHERE status IN ('pending', 'processing', 'failed')`
+            }
             ORDER BY created_at DESC
-            LIMIT 50
+            LIMIT 100
         `;
 
         // Fetch chat creation tasks
         const createTasks = await sql`
             SELECT id, title, status, error, scheduled_at, created_at
             FROM chat_creation_queue
+            ${showCompleted
+                ? sql`WHERE status IN ('pending', 'processing', 'failed') OR (status = 'completed' AND created_at > NOW() - INTERVAL '24 HOURS')`
+                : sql`WHERE status IN ('pending', 'processing', 'failed')`
+            }
             ORDER BY created_at DESC
-            LIMIT 50
+            LIMIT 100
         `;
 
         // Normalize and merge
