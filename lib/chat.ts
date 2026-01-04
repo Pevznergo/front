@@ -5,12 +5,39 @@ import { sql } from "@/lib/db";
 export async function createEcosystem(title: string, district: string | null) {
     const client = await getTelegramClient();
 
+    // 1. Process Title (Format: House, Street -> Street House)
+    let addressPart = title;
+    if (title.includes(',')) {
+        const parts = title.split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+            const part1 = parts[0];
+            const part2 = parts[1];
+
+            // We expect input "House, Street" (from map extraction)
+            // We want output "Street House"
+
+            const p1IsNum = /^\d/.test(part1);
+            // const p2IsNum = /^\d/.test(part2);
+
+            if (p1IsNum) {
+                // Input is "House, Street", swap to "Street House"
+                addressPart = `${part2} ${part1}`;
+            } else {
+                // Input is "Street, House" (unlikely from map but possible manually), swap to "Street House"
+                // Actually if it's "Street, House", just removing comma and keeping order might be what we want? 
+                // User example "Сергея Акимова 59".
+                addressPart = `${part1} ${part2}`;
+            }
+        }
+    }
+
     // 1. Create Supergroup
-    const chatTitle = `Дом ${title}${district ? `, ${district}` : ""}`;
+    // Format: 🏠 Street House | Соседи | City
+    const chatTitle = `🏠 ${addressPart} | Соседи${district ? ` | ${district}` : ""}`;
     const createResult = await client.invoke(
         new Api.channels.CreateChannel({
             title: chatTitle,
-            about: `Чат жильцов дома ${title}${district ? `, ${district}` : ""}`,
+            about: `Чат соседей: ${addressPart}${district ? `, ${district}` : ""}`,
             megagroup: true,
         })
     ) as any;
