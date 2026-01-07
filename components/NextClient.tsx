@@ -631,22 +631,16 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </div>
                                 <div class="content-box">
                                     <h1 class="main-title">
-                                        <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
-                                        </svg>
-                                        Чат нашего дома
+                                        КЛУБ СОСЕДЕЙ 🏠
                                     </h1>
-                                    <ul class="features">
-                                        <li>Без УК</li>
-                                        <li>Барахолка района</li>
-                                        <li>Скидки района</li>
-                                    </ul>
+                                    <div class="features">
+                                        Закрытый чат
+                                    </div>
                                     <div class="cta">
-                                        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="19" y1="12" x2="5" y2="12"></line>
-                                            <polyline points="12 19 5 12 12 5"></polyline>
-                                        </svg>
-                                        <span>Сканируй QR-код</span>
+                                        Колесо Призов:
+                                    </div>
+                                    <div class="prizes">
+                                        WB / OZON / iPhone
                                     </div>
                                 </div>
                             </div>
@@ -724,58 +718,41 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     .main-title {
                         margin: 0;
                         padding: 0;
-                        font-size: 11.5px;
-                        font-weight: 800;
+                        font-size: 10px;
+                        font-weight: 900;
                         line-height: 1;
                         text-transform: uppercase;
-                        margin-bottom: 2mm;
+                        margin-bottom: 1mm;
                         white-space: nowrap;
-                        display: flex;
-                        align-items: center;
-                        gap: 1.5mm;
-                    }
-                    .tg-icon {
-                        width: 4mm;
-                        height: 4mm;
-                        flex-shrink: 0;
                     }
                     .features {
-                        margin: 0;
-                        padding: 0;
-                        list-style: none;
-                        font-size: 11px;
-                        line-height: 1.2;
-                        font-weight: 600;
-                        color: #333;
+                        font-size: 9px;
+                        font-weight: 700;
+                        color: #000;
+                        background: #eee;
+                        padding: 0.5mm 1.5mm;
+                        border-radius: 2mm;
+                        width: fit-content;
                         margin-bottom: 2mm;
+                        text-transform: uppercase;
                     }
                     .cta {
-                        display: flex;
-                        align-items: center;
-                        gap: 1.5mm;
+                        font-size: 8px;
+                        font-weight: 600;
+                        color: #555;
+                        margin-bottom: 0.5mm;
+                        text-transform: uppercase;
+                    }
+                    .prizes {
                         font-size: 9px;
                         font-weight: 900;
-                        text-transform: uppercase;
-                        color: #000;
-                        background: #f0f0f0;
-                        padding: 1mm 2mm;
-                        border-radius: 1mm;
-                        width: fit-content;
-                    }
-                    .arrow {
-                        width: 3.5mm;
-                        height: 3.5mm;
-                    }
-                    .code-label {
-                        margin-top: 1mm;
-                        font-family: monospace;
-                        font-size: 8px;
-                        color: #666;
+                        color: black;
                         text-transform: uppercase;
                     }
                     @media print {
                         .no-print { display: none; }
                         .sticker { border: none; }
+                        .features { -webkit-print-color-adjust: exact; background: #eee; }
                     }
                 </style>
             </head>
