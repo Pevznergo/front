@@ -225,6 +225,51 @@ export async function initDatabase() {
       )
     `;
 
+    // Telegram Web App Users
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS app_users (
+        telegram_id BIGINT PRIMARY KEY,
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        username VARCHAR(255),
+        points INTEGER DEFAULT 0,
+        spins_count INTEGER DEFAULT 0,
+        last_visit TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Prizes table
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS prizes (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        type VARCHAR(50) NOT NULL, -- 'points', 'coupon', 'physical'
+        value VARCHAR(255), -- '50', '10%', 'iPhone'
+        probability DECIMAL(5,2) DEFAULT 0, -- percentage 0-100
+        image_url TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Seed prizes if empty
+    const existingPrizes = await sqlConnection`SELECT count(*) as count FROM prizes`;
+    if (existingPrizes[0].count == 0) {
+      await sqlConnection`
+        INSERT INTO prizes (name, type, value, probability, description) VALUES
+        ('5 Баллов', 'points', '5', 30.00, 'Утешительный приз'),
+        ('10 Баллов', 'points', '10', 25.00, 'Вернули ставку'),
+        ('20 Баллов', 'points', '20', 20.00, 'В плюсе!'),
+        ('50 Баллов', 'points', '50', 10.00, 'Крупный выигрыш'),
+        ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
+        ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
+        ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
+        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
+      `;
+    }
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
