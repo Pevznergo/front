@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Wheel from '@/components/webapp/Wheel'
 // import { WebAppUser } from '@/types/telegram' // Removed unused import
-import { Loader2 } from 'lucide-react'
+import { Loader2, Send } from 'lucide-react'
 
 // Define types locally for now
 interface Prize {
@@ -143,11 +143,12 @@ export default function WebAppPage() {
             {/* Header / Branding */}
             <div className="w-full mb-6 z-10 relative">
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-black text-white tracking-tight leading-none mb-1">
+                    <h1 className="text-3xl font-black text-white tracking-tight leading-none mb-1 flex items-center justify-center gap-2">
+                        <Send className="w-8 h-8 text-[#229ED9] fill-current" />
                         КЛУБ СОСЕДЕЙ 🏠
                     </h1>
                     <span className="inline-block px-3 py-1 bg-white/10 rounded-full text-xs font-medium tracking-wide text-gray-300 uppercase border border-white/10 backdrop-blur-sm">
-                        Закрытый чат
+                        ЧАТ НАШЕГО ДОМА
                     </span>
                     <p className="mt-3 text-sm text-gray-400 font-medium tracking-wide">
                         Колесо Призов: <span className="text-white">WB / OZON / iPhone</span>

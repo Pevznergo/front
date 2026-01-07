@@ -631,10 +631,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </div>
                                 <div class="content-box">
                                     <h1 class="main-title">
+                                        <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                                        </svg>
                                         КЛУБ СОСЕДЕЙ 🏠
                                     </h1>
                                     <div class="features">
-                                        Закрытый чат
+                                        ЧАТ НАШЕГО ДОМА
                                     </div>
                                     <div class="cta">
                                         Колесо Призов:
@@ -724,6 +727,14 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         text-transform: uppercase;
                         margin-bottom: 1mm;
                         white-space: nowrap;
+                        display: flex;
+                        align-items: center;
+                        gap: 1mm;
+                    }
+                    .tg-icon {
+                        width: 3mm;
+                        height: 3mm;
+                        flex-shrink: 0;
                     }
                     .features {
                         font-size: 9px;
