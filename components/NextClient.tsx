@@ -525,13 +525,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             });
 
             if (res.ok) {
-                // Update local state: remove code from the specific ecosystem's codes array
-                setEcosystems(prev => prev.map(e => e.tg_chat_id === tgChatId ? {
-                    ...e,
-                    codes: e.codes.filter((c: string) => c !== code)
-                } : e));
-
-                // Also update the links state if needed
+                // Update links state: remove tg_chat_id from the link
                 setLinks(prev => prev.map(l => l.code === code ? { ...l, tg_chat_id: undefined } : l));
             } else {
                 alert("Ошибка при отвязке");
