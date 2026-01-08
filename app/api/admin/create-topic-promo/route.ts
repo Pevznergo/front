@@ -45,7 +45,11 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Prepare Keyboard
-        const keyboard = new InlineKeyboard().webApp("🎡 КРУТИТЬ КОЛЕСО", "https://aporto.tech/app");
+        // web_app inline buttons are allowed EXCEPT in some group contexts where Telegram forbids them (BUTTON_TYPE_INVALID).
+        // Best practice for groups: Use a direct t.me link which opens the Web App reliably.
+        // We assume the bot username is 'aportomessage_bot' and the app shortname is 'app' (default).
+        const appLink = "https://t.me/aportomessage_bot/app";
+        const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
         // 3. Send Message
         await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
