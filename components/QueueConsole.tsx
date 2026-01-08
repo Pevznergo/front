@@ -20,7 +20,7 @@ export default function QueueConsole() {
     const [tasks, setTasks] = useState<QueueTask[]>([]);
     const [isOpen, setIsOpen] = useState(true);
     const [showCompleted, setShowCompleted] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchQueue = async () => {
         try {
@@ -34,21 +34,24 @@ export default function QueueConsole() {
         }
     };
 
-    useEffect(() => {
-        fetchQueue();
-    }, [showCompleted]); // Refetch when showCompleted changes
-
-    useEffect(() => {
-        fetchQueue();
-        const interval = setInterval(fetchQueue, 3000); // Poll every 3s
-        return () => clearInterval(interval);
-    }, [showCompleted]);
+    const handleProcess = async () => {
+        setIsProcessing(true);
+        try {
+            await fetch("/api/queue/process?force=true");
+            await fetch("/api/topic-queue/process");
+            await fetchQueue();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'processing').length;
 
     return (
         <div
-            className={`fixed right-0 top-0 bottom-0 z-50 transition-all duration-300 transform bg-slate-950/90 backdrop-blur-md border-l border-white/10 flex flex-col ${isOpen ? 'w-80 translate-x-0' : 'w-12 translate-x-0' // Using minimal width for collapsed state instead of translating off-screen
+            className={`fixed right-0 top-0 bottom-0 z-50 transition-all duration-300 transform bg-slate-950/90 backdrop-blur-md border-l border-white/10 flex flex-col ${isOpen ? 'w-96 translate-x-0' : 'w-12 translate-x-0' // Using minimal width for collapsed state instead of translating off-screen
                 }`}
         >
             {/* Toggle Button */}
@@ -71,16 +74,12 @@ export default function QueueConsole() {
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] text-slate-500 font-mono">{pendingCount} Active</span>
                             <button
-                                onClick={async () => {
-                                    // Trigger both processors
-                                    await fetch("/api/queue/process?force=true");
-                                    await fetch("/api/topic-queue/process");
-                                    fetchQueue(); // Refresh list
-                                }}
-                                className="text-slate-400 hover:text-green-400 transition-colors"
+                                onClick={handleProcess}
+                                disabled={isProcessing}
+                                className={`text-slate-400 hover:text-green-400 transition-colors ${isProcessing ? 'animate-spin text-green-500' : ''}`}
                                 title="Force Process Queues"
                             >
-                                <Play className="w-3 h-3" />
+                                {isProcessing ? <Loader2 className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                             </button>
                             <button
                                 onClick={() => setShowCompleted(!showCompleted)}
