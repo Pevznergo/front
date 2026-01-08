@@ -141,7 +141,36 @@ export default function SetupClient({ code }: { code: string }) {
                     />
                 </div>
 
-                <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1">Выберите группу для привязки:</div>
+                <div className="text-[10px] text-slate-500 uppercase tracking-widest px-1 mb-2 flex justify-between items-center">
+                    <span>Выберите группу для привязки:</span>
+                    {/* Promo Action Button */}
+                    <button
+                        onClick={async () => {
+                            const chatId = prompt("Введите ID группы (начинается с -100) для создания игры:");
+                            if (!chatId) return;
+
+                            try {
+                                const res = await fetch("/api/admin/create-topic-promo", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ chatId })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert("Игра создана! Топик ID: " + data.threadId);
+                                } else {
+                                    alert("Ошибка: " + data.error);
+                                }
+                            } catch (e: any) {
+                                alert("Ошибка сети");
+                            }
+                        }}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/10 text-yellow-500 rounded-md hover:bg-yellow-500/20 transition-colors text-[9px] font-bold"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="11" x2="10" y2="11" /><line x1="8" y1="9" x2="8" y2="13" /><rect width="22" height="14" x="1" y="6" rx="2" ry="2" /><path d="M9 1l2 2 3.5-3.5" /><path d="M15 12h.01" /><path d="M18 11h.01" /></svg>
+                        СОЗДАТЬ ИГРУ
+                    </button>
+                </div>
 
                 {/* Current Link Status - Unlink Button */}
                 {currentLink && currentLink.targetUrl && (

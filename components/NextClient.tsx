@@ -1530,6 +1530,41 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 <td className="p-5 align-top">
                                                     <div className="flex flex-col gap-2">
                                                         <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm(`Создать топик с игрой в "${item.title}"?`)) return;
+
+                                                                    try {
+                                                                        const res = await fetch("/api/admin/create-topic-promo", {
+                                                                            method: "POST",
+                                                                            headers: { "Content-Type": "application/json" },
+                                                                            body: JSON.stringify({ chatId: item.tg_chat_id })
+                                                                        });
+                                                                        const data = await res.json();
+                                                                        if (res.ok) {
+                                                                            alert("Игра создана! Топик: " + data.threadId);
+                                                                        } else {
+                                                                            alert("Ошибка: " + data.error);
+                                                                        }
+                                                                    } catch (err) {
+                                                                        alert("Ошибка сети");
+                                                                    }
+                                                                }}
+                                                                className="p-1.5 hover:bg-yellow-500/20 text-yellow-500 rounded-lg transition-colors"
+                                                                title="Создать игру"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="11" x2="10" y2="11" /><line x1="8" y1="9" x2="8" y2="13" /><rect width="22" height="14" x="1" y="6" rx="2" ry="2" /><path d="M9 1l2 2 3.5-3.5" /><path d="M15 12h.01" /><path d="M18 11h.01" /></svg>
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingGroup(item);
+                                                                }}
+                                                                className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
+                                                            >
+                                                                <Edit3 className="w-3.5 h-3.5" />
+                                                            </button>
                                                             {item.codes.map((code: string) => (
                                                                 <button
                                                                     key={code}
