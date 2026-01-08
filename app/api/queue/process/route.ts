@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql, initDatabase, getFloodWait, setFloodWait } from "@/lib/db";
 import { createEcosystem } from "@/lib/chat";
+import { Bot, InlineKeyboard } from "grammy";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
@@ -109,6 +110,44 @@ export async function GET(req: NextRequest) {
             `;
 
             triggerNext(3000); // 3s pause before next
+
+            // ---------------------------------------------------------
+            // 4. AUTOMATION: Create "Wheel of Fortune" Topic & Message
+            // ---------------------------------------------------------
+            try {
+                // Ensure we have a valid bot token
+                const token = process.env.TELEGRAM_BOT_TOKEN;
+                if (token && result.chatId) {
+                    const bot = new Bot(token);
+                    const targetChatId = result.chatId.toString().startsWith("-") ? result.chatId.toString() : "-100" + result.chatId;
+
+                    // Small delay to ensure rights propagation
+                    await new Promise(r => setTimeout(r, 2000));
+
+                    console.log(`[Queue] Creating promo topic for ${targetChatId}...`);
+
+                    // A. Create Topic
+                    const topic = await bot.api.createForumTopic(targetChatId, "🎁 Колесо Фортуны");
+                    const threadId = topic.message_thread_id;
+
+                    // B. Send Button
+                    // Hardcoded Deep Link as requested/verified
+                    const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
+                    const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
+
+                    await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+                        message_thread_id: threadId,
+                        reply_markup: keyboard,
+                        parse_mode: "Markdown",
+                    });
+
+                    console.log(`[Queue] Automating promo success: Topic ${threadId}`);
+                }
+            } catch (botError: any) {
+                // We do NOT fail the task if this optional step fails, just log it.
+                console.error(`[Queue] Failed to automate promo topic:`, botError);
+            }
+            // ---------------------------------------------------------
 
             return NextResponse.json({
                 success: true,

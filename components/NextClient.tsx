@@ -478,7 +478,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 member_count: 0,
                 last_updated: new Date().toISOString(),
                 created_at: new Date().toISOString(),
-                status: 'не подключен'
+                status: 'не подключен',
+                codes: []
             };
 
             setEcosystems([newEco, ...ecosystems]);
