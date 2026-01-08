@@ -71,6 +71,18 @@ export default function QueueConsole() {
                         <div className="flex items-center gap-3">
                             <span className="text-[10px] text-slate-500 font-mono">{pendingCount} Active</span>
                             <button
+                                onClick={async () => {
+                                    // Trigger both processors
+                                    await fetch("/api/queue/process?force=true");
+                                    await fetch("/api/topic-queue/process");
+                                    fetchQueue(); // Refresh list
+                                }}
+                                className="text-slate-400 hover:text-green-400 transition-colors"
+                                title="Force Process Queues"
+                            >
+                                <Play className="w-3 h-3" />
+                            </button>
+                            <button
                                 onClick={() => setShowCompleted(!showCompleted)}
                                 className={`text-slate-400 hover:text-white transition-colors ${showCompleted ? 'text-indigo-400' : ''}`}
                                 title={showCompleted ? "Hide Completed" : "Show Completed (24h)"}
