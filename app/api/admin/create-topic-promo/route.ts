@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
 
         // 2. Prepare Keyboard
         // per user request: simple hardcoded link
-        const appLink = "https://t.me/aportomessage_bot/app";
+        // Adding startapp parameter to ensure it is treated as a Mini App Launch
+        const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
         const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
         // 3. Send Message
