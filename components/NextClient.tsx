@@ -51,6 +51,7 @@ interface Ecosystem {
     last_updated: string;
     created_at: string;
     status?: string;
+    codes: string[];
 }
 
 interface QueueItem {
@@ -509,6 +510,33 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             }
         } catch (e) {
             alert('Ошибка при удалении');
+        }
+    };
+
+    const handleUnlinkCode = async (code: string, ecosystemTitle: string, tgChatId: string) => {
+        if (!confirm(`Вы уверены, что хотите отвязать код ${code} от "${ecosystemTitle}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/links/${code}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tgChatId: null })
+            });
+
+            if (res.ok) {
+                // Update local state: remove code from the specific ecosystem's codes array
+                setEcosystems(prev => prev.map(e => e.tg_chat_id === tgChatId ? {
+                    ...e,
+                    codes: e.codes.filter((c: string) => c !== code)
+                } : e));
+
+                // Also update the links state if needed
+                setLinks(prev => prev.map(l => l.code === code ? { ...l, tg_chat_id: undefined } : l));
+            } else {
+                alert("Ошибка при отвязке");
+            }
+        } catch (e) {
+            alert("Ошибка сети");
         }
     };
 
@@ -1566,14 +1594,22 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                 <Edit3 className="w-3.5 h-3.5" />
                                                             </button>
                                                             {item.codes.map((code: string) => (
-                                                                <button
-                                                                    key={code}
-                                                                    onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
-                                                                    className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
-                                                                >
-                                                                    {code}
-                                                                    {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <ClipboardIcon className="w-3 h-3 opacity-50" />}
-                                                                </button>
+                                                                <div key={code} className="flex items-center gap-1">
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
+                                                                        className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
+                                                                    >
+                                                                        {code}
+                                                                        {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <ClipboardIcon className="w-3 h-3 opacity-50" />}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleUnlinkCode(code, item.title, item.tg_chat_id)}
+                                                                        className="p-1 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-md transition-colors"
+                                                                        title="Отвязать код"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
                                                             ))}
                                                         </div>
 
