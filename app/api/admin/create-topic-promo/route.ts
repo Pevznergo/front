@@ -44,41 +44,29 @@ export async function POST(req: NextRequest) {
             }, { status: 500 });
         }
 
-        // 2. Prepare Keyboards
+        // 2. Prepare Keyboard
         // Fetch bot info to ensure correct username in Deep Link
         const me = await bot.api.getMe();
         const username = me.username;
-        const appName = "app"; // Default short name. If you customized it in BotFather, change this.
+        const appName = "app";
 
-        // Primary: WebApp button (Best UX: opens in-chat)
-        const keyboardWebApp = new InlineKeyboard().webApp("🎡 КРУТИТЬ КОЛЕСО", "https://aporto.tech/app");
-
-        // Fallback: Deep Link (Safe: works everywhere, but opens via bot)
-        // Format: https://t.me/BOT_USERNAME/APP_NAME?startapp=PARAMS
+        // Direct Deep Link (Works in Groups/Topics reliable)
         const appLink = `https://t.me/${username}/${appName}?startapp=promo`;
-        const keyboardLink = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
+        const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
-        // 3. Send Message with Fallback
-        try {
-            await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
-                message_thread_id: threadId,
-                reply_markup: keyboardWebApp,
-                parse_mode: "Markdown",
-            });
-        } catch (sendError: any) {
-            console.warn("WebApp button failed (likely BUTTON_TYPE_INVALID), falling back to Deep Link:", sendError.message);
-            // Fallback to URL button
-            await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
-                message_thread_id: threadId,
-                reply_markup: keyboardLink,
-                parse_mode: "Markdown",
-            });
-        }
+        // 3. Send Message
+        await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+            message_thread_id: threadId,
+            reply_markup: keyboard,
+            parse_mode: "Markdown",
+        });
 
         return NextResponse.json({
             success: true,
             threadId,
-            message: "Topic created and message sent"
+            message: "Topic created and message sent",
+            appLink,
+            botUsername: username
         });
 
     } catch (error: any) {

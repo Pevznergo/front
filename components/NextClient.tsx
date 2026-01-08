@@ -1543,7 +1543,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                         });
                                                                         const data = await res.json();
                                                                         if (res.ok) {
-                                                                            alert("Игра создана! Топик: " + data.threadId);
+                                                                            alert(`Игра создана! Топик: ${data.threadId}\n\nСсылка на приложение:\n${data.appLink}`);
                                                                         } else {
                                                                             alert("Ошибка: " + data.error);
                                                                         }
