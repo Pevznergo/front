@@ -28,9 +28,12 @@ export async function POST(req: NextRequest) {
             threadId = topic.message_thread_id;
         } catch (e: any) {
             console.error("Failed to create topic:", e);
-            // If topic creation fails (e.g. not a supergroup, or not enough rights), we might want to fail hard?
-            // Or maybe fallback to general? No, usually explicitly requested.
-            return NextResponse.json({ error: "Failed to create topic. Ensure bot is admin and group is a Supergroup with Topics enabled.", details: e.message }, { status: 500 });
+            // Return specific telegram error info if available
+            const errorMsg = e.description || e.message || "Unknown error";
+            return NextResponse.json({
+                error: `Telegram Error: ${errorMsg}. (Ensure bot is Admin & Topics enabled)`,
+                details: e
+            }, { status: 500 });
         }
 
         // 2. Prepare Keyboard
