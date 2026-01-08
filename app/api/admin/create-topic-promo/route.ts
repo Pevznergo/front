@@ -18,11 +18,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing chatId" }, { status: 400 });
         }
 
+        // Normalize Chat ID: Ensure it starts with -100 for supergroups if it's a number-like string
+        // If the user passed a positive number string like "3550262587", we prepend "-100"
+        let targetChatId = chatId.toString();
+        if (!targetChatId.startsWith("-") && /^\d+$/.test(targetChatId)) {
+            targetChatId = "-100" + targetChatId;
+        }
+
         // 1. Create Forum Topic
         let threadId: number;
 
         try {
-            const topic = await bot.api.createForumTopic(chatId, topicName, {
+            const topic = await bot.api.createForumTopic(targetChatId, topicName, {
                 icon_custom_emoji_id: undefined // Optional: could pass a custom emoji id if known
             });
             threadId = topic.message_thread_id;
@@ -31,9 +38,9 @@ export async function POST(req: NextRequest) {
             // Return specific telegram error info if available
             const errorMsg = e.description || e.message || "Unknown error";
             return NextResponse.json({
-                error: `Telegram Error: ${errorMsg}. (Ensure bot is Admin & Topics enabled). Attempted Chat ID: ${chatId}`,
+                error: `Telegram Error: ${errorMsg}. (Ensure bot is Admin & Topics enabled). Target ID: ${targetChatId}`,
                 details: e,
-                chatId
+                chatId: targetChatId
             }, { status: 500 });
         }
 
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
         const keyboard = new InlineKeyboard().webApp("🎡 КРУТИТЬ КОЛЕСО", "https://aporto.tech/app");
 
         // 3. Send Message
-        await bot.api.sendMessage(chatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+        await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
             message_thread_id: threadId,
             reply_markup: keyboard,
             parse_mode: "Markdown",
