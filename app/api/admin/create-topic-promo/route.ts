@@ -45,11 +45,17 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Prepare Keyboards
+        // Fetch bot info to ensure correct username in Deep Link
+        const me = await bot.api.getMe();
+        const username = me.username;
+        const appName = "app"; // Default short name. If you customized it in BotFather, change this.
+
         // Primary: WebApp button (Best UX: opens in-chat)
         const keyboardWebApp = new InlineKeyboard().webApp("🎡 КРУТИТЬ КОЛЕСО", "https://aporto.tech/app");
+
         // Fallback: Deep Link (Safe: works everywhere, but opens via bot)
-        // Adding ?startapp=promo parameter to hint 'auto-start' behavior
-        const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
+        // Format: https://t.me/BOT_USERNAME/APP_NAME?startapp=PARAMS
+        const appLink = `https://t.me/${username}/${appName}?startapp=promo`;
         const keyboardLink = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
         // 3. Send Message with Fallback
