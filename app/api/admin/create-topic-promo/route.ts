@@ -3,13 +3,13 @@ import { Bot, InlineKeyboard } from "grammy";
 
 // Initialize bot for this specific One-Off action
 // We don't use the webhook instance to avoid conflicts, just a fresh API caller
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = token ? new Bot(token) : null;
-
 export async function POST(req: NextRequest) {
-    if (!bot) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
         return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
     }
+    // Initialize bot for this request to ensure env vars are loaded
+    const bot = new Bot(token);
 
     try {
         const { chatId, topicName = "🎁 Колесо Фортуны" } = await req.json();
@@ -45,13 +45,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Prepare Keyboard
-        // Fetch bot info to ensure correct username in Deep Link
-        const me = await bot.api.getMe();
-        const username = me.username;
-        const appName = "app";
-
-        // Direct Deep Link (Works in Groups/Topics reliable)
-        const appLink = `https://t.me/${username}/${appName}?startapp=promo`;
+        // per user request: simple hardcoded link
+        const appLink = "https://t.me/aportomessage_bot/app";
         const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
         // 3. Send Message
@@ -66,7 +61,7 @@ export async function POST(req: NextRequest) {
             threadId,
             message: "Topic created and message sent",
             appLink,
-            botUsername: username
+            botUsername: "aportomessage_bot"
         });
 
     } catch (error: any) {
