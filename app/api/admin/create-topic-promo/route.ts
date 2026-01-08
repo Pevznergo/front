@@ -31,8 +31,9 @@ export async function POST(req: NextRequest) {
             // Return specific telegram error info if available
             const errorMsg = e.description || e.message || "Unknown error";
             return NextResponse.json({
-                error: `Telegram Error: ${errorMsg}. (Ensure bot is Admin & Topics enabled)`,
-                details: e
+                error: `Telegram Error: ${errorMsg}. (Ensure bot is Admin & Topics enabled). Attempted Chat ID: ${chatId}`,
+                details: e,
+                chatId
             }, { status: 500 });
         }
 
