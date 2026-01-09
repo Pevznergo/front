@@ -30,59 +30,37 @@ export default function WebAppPage() {
     const [winIndex, setWinIndex] = useState<number | null>(null)
     const [winResult, setWinResult] = useState<Prize | null>(null)
 
+    // Daily Bonus State
+    const [isDailyOpen, setIsDailyOpen] = useState(false);
+    const [dailyStreak, setDailyStreak] = useState(1);
+    const [lastDailyDate, setLastDailyDate] = useState<string | null>(null); // ISO date
+
     // Countdown Timer Logic
     const [timeLeft, setTimeLeft] = useState("");
 
     useEffect(() => {
-        // Initialize WebApp
+        // Initialize WebApp (Visuals Only)
         if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
             const tg = (window as any).Telegram.WebApp
             tg.ready()
             tg.expand() // Fullscreen
             tg.setHeaderColor('#FF4500'); // Orange header
-
-            const rawInitData = tg.initData
-            setInitData(rawInitData)
-
-            // Auth call
-            fetch('/api/webapp/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: rawInitData })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.user) {
-                        setUser(data.user)
-                    }
-                })
-                .catch(err => console.error(err))
-
-            // Fetch Prizes
-            fetch('/api/webapp/prizes')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.prizes) setPrizes(data.prizes)
-                    setLoading(false)
-                })
-                .catch(err => {
-                    console.error(err)
-                    setLoading(false)
-                })
-        } else {
-            // Dev fallback
-            setLoading(false)
-            // Mock data for dev
-            if (process.env.NODE_ENV === 'development') {
-                setPrizes([
-                    { id: 1, name: '1000₽', type: 'points', value: '1000', probability: '0.1' },
-                    { id: 2, name: '500₽', type: 'points', value: '500', probability: '0.2' },
-                    { id: 3, name: '-20%', type: 'coupon', value: '-20%', probability: '0.2' },
-                    { id: 4, name: 'iPhone', type: 'physical', value: 'iphone', probability: '0.01' }
-                ])
-                setUser({ telegram_id: 123, first_name: 'Dev', points: 100 })
-            }
+            setInitData(tg.initData)
         }
+
+        // --- MOCK DATA MODE (TESTING PERFORMANCE) ---
+        // Replacing real fetch with mock data to test smoothness in Prod
+        const mockPrizes = [
+            { id: 1, name: '1000₽', type: 'points', value: '1000', probability: '0.1' },
+            { id: 2, name: '500₽', type: 'points', value: '500', probability: '0.2' },
+            { id: 3, name: '-20%', type: 'coupon', value: '-20%', probability: '0.2' },
+            { id: 4, name: 'iPhone', type: 'physical', value: 'iphone', probability: '0.01' }
+        ];
+        setPrizes(mockPrizes);
+
+        // Mock User
+        setUser({ telegram_id: 999999, first_name: 'Test User (Mock)', points: 1000 });
+        setLoading(false);
 
         // Timer
         const updateTimer = () => {
@@ -115,12 +93,15 @@ export default function WebAppPage() {
         setWinResult(null)
 
         try {
-            const res = await fetch('/api/webapp/spin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData })
-            })
-            const data = await res.json()
+            // MOCK SPIN RESPONSE (Simulate Network)
+            await new Promise(resolve => setTimeout(resolve, 500)); // 0.5s network delay
+
+            const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
+            const data = {
+                success: true,
+                points: user.points - 10 + (randomPrize.type === 'points' ? parseInt(randomPrize.value) : 0),
+                prize: randomPrize
+            };
 
             if (data.success) {
                 // 2. Sync with Server Truth (includes winnings)
@@ -137,9 +118,8 @@ export default function WebAppPage() {
                     setSpinning(false)
                 }
             } else {
-                alert(data.error || 'Error spinning')
+                alert('Error spinning (Mock)')
                 setSpinning(false)
-                // Rollback if error? Ideally yes, but simplified for now (auth verification will fix on reload)
             }
         } catch (e) {
             console.error(e)
@@ -153,16 +133,31 @@ export default function WebAppPage() {
         setWinIndex(null)
     }
 
+    // Daily Bonus Handlers (Mocked)
+    const handleDailyClaim = () => {
+        // Optimistic update
+        const reward = [10, 15, 15, 20, 20, 25, 25][dailyStreak - 1] || 10;
+        setUser(prev => prev ? { ...prev, points: prev.points + reward } : null);
+
+        const today = new Date().toISOString().split('T')[0];
+        setLastDailyDate(today);
+        setDailyStreak(prev => Math.min(prev + 1, 7));
+
+        setIsDailyOpen(false);
+    }
+
+    // Check if daily is available
+    useEffect(() => {
+        // Just always show it available for mock testing if not claimed today
+        // For now, let's just default to available
+    }, []);
+
+
     const canSpin = (user?.points || 0) >= 10;
 
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FF4500]"><Loader2 className="animate-spin text-white" /></div>
 
-    if (!user && !loading && process.env.NODE_ENV !== 'development') {
-        return <div className="flex flex-col items-center justify-center min-h-screen text-center p-4 bg-[#FF4500] text-white">
-            <h1 className="text-2xl font-bold mb-4">Welcome</h1>
-            <p>Please open this in Telegram.</p>
-        </div>
-    }
+    // Removed the "Open in Telegram" check for this Test Mode
 
     return (
         <div className="flex flex-col h-screen bg-gradient-to-b from-[#FF4500] to-[#FF5500] overflow-hidden relative font-sans">
@@ -217,7 +212,10 @@ export default function WebAppPage() {
                     </button>
 
                     {/* Daily Login + Timer */}
-                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                    <button
+                        onClick={() => setIsDailyOpen(true)}
+                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+                    >
                         <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Coins className="w-6 h-6 text-yellow-400 drop-shadow-md" />
@@ -272,6 +270,15 @@ export default function WebAppPage() {
                     Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
                 </p>
             </div>
+
+            {/* Daily Bonus Modal */}
+            <DailyBonus
+                isOpen={isDailyOpen}
+                onClose={() => setIsDailyOpen(false)}
+                streakDays={dailyStreak}
+                onClaim={handleDailyClaim}
+                lastClaimDate={lastDailyDate}
+            />
 
         </div>
     )
