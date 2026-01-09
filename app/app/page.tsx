@@ -29,6 +29,9 @@ export default function WebAppPage() {
     const [winIndex, setWinIndex] = useState<number | null>(null)
     const [winResult, setWinResult] = useState<Prize | null>(null)
 
+    // Countdown Timer Logic
+    const [timeLeft, setTimeLeft] = useState("");
+
     useEffect(() => {
         // Initialize WebApp
         if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
@@ -79,6 +82,25 @@ export default function WebAppPage() {
                 setUser({ telegram_id: 123, first_name: 'Dev', points: 100 })
             }
         }
+
+        // Timer
+        const updateTimer = () => {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            const diff = tomorrow.getTime() - now.getTime();
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+
+            setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        };
+        const timer = setInterval(updateTimer, 1000);
+        updateTimer();
+        return () => clearInterval(timer);
+
     }, [])
 
     const handleSpin = async () => {
@@ -118,8 +140,6 @@ export default function WebAppPage() {
     const onSpinEnd = () => {
         setSpinning(false)
         if (winResult) {
-            // alert(`You won: ${winResult.name}!`) // Optional: remove alert for smoother UX
-            // Refresh user data (points)
             fetch('/api/webapp/auth', {
                 method: 'POST',
                 body: JSON.stringify({ initData })
@@ -132,82 +152,22 @@ export default function WebAppPage() {
         setWinIndex(null)
     }
 
-    // Countdown Timer Logic
-    const [timeLeft, setTimeLeft] = useState("");
-
-    useEffect(() => {
-        const updateTimer = () => {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-
-            const diff = tomorrow.getTime() - now.getTime();
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const minutes = Math.floor((diff / (1000 * 60)) % 60);
-            const seconds = Math.floor((diff / 1000) % 60);
-
-            setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-        };
-
-        const timer = setInterval(updateTimer, 1000);
-        updateTimer();
-        return () => clearInterval(timer);
-    }, []);
-
     const canSpin = (user?.points || 0) >= 10;
 
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FF4500]"><Loader2 className="animate-spin text-white" /></div>
 
     if (!user && !loading && process.env.NODE_ENV !== 'development') {
         return <div className="flex flex-col items-center justify-center min-h-screen text-center p-4 bg-[#FF4500] text-white">
-            <h1 className="text-2xl font-bold mb-4">Welcome to Aporto Prize Wheel</h1>
+            <h1 className="text-2xl font-bold mb-4">Welcome</h1>
             <p>Please open this in Telegram.</p>
         </div>
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#FF4500] to-[#FF8C00] overflow-hidden relative font-sans">
-            {/* Left-Aligned Header */}
-            <div className="flex flex-col items-start p-4 pt-6 gap-3 z-10 relative">
+        <div className="flex flex-col h-screen bg-gradient-to-b from-[#FF4500] to-[#FF5500] overflow-hidden relative font-sans">
 
-                {/* 1. Balance Pill (Top Left) */}
-                <div className="bg-black/20 backdrop-blur-sm rounded-full pl-3 pr-4 py-1.5 flex items-center gap-2 border border-white/10">
-                    <span className="font-black text-xl text-white">{user?.points || 0}</span>
-                    <Coins className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                </div>
-
-                {/* 2. Action Icons (Below Balance) */}
-                <div className="flex items-center gap-3">
-                    <button className="flex flex-col items-center group">
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 group-active:scale-95 transition-all">
-                            <Gift className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-[9px] font-bold text-white mt-1 uppercase tracking-wide opacity-80">Призы</span>
-                    </button>
-
-                    <button className="flex flex-col items-center group">
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 group-active:scale-95 transition-all">
-                            <Target className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-[9px] font-bold text-white mt-1 uppercase tracking-wide opacity-80">Задания</span>
-                    </button>
-
-                    <button className="flex flex-col items-center group">
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 group-active:scale-95 transition-all relative overflow-hidden">
-                            <Coins className="w-5 h-5 text-yellow-300" />
-                            {/* <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-full -mt-1 -mr-1 font-bold">24h</div> */}
-                        </div>
-                        <div className="flex flex-col items-center mt-1">
-                            <span className="text-[9px] font-bold text-white uppercase tracking-wide opacity-80 leading-none">Вход</span>
-                            <span className="text-[8px] font-mono text-yellow-200 leading-none mt-0.5">{timeLeft}</span>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            {/* Vertical Slot Machine Area (Centered) */}
-            <div className="flex-1 flex flex-col items-center justify-center relative -mt-10">
+            {/* 1. Main Background Content: Slot Machine (Full Screen) */}
+            <div className="absolute inset-0 z-0">
                 {prizes.length > 0 && (
                     <SlotMachine
                         prizes={prizes}
@@ -218,39 +178,100 @@ export default function WebAppPage() {
                 )}
             </div>
 
-            {/* Bottom Actions */}
-            <div className="p-6 pb-8 w-full max-w-md mx-auto z-10 relative">
+            {/* 2. UI Overlay Layer */}
+            <div className="absolute inset-0 z-20 pointer-events-none">
+
+                {/* Top Right: Balance */}
+                <div className="absolute top-4 right-4 pointer-events-auto">
+                    <div className="bg-black/40 backdrop-blur-md rounded-2xl pl-3 pr-2 py-1.5 flex items-center gap-2 border border-white/10 shadow-lg group active:scale-95 transition-transform">
+                        <span className="font-black text-xl text-white tracking-wider leading-none pt-0.5">{user?.points || 0}</span>
+                        <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
+                            <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Actions */}
+                <div className="absolute top-20 right-4 flex flex-col gap-6 items-center pointer-events-auto">
+
+                    {/* Prizes */}
+                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
+                        </div>
+                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
+                    </button>
+
+                    {/* Tasks */}
+                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Target className="w-6 h-6 text-white drop-shadow-md" />
+                        </div>
+                        <div className="flex flex-col items-center leading-none gap-0.5">
+                            <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Задания</span>
+                            <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">и игры</span>
+                        </div>
+                    </button>
+
+                    {/* Daily Login + Timer */}
+                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Coins className="w-6 h-6 text-yellow-400 drop-shadow-md" />
+
+                            {/* Timer Overlay Tag */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] font-mono text-white text-center py-[2px] backdrop-blur-[1px]">
+                                {timeLeft}
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center leading-none gap-0.5">
+                            <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Монетки</span>
+                            <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">за вход</span>
+                        </div>
+                    </button>
+
+                </div>
+            </div>
+
+            {/* Bottom: Spin Button Pinned */}
+            <div className="absolute bottom-8 left-6 right-6 z-30 pointer-events-auto">
                 <button
                     onClick={handleSpin}
                     disabled={spinning || !canSpin}
                     className={`
-                        w-full py-5 rounded-2xl font-black text-2xl uppercase tracking-wider italic flex items-center justify-center gap-2
-                        shadow-[0_6px_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[6px]
-                        transition-all duration-150
+                        w-full h-16 rounded-2xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
+                        shadow-[0_4px_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[4px]
+                        transition-all duration-200
                         ${!canSpin
-                            ? 'bg-white text-gray-400'
+                            ? 'bg-white text-black' // Design choice from screenshot: Button is White "NUZHNO 10"
                             : 'bg-white text-black hover:bg-gray-50'}
                     `}
                 >
                     {spinning ? (
-                        <span>КРУТИМ...</span>
+                        <span className="animate-pulse opacity-50">КРУТИМ...</span>
                     ) : canSpin ? (
                         <>
                             <span>ВРАЩАТЬ ЗА 10</span>
-                            <Coins className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
+                                <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
+                            </div>
                         </>
                     ) : (
                         <>
                             <span>НУЖНО 10</span>
-                            <Coins className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
+                                <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
+                            </div>
                         </>
                     )}
                 </button>
-
-                <p className="text-center text-white/50 text-[10px] mt-4 px-4 leading-tight">
-                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline">Правилами</a>.
+                <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
+                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
                 </p>
             </div>
+
         </div>
     )
 }

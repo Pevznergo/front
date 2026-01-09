@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils"; // Assuming utils exist, or I can define helper
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Prize {
     id: number;
@@ -18,13 +18,11 @@ interface SlotMachineProps {
     onSpinEnd: () => void;
 }
 
-const CARD_HEIGHT = 160; // px
-const GAP = 16; // px
-const VISIBLE_ITEMS = 3;
+const CARD_HEIGHT = 180; // Larger cards
+const GAP = 20;
 
 export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: SlotMachineProps) {
     const [offset, setOffset] = useState(0);
-    const [isAnimating, setIsAnimating] = useState(false);
     const [idleStage, setIdleStage] = useState<'static' | 'hiccup-up' | 'drop'>('static');
 
     // Vertical strip needs less horizontal width, but height
@@ -65,44 +63,27 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             // Target specific prize instance deep in the list
             const LOOP_TARGET = 45;
             const targetIndex = (LOOP_TARGET * prizes.length) + winIndex;
-
-            // Align center: We want the item to be reachable.
-            // Since it's vertical, we seek `targetIndex * ITEM_SIZE`
             const targetOffset = targetIndex * ITEM_SIZE;
 
-            setIsAnimating(true);
             setOffset(targetOffset);
 
             const duration = 4000;
             setTimeout(() => {
                 onSpinEnd();
-                setIsAnimating(false);
             }, duration);
         }
     }, [spinning, winIndex, prizes.length, ITEM_SIZE, onSpinEnd]);
 
     // Calculate current transform based on state
-    // If spin: use offset directly with transition
-    // If idle:
-    //   Stage 'static': translateY(-offset)
-    //   Stage 'hiccup-up': translateY(-offset - 15px)  (Move UP naturally means negative Y relative to item, but scroll moves stripe down? No, scroll moves stripe UP to show next.
-    //      To show next item (index+1), we scroll to offset + ITEM_SIZE.
-    //      "Start movement slightly UP" -> means we want to see a bit of the PREVIOUS item? Or just a bounce?
-    //      Usually "Wind up" means moving opposite direction of travel.
-    //      Travel is: 0 -> 100 (Stripe moves UP visually, items go UP).
-    //      So "Wind up" should move Stripe DOWN (items go DOWN).
-    //      Let's try translateY(-(offset - 20px)).
+    // "Hiccup Up": Move strip DOWN by small amount (wind up)
     const getTransform = () => {
         if (spinning) {
             return `translateY(-${offset}px)`;
         }
-
-        // Idle logic
         switch (idleStage) {
             case 'hiccup-up':
-                return `translateY(-${offset - 25}px)`; // Move strip DOWN (items down) = Wind up
+                return `translateY(-${offset - 30}px)`; // Wind up DOWN
             case 'drop':
-                return `translateY(-${offset}px)`; // Move to new offset (which is already incremented in effect)
             case 'static':
             default:
                 return `translateY(-${offset}px)`;
@@ -110,28 +91,33 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
     };
 
     return (
-        <div className="w-full relative h-[400px] overflow-hidden flex justify-center bg-black/5 rounded-3xl">
-            {/* Center Indicators (Arrows) */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-2 z-20">
-                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-yellow-400 drop-shadow-lg filter drop-shadow(0 0 5px rgba(255,215,0,0.5))" />
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 right-2 z-20 rotate-180">
-                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-yellow-400 drop-shadow-lg filter drop-shadow(0 0 5px rgba(255,215,0,0.5))" />
-            </div>
+        <div className="w-full h-full relative overflow-hidden flex justify-center">
+            {/* Gradient Overlays (Top/Bottom Fades) - As requested in screenshot */}
+            <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#FF4500] via-[#FF4500]/90 to-transparent z-10 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FF6000] via-[#FF6000]/90 to-transparent z-10 pointer-events-none" />
 
-            {/* Center Selection Frame (Optional subtle overlay) */}
-            <div className="absolute top-1/2 -translate-y-1/2 w-full h-[160px] bg-white/5 border-y border-white/10 z-10 pointer-events-none" />
+            {/* Center Indicators (White Arrows, Only when Spinning) */}
+            {spinning && (
+                <>
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 z-20 animate-pulse">
+                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md" />
+                    </div>
+                    <div className="absolute top-1/2 -translate-y-1/2 right-0 z-20 rotate-180 animate-pulse">
+                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md" />
+                    </div>
+                </>
+            )}
 
             {/* Speed Lines Overlay (Visible only when spinning) */}
             <div
-                className={`absolute inset-0 z-30 pointer-events-none transition-opacity duration-300 ${spinning ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-300 ${spinning ? 'opacity-30' : 'opacity-0'}`}
                 style={{
                     background: `
-                        linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 10%, rgba(255,255,255,0) 20%),
-                        linear-gradient(to bottom, rgba(255,255,255,0) 80%, rgba(255,255,255,0.8) 90%, rgba(255,255,255,0) 100%)
+                        linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.8) 10%, transparent 20%),
+                        linear-gradient(to bottom, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%)
                     `,
                     backgroundSize: '100% 200%',
-                    animation: 'speedLines 0.5s linear infinite'
+                    animation: 'speedLines 0.2s linear infinite'
                 }}
             />
             <style jsx>{`
@@ -143,16 +129,15 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
 
             {/* The Strip */}
             <div
-                className="flex flex-col items-center absolute top-0 w-full"
-                // Best approach: Anchor Top, but initial offset centers the first item.
+                className="flex flex-col items-center absolute w-full"
                 style={{
-                    // Centering first item: Container H=400. Item H=160. Center = 200. Item Center = 80.
-                    // Initial Top should be 200 - 80 = 120px.
-                    top: 0, // Anchor to top
-                    paddingTop: (400 - CARD_HEIGHT) / 2, // Dynamically center the first item
+                    // Centering: Parent is full height. We center strip vertically.
+                    // transform-origin is important.
+                    top: '50%',
+                    marginTop: -CARD_HEIGHT / 2, // Shift up by half card height to center active card
                     transform: getTransform(),
                     transition: spinning
-                        ? 'transform 4s cubic-bezier(0.2, 0.8, 0.2, 1)' // Fast then slow
+                        ? 'transform 4s cubic-bezier(0.1, 0.9, 0.2, 1)'
                         : idleStage === 'drop' ? 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)' // Heavy drop
                             : idleStage === 'hiccup-up' ? 'transform 0.3s ease-out' // Slow wind up
                                 : 'none',
@@ -163,31 +148,43 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                     <div
                         key={`${prize.id}-${i}`}
                         className="flex-shrink-0 relative transition-transform duration-300 transform"
-                        style={{ width: 280, height: CARD_HEIGHT }} // Fixed width for mobile cards
+                        style={{ width: '85%', height: CARD_HEIGHT }} // Wider cards for full impact
                     >
-                        {/* 3D Card Styling */}
+                        {/* 3D Card Styling (Matching screenshot vibe: Orange/Red blocky) */}
                         <div className={`
-                            w-full h-full rounded-2xl flex items-center justify-between px-6
-                            ${i % 2 === 0 ? 'bg-[#ff4d00]' : 'bg-[#ff5e00]'}
-                            shadow-[0_8px_0_#cc3d00] // Bottom 3D edge
-                            border-t border-white/20
+                            w-full h-full rounded-3xl flex items-center justify-between px-8 relative overflow-hidden
+                            ${i % 2 === 0 ? 'bg-[#ff5500]' : 'bg-[#ff6600]'} 
+                            shadow-[0_8px_0_rgba(0,0,0,0.15)] 
+                            transform hover:scale-[1.02] transition-transform
                         `}>
+                            {/* Decorative Circles */}
+                            <div className="absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full blur-xl" />
+                            <div className="absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full blur-xl" />
+
                             {/* Left: Value */}
-                            <div className="text-white">
-                                {prize.type === 'coupon' || prize.type === 'physical' ? (
-                                    <div className="text-4xl font-black italic drop-shadow-md">
-                                        {prize.value.replace('ozon_', '').replace('wb_', '').replace('iphone', 'Phone')}
+                            <div className="text-white z-10">
+                                {prize.type === 'coupon' ? (
+                                    <div className="text-6xl font-black italic drop-shadow-sm tracking-tighter">
+                                        {prize.value}
+                                    </div>
+                                ) : prize.type === 'physical' ? (
+                                    <div className="text-4xl font-black italic drop-shadow-sm">
+                                        iPhone 15
                                     </div>
                                 ) : (
-                                    <div className="text-5xl font-black italic drop-shadow-md">
-                                        {prize.value}<span className="text-3xl ml-1">₽</span>
+                                    <div className="text-6xl font-black italic drop-shadow-sm flex items-baseline">
+                                        {prize.value}
+                                        <span className="text-4xl ml-1">₽</span>
                                     </div>
                                 )}
+                                <div className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1 ml-1">
+                                    {prize.name}
+                                </div>
                             </div>
 
-                            {/* Right: Icon/Decor (Optional) */}
-                            <div className="w-16 h-16 bg-black/10 rounded-full flex items-center justify-center border-2 border-white/10">
-                                <span className="text-2xl">🎁</span>
+                            {/* Right: Icon/Decor */}
+                            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10">
+                                <span className="text-4xl">🎁</span>
                             </div>
                         </div>
                     </div>
