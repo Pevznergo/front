@@ -27,7 +27,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
 
     // Memoize the extended prize list to prevent re-renders breaking transitions
     const extendedPrizes = useMemo(() => {
-        const REPEAT_COUNT = 24; // Reduce significantly to prevent Main Thread blocking (was 100)
+        const REPEAT_COUNT = 14; // Reduce DOM size further for Telegram WebView (was 24)
         return Array(REPEAT_COUNT).fill(prizes).flat();
     }, [prizes]);
 
@@ -62,7 +62,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
     useEffect(() => {
         if (spinning && winIndex !== null) {
             // Target specific prize instance near the BEGINNING (Top)
-            // Start fairly deep (e.g. index 20*L), spin UP to index 2*L
+            // Start fairly deep (e.g. index 10*L), spin UP to index 2*L
             const LOOP_TARGET = 2;
             const targetIndex = (LOOP_TARGET * prizes.length) + winIndex;
             const targetOffset = targetIndex * ITEM_SIZE;
@@ -91,16 +91,16 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
         }
     };
 
-    // Initial Offset: Start deep enough (e.g. at 20th repetition)
+    // Initial Offset: Start deep enough (e.g. at 10th repetition)
     useEffect(() => {
         if (prizes.length > 0 && offset < 1000) {
-            // 24 reps total. Start at 18.
-            setOffset((prizes.length * 18 + 1) * ITEM_SIZE);
+            // 14 reps total. Start at 11.
+            setOffset((prizes.length * 11 + 1) * ITEM_SIZE);
         }
     }, [prizes.length, ITEM_SIZE]);
 
     return (
-        <div className="w-full h-full relative overflow-hidden flex justify-center">
+        <div className="w-full h-full relative overflow-hidden flex justify-center transform-gpu">
             {/* ... (keep overlays same) ... */}
             <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#FF4500] via-[#FF4500]/90 to-transparent z-10 pointer-events-none" />
             <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FF6000] via-[#FF6000]/90 to-transparent z-10 pointer-events-none" />
@@ -124,7 +124,8 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                         linear-gradient(to bottom, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%)
                     `,
                     backgroundSize: '100% 200%',
-                    animation: 'speedLines 0.2s linear infinite'
+                    // Removed heavy background-position animation for performance
+                    // animation: 'speedLines 0.2s linear infinite' 
                 }}
             />
             <style jsx>{`
@@ -145,7 +146,10 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                         : idleStage === 'drop' ? 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)'
                             : idleStage === 'hiccup-up' ? 'transform 0.3s ease-out'
                                 : 'none',
-                    gap: GAP
+                    gap: GAP,
+                    backfaceVisibility: 'hidden', // Force GPU
+                    perspective: 1000,
+                    transformStyle: 'preserve-3d',
                 }}
             >
                 {extendedPrizes.map((prize, i) => (
