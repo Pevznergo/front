@@ -657,10 +657,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
                                         </svg>
-                                        КЛУБ СОСЕДЕЙ 🏠
+                                        ЧАТ СОСЕДЕЙ🏠
                                     </h1>
                                     <div class="features">
-                                        ЧАТ СОСЕДЕЙ🏠 КОЛЕСО ПРИЗОВ:
+                                        КОЛЕСО ПРИЗОВ:
                                     </div>
                                     <div class="prizes">
                                         WB/OZON/ iPhone
