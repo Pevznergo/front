@@ -161,9 +161,9 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                             shadow-[0_8px_0_rgba(0,0,0,0.15)] 
                             transform hover:scale-[1.02] transition-transform
                         `}>
-                            {/* Decorative Circles */}
-                            <div className="absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full blur-xl" />
-                            <div className="absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full blur-xl" />
+                            {/* Decorative Circles - Dynamic Blur (Off during spin for performance) */}
+                            <div className={`absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full ${spinning ? '' : 'blur-xl'} transition-all duration-300`} />
+                            <div className={`absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full ${spinning ? '' : 'blur-xl'} transition-all duration-300`} />
 
                             {/* Left: Value */}
                             <div className="text-white z-10">
@@ -186,8 +186,8 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                                 </div>
                             </div>
 
-                            {/* Right: Icon/Decor */}
-                            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10">
+                            {/* Right: Icon/Decor - Dynamic Blur */}
+                            <div className={`w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10 ${spinning ? '' : 'backdrop-blur-sm'} transition-all duration-300`}>
                                 <span className="text-4xl">🎁</span>
                             </div>
                         </div>
