@@ -22,6 +22,8 @@ npm run build
 
 # 5. Restart PM2 process
 echo "🔄 Restarting Service..."
-pm2 restart aporto
+pm2 restart aporto || pm2 start npm --name "aporto" -- start
+echo "🔄 Restarting Worker..."
+pm2 restart aporto-worker || pm2 start npm --name "aporto-worker" -- run worker
 
 echo "✅ Deployment Complete!"

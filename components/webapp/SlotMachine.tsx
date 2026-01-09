@@ -18,136 +18,177 @@ interface SlotMachineProps {
     onSpinEnd: () => void;
 }
 
-const CARD_WIDTH = 200; // px
-const GAP = 20; // px
-const VISIBLE_ITEMS = 3; // How many items visible on screen (approx)
+const CARD_HEIGHT = 160; // px
+const GAP = 16; // px
+const VISIBLE_ITEMS = 3;
 
 export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: SlotMachineProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
     const [offset, setOffset] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [idleStage, setIdleStage] = useState<'static' | 'hiccup-up' | 'drop'>('static');
 
-    // Create a long strip of prizes for the "infinite" feel
-    // We repeat the prize list enough times to cover idle animation + spin distance
-    // Idle needs to loop. Spin needs to go far forward.
-    const REPEAT_COUNT = 50;
+    // Vertical strip needs less horizontal width, but height
+    const REPEAT_COUNT = 60;
     const extendedPrizes = Array(REPEAT_COUNT).fill(prizes).flat();
 
-    const TOTAL_ITEM_WIDTH = CARD_WIDTH + GAP;
+    const ITEM_SIZE = CARD_HEIGHT + GAP;
 
-    // Idle Animation Reference
-    const idleInterval = useRef<NodeJS.Timeout | null>(null);
-
-    // 1. Idle Animation (Jerky Movement)
+    // Idle Animation Interval
     useEffect(() => {
         if (spinning) {
-            if (idleInterval.current) clearInterval(idleInterval.current);
+            setIdleStage('static');
             return;
         }
 
-        // Jerky movement: every 1.5s, slide 1 card over
-        // We reset offset to 0 modulo prize.length * width to loop seamlessly?
-        // Simpler: Just keep increasing offset, and when it gets too far, reset it (virtual scroll)
-        // But for visual "jerk", we animate 0 -> 1 over 0.3s, then wait.
+        const interval = setInterval(() => {
+            // Sequence: Static -> Hiccup Up -> Drop Down
+            setIdleStage('hiccup-up');
 
-        const moveOneStep = () => {
-            setOffset(prev => {
-                const next = prev + TOTAL_ITEM_WIDTH;
-                // Seamless loop reset logic could go here if array wasn't huge
-                // For now, just let it scroll. 50 repeats is plenty for idle time.
-                return next;
-            });
-        };
+            setTimeout(() => {
+                setIdleStage('drop');
+                setOffset(prev => prev + ITEM_SIZE);
+            }, 300); // Wait 0.3s in "up" state before dropping
 
-        idleInterval.current = setInterval(moveOneStep, 1000); // 1s wait
+            setTimeout(() => {
+                setIdleStage('static');
+            }, 800); // Animation duration total
 
-        return () => {
-            if (idleInterval.current) clearInterval(idleInterval.current);
-        };
-    }, [spinning, TOTAL_ITEM_WIDTH]);
+        }, 3000); // Every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [spinning, ITEM_SIZE]);
 
 
-    // 2. Spin Logic
+    // Spin Logic
     useEffect(() => {
         if (spinning && winIndex !== null) {
-            // Calculate target position
-            // We want to land on the specific prize instance far in the future
-            // Let's pick a loop index far ahead (e.g., 40th repetition)
-            const LOOP_TARGET = 35;
+            // Target specific prize instance deep in the list
+            const LOOP_TARGET = 45;
             const targetIndex = (LOOP_TARGET * prizes.length) + winIndex;
 
-            // Random offset within the card to make it look natural? No, center it.
-            // Center alignment: 
-            // Screen center = 50vw. 
-            // We want center of card (CARD_WIDTH/2) to align with screen center.
-            // But simplified: just scroll to exact position.
+            // Align center: We want the item to be reachable.
+            // Since it's vertical, we seek `targetIndex * ITEM_SIZE`
+            const targetOffset = targetIndex * ITEM_SIZE;
 
-            const targetOffset = targetIndex * TOTAL_ITEM_WIDTH;
-
-            setIsAnimating(true); // Switch to CSS transition for smooth fast spin
+            setIsAnimating(true);
             setOffset(targetOffset);
 
-            // Wait for transition end
-            // Transition duration should be ~4-5s for effect
             const duration = 4000;
             setTimeout(() => {
                 onSpinEnd();
                 setIsAnimating(false);
-                // Optional: Snap back to a lower index (modulo) for next run to prevent overflow?
-                // Visual jump might be noticeable. Better to just reset whole component or prizes.
             }, duration);
         }
-    }, [spinning, winIndex, prizes.length, TOTAL_ITEM_WIDTH, onSpinEnd]);
+    }, [spinning, winIndex, prizes.length, ITEM_SIZE, onSpinEnd]);
+
+    // Calculate current transform based on state
+    // If spin: use offset directly with transition
+    // If idle:
+    //   Stage 'static': translateY(-offset)
+    //   Stage 'hiccup-up': translateY(-offset - 15px)  (Move UP naturally means negative Y relative to item, but scroll moves stripe down? No, scroll moves stripe UP to show next.
+    //      To show next item (index+1), we scroll to offset + ITEM_SIZE.
+    //      "Start movement slightly UP" -> means we want to see a bit of the PREVIOUS item? Or just a bounce?
+    //      Usually "Wind up" means moving opposite direction of travel.
+    //      Travel is: 0 -> 100 (Stripe moves UP visually, items go UP).
+    //      So "Wind up" should move Stripe DOWN (items go DOWN).
+    //      Let's try translateY(-(offset - 20px)).
+    const getTransform = () => {
+        if (spinning) {
+            return `translateY(-${offset}px)`;
+        }
+
+        // Idle logic
+        switch (idleStage) {
+            case 'hiccup-up':
+                return `translateY(-${offset - 25}px)`; // Move strip DOWN (items down) = Wind up
+            case 'drop':
+                return `translateY(-${offset}px)`; // Move to new offset (which is already incremented in effect)
+            case 'static':
+            default:
+                return `translateY(-${offset}px)`;
+        }
+    };
 
     return (
-        <div className="w-full overflow-hidden relative h-[300px] flex items-center">
-            {/* Center Indicator / Arrow? (Optional, user didn't ask but implied by 'stop on something') */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[4px] bg-yellow-400/50 z-20 hidden" />
+        <div className="w-full relative h-[400px] overflow-hidden flex justify-center bg-black/5 rounded-3xl">
+            {/* Center Indicators (Arrows) */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-2 z-20">
+                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-yellow-400 drop-shadow-lg filter drop-shadow(0 0 5px rgba(255,215,0,0.5))" />
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-2 z-20 rotate-180">
+                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-yellow-400 drop-shadow-lg filter drop-shadow(0 0 5px rgba(255,215,0,0.5))" />
+            </div>
 
-            {/* Scrolling Strip */}
+            {/* Center Selection Frame (Optional subtle overlay) */}
+            <div className="absolute top-1/2 -translate-y-1/2 w-full h-[160px] bg-white/5 border-y border-white/10 z-10 pointer-events-none" />
+
+            {/* Speed Lines Overlay (Visible only when spinning) */}
             <div
-                className="flex items-center absolute left-1/2" // Start from center-ish
+                className={`absolute inset-0 z-30 pointer-events-none transition-opacity duration-300 ${spinning ? 'opacity-100' : 'opacity-0'}`}
                 style={{
-                    transform: `translateX(calc(-50% - ${offset - (CARD_WIDTH / 2)}px))`, // Center the current item
-                    transition: isAnimating ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'transform 0.3s ease-out', // Fast spin vs Idle jerk
+                    background: `
+                        linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 10%, rgba(255,255,255,0) 20%),
+                        linear-gradient(to bottom, rgba(255,255,255,0) 80%, rgba(255,255,255,0.8) 90%, rgba(255,255,255,0) 100%)
+                    `,
+                    backgroundSize: '100% 200%',
+                    animation: 'speedLines 0.5s linear infinite'
+                }}
+            />
+            <style jsx>{`
+                @keyframes speedLines {
+                    0% { background-position: 0% 0%; }
+                    100% { background-position: 0% 100%; }
+                }
+            `}</style>
+
+            {/* The Strip */}
+            <div
+                className="flex flex-col items-center absolute top-0 w-full"
+                // Best approach: Anchor Top, but initial offset centers the first item.
+                style={{
+                    // Centering first item: Container H=400. Item H=160. Center = 200. Item Center = 80.
+                    // Initial Top should be 200 - 80 = 120px.
+                    top: 0, // Anchor to top
+                    paddingTop: (400 - CARD_HEIGHT) / 2, // Dynamically center the first item
+                    transform: getTransform(),
+                    transition: spinning
+                        ? 'transform 4s cubic-bezier(0.2, 0.8, 0.2, 1)' // Fast then slow
+                        : idleStage === 'drop' ? 'transform 0.5s cubic-bezier(0.5, 0, 0, 1)' // Heavy drop
+                            : idleStage === 'hiccup-up' ? 'transform 0.3s ease-out' // Slow wind up
+                                : 'none',
                     gap: GAP
                 }}
             >
                 {extendedPrizes.map((prize, i) => (
                     <div
                         key={`${prize.id}-${i}`}
-                        className="flex-shrink-0 relative"
-                        style={{ width: CARD_WIDTH, height: CARD_WIDTH * 0.8 }}
+                        className="flex-shrink-0 relative transition-transform duration-300 transform"
+                        style={{ width: 280, height: CARD_HEIGHT }} // Fixed width for mobile cards
                     >
                         {/* 3D Card Styling */}
                         <div className={`
-                            w-full h-full rounded-2xl flex flex-col items-center justify-center p-4
-                            transition-transform duration-300
-                            ${i % 2 === 0 ? 'bg-[#FF4500]' : 'bg-[#FF5500]'} // Slight variation
-                            shadow-[0_10px_0_#992b00] // 3D "bottom" edge
-                            border-2 border-white/20
-                            transform hover:-translate-y-2
+                            w-full h-full rounded-2xl flex items-center justify-between px-6
+                            ${i % 2 === 0 ? 'bg-[#ff4d00]' : 'bg-[#ff5e00]'}
+                            shadow-[0_8px_0_#cc3d00] // Bottom 3D edge
+                            border-t border-white/20
                         `}>
-                            {/* Inner Content */}
-                            <div className="text-white text-center">
-                                {/* If image exists use it, else text */}
+                            {/* Left: Value */}
+                            <div className="text-white">
                                 {prize.type === 'coupon' || prize.type === 'physical' ? (
-                                    <div className="mb-2 text-5xl font-black italic">
-                                        {prize.value.replace('ozon_', '').replace('wb_', '').replace('iphone', '📱')}
+                                    <div className="text-4xl font-black italic drop-shadow-md">
+                                        {prize.value.replace('ozon_', '').replace('wb_', '').replace('iphone', 'Phone')}
                                     </div>
                                 ) : (
-                                    <div className="mb-2 text-5xl font-black italic">
-                                        {prize.value}<span className="text-2xl">₽</span>
+                                    <div className="text-5xl font-black italic drop-shadow-md">
+                                        {prize.value}<span className="text-3xl ml-1">₽</span>
                                     </div>
                                 )}
-
-                                <div className="text-white/80 text-xs font-bold uppercase tracking-wider bg-black/20 px-2 py-1 rounded">
-                                    {prize.name}
-                                </div>
                             </div>
 
-                            {/* Decorative Shine */}
-                            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none rounded-r-2xl" />
+                            {/* Right: Icon/Decor (Optional) */}
+                            <div className="w-16 h-16 bg-black/10 rounded-full flex items-center justify-center border-2 border-white/10">
+                                <span className="text-2xl">🎁</span>
+                            </div>
                         </div>
                     </div>
                 ))}
