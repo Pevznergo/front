@@ -41,7 +41,8 @@ export async function GET(req: NextRequest) {
         await sql`UPDATE topic_actions_queue SET status = 'processing' WHERE id = ${id}`;
 
         // VALIDATION: Reject usage of obvious test data (e.g. "100")
-        if (!chat_id || chat_id.length < 5) {
+        const chatIdStr = String(chat_id);
+        if (!chatIdStr || chatIdStr.length < 5) {
             const errorMsg = `Invalid Chat ID: ${chat_id}. Marking as failed.`;
             console.error(errorMsg);
             await sql`UPDATE topic_actions_queue SET status = 'failed', error = ${errorMsg} WHERE id = ${id}`;
