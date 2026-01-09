@@ -25,19 +25,12 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
     // Refs for animation to bypass React Render Cycle (Critical for Telegram Web Performance)
     const stripRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>();
-    const startOffsetRef = useRef<number>(0);
+    // Track current position directly in a ref
+    const currentOffsetRef = useRef<number>(200);
 
     // State only for logic/setup, not high-frequency updates
     const [isSpinning, setIsSpinning] = useState(false);
 
-    // Constants
-    // CARD_HEIGHT and GAP are already defined globally, but re-defining them here for clarity as per the instruction snippet.
-    // If they were meant to be removed from the global scope, the instruction would specify.
-    // For now, I'll keep the global ones and add these local ones as per the snippet.
-    // However, it's redundant. I will assume the instruction wants to move them inside the component.
-    // Let's remove the global ones and keep the local ones.
-    // const CARD_HEIGHT = 180; // Already defined globally, removing this local re-definition
-    // const GAP = 20; // Already defined globally, removing this local re-definition
     const ITEM_SIZE = CARD_HEIGHT + GAP;
 
     // Config: Reduce DOM size for mobile performance
@@ -96,18 +89,11 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             // "Other direction" means items should move UP (Strip moves UP).
             // Start: Low Index (Current) -> End: High Index (Future)
 
-            // 1. Determine Start Position (Current View)
-            // Let's say we are currently at index 2 (viewing item 2)
-            // We want to spin to index 12 (viewing match).
-            // Strip moves from -2*H to -12*H. (More negative = Moves Up).
-
             const LOOP_TARGET = 10; // Target deeply into the list
             const targetIndex = (LOOP_TARGET * prizes.length) + winIndex;
             const targetOffset = targetIndex * ITEM_SIZE;
 
             // Start from where we roughly are (or a standard reset point)
-            // For visual continuity, we can jump to a modulo position if needed, 
-            // but simply animating from "Current Low" to "Target High" works best for "Spinning away".
             const startOffset = (2 * prizes.length) * ITEM_SIZE;
 
             // Instant Reset to start position (invisible jump if items match)
@@ -121,131 +107,130 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                 onSpinEnd();
             });
 
-            // Track current position directly in a ref
-            const currentOffsetRef = useRef<number>(200);
+        }
+    }, [spinning, winIndex, prizes.length, ITEM_SIZE, onSpinEnd]);
 
-            // Initial Setup
-            useEffect(() => {
-                if (prizes.length > 0 && stripRef.current) {
-                    const startIdx = 2 * prizes.length; // Start at 2nd set
-                    const initialPixelOffset = startIdx * ITEM_SIZE;
-                    currentOffsetRef.current = initialPixelOffset;
-                    stripRef.current.style.transform = `translate3d(0, -${initialPixelOffset}px, 0)`;
-                }
-            }, [prizes.length, ITEM_SIZE]); // Added ITEM_SIZE dependency
+    // Initial Setup
+    useEffect(() => {
+        if (prizes.length > 0 && stripRef.current) {
+            const startIdx = 2 * prizes.length; // Start at 2nd set
+            const initialPixelOffset = startIdx * ITEM_SIZE;
+            currentOffsetRef.current = initialPixelOffset;
+            stripRef.current.style.transform = `translate3d(0, -${initialPixelOffset}px, 0)`;
+        }
+    }, [prizes.length, ITEM_SIZE]);
 
-            // --- IDLE ANIMATION LOOP ---
-            useEffect(() => {
-                if (spinning) return;
+    // --- IDLE ANIMATION LOOP ---
+    useEffect(() => {
+        if (spinning) return;
 
-                const interval = setInterval(() => {
-                    // "Wind Up" / Hiccup Effect
-                    // Move strp DOWN slightly (indices decrease)
-                    const baseOffset = currentOffsetRef.current;
-                    const windUpOffset = baseOffset - 40; // Move strip DOWN (view moves UP)
-                    const targetOffset = baseOffset + ITEM_SIZE; // Move strip UP (view moves DOWN to next item)
+        const interval = setInterval(() => {
+            // "Wind Up" / Hiccup Effect
+            const baseOffset = currentOffsetRef.current;
+            const windUpOffset = baseOffset - 40;
+            const targetOffset = baseOffset + ITEM_SIZE;
 
-                    // 1. Wind Up (Fast)
-                    animateScroll(baseOffset, windUpOffset, 300, () => {
-                        // 2. Drop (Bounce/Elastic)
-                        animateScroll(windUpOffset, targetOffset, 600, () => {
-                            currentOffsetRef.current = targetOffset;
+            // 1. Wind Up (Fast)
+            animateScroll(baseOffset, windUpOffset, 300, () => {
+                // 2. Drop (Bounce/Elastic)
+                animateScroll(windUpOffset, targetOffset, 600, () => {
+                    currentOffsetRef.current = targetOffset;
 
-                            // Reset if too deep (Infinite Scroll Illusion)
-                            const limit = (prizes.length * (REPEAT_COUNT - 4)) * ITEM_SIZE;
-                            if (currentOffsetRef.current > limit) {
-                                const resetOffset = (2 * prizes.length * ITEM_SIZE) + (currentOffsetRef.current % ITEM_SIZE);
-                                currentOffsetRef.current = resetOffset;
-                                if (stripRef.current) {
-                                    stripRef.current.style.transform = `translate3d(0, -${resetOffset}px, 0)`;
-                                }
-                            }
-                        });
-                    });
+                    // Reset if too deep (Infinite Scroll Illusion)
+                    const limit = (prizes.length * (REPEAT_COUNT - 4)) * ITEM_SIZE;
+                    if (currentOffsetRef.current > limit) {
+                        const resetOffset = (2 * prizes.length * ITEM_SIZE) + (currentOffsetRef.current % ITEM_SIZE);
+                        currentOffsetRef.current = resetOffset;
+                        if (stripRef.current) {
+                            stripRef.current.style.transform = `translate3d(0, -${resetOffset}px, 0)`;
+                        }
+                    }
+                });
+            });
 
-                }, 3000);
+        }, 3000);
 
-                return () => {
-                    clearInterval(interval);
-                };
-            }, [spinning, prizes.length, ITEM_SIZE]); // Removed WinIndex dependency from idle loop
+        return () => {
+            clearInterval(interval);
+        };
+    }, [spinning, prizes.length, ITEM_SIZE]);
 
 
-            return (
-                <div className="w-full h-full relative overflow-hidden flex justify-center transform-gpu">
-                    {/* Gradient Overlays */}
-                    <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#FF4500] via-[#FF4500]/90 to-transparent z-10 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FF6000] via-[#FF6000]/90 to-transparent z-10 pointer-events-none" />
+    return (
+        <div className="w-full h-full relative overflow-hidden flex justify-center transform-gpu">
+            {/* Gradient Overlays */}
+            <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#FF4500] via-[#FF4500]/90 to-transparent z-10 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FF6000] via-[#FF6000]/90 to-transparent z-10 pointer-events-none" />
 
-                    {/* Spin Indicators (Always Visible now, acting as the 'Winning Line' markers) */}
-                    <div className="absolute top-1/2 -translate-y-1/2 left-0 z-20">
-                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
-                    </div>
-                    <div className="absolute top-1/2 -translate-y-1/2 right-0 z-20 rotate-180">
-                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
-                    </div>
+            {/* Spin Indicators (Always Visible now) */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-0 z-20">
+                <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
+            </div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-0 z-20 rotate-180">
+                <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
+            </div>
 
-                    {/* Background Pattern */}
+            {/* Background Pattern */}
+            <div
+                className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-300 ${spinning ? 'opacity-30' : 'opacity-0'}`}
+                style={{
+                    background: `linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.8) 10%, transparent 20%)`,
+                    backgroundSize: '100% 200%'
+                }}
+            />
+
+            {/* SCROLL STRIP - Controlled by ref (no React State for transform) */}
+            <div
+                ref={stripRef}
+                className="flex flex-col items-center absolute w-full will-change-transform"
+                style={{
+                    top: '50%',
+                    marginTop: -CARD_HEIGHT / 2,
+                    // transform is assigned via JS directly
+                    gap: GAP,
+                    backfaceVisibility: 'hidden',
+                    perspective: 1000,
+                    transformStyle: 'preserve-3d',
+                }}
+            >
+                {extendedPrizes.map((prize, i) => (
                     <div
-                        className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-300 ${spinning ? 'opacity-30' : 'opacity-0'}`}
-                        style={{
-                            background: `linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.8) 10%, transparent 20%)`,
-                            backgroundSize: '100% 200%'
-                        }}
-                    />
-
-                    {/* SCROLL STRIP - Controlled by ref (no React State for transform) */}
-                    <div
-                        ref={stripRef}
-                        className="flex flex-col items-center absolute w-full will-change-transform"
-                        style={{
-                            top: '50%',
-                            marginTop: -CARD_HEIGHT / 2,
-                            // transform is assigned via JS directly
-                            gap: GAP,
-                            backfaceVisibility: 'hidden',
-                            perspective: 1000,
-                            transformStyle: 'preserve-3d',
-                        }}
+                        key={`${prize.id}-${i}`}
+                        className="flex-shrink-0 relative transition-transform duration-300 transform"
+                        style={{ width: '85%', height: CARD_HEIGHT }}
                     >
-                        {extendedPrizes.map((prize, i) => (
-                            <div
-                                key={`${prize.id}-${i}`}
-                                className="flex-shrink-0 relative transition-transform duration-300 transform"
-                                style={{ width: '85%', height: CARD_HEIGHT }}
-                            >
-                                {/* Card Design */}
-                                <div className={`
+                        {/* Card Design */}
+                        <div className={`
                             w-full h-full rounded-3xl flex items-center justify-between px-8 relative overflow-hidden
                             ${i % 2 === 0 ? 'bg-[#ff5500]' : 'bg-[#ff6600]'} 
                             shadow-[0_8px_0_rgba(0,0,0,0.15)] 
                         `}>
-                                    {/* Dynamic Blurs: Only show when NOT spinning */}
-                                    <div className={`absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
-                                    <div className={`absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
+                            {/* Dynamic Blurs: Only show when NOT spinning */}
+                            <div className={`absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
+                            <div className={`absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
 
-                                    {/* Prize Value */}
-                                    <div className="text-white z-10">
-                                        {prize.type === 'coupon' ? (
-                                            <div className="text-6xl font-black italic drop-shadow-sm tracking-tighter">{prize.value}</div>
-                                        ) : prize.type === 'physical' ? (
-                                            <div className="text-4xl font-black italic drop-shadow-sm">iPhone 15</div>
-                                        ) : (
-                                            <div className="text-6xl font-black italic drop-shadow-sm flex items-baseline">
-                                                {prize.value}<span className="text-4xl ml-1">₽</span>
-                                            </div>
-                                        )}
-                                        <div className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1 ml-1">{prize.name}</div>
+                            {/* Prize Value */}
+                            <div className="text-white z-10">
+                                {prize.type === 'coupon' ? (
+                                    <div className="text-6xl font-black italic drop-shadow-sm tracking-tighter">{prize.value}</div>
+                                ) : prize.type === 'physical' ? (
+                                    <div className="text-4xl font-black italic drop-shadow-sm">iPhone 15</div>
+                                ) : (
+                                    <div className="text-6xl font-black italic drop-shadow-sm flex items-baseline">
+                                        {prize.value}<span className="text-4xl ml-1">₽</span>
                                     </div>
-
-                                    {/* Icon */}
-                                    <div className={`w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10 ${isSpinning ? '' : 'backdrop-blur-sm'} transition-all duration-300`}>
-                                        <span className="text-4xl">🎁</span>
-                                    </div>
-                                </div>
+                                )}
+                                <div className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1 ml-1">{prize.name}</div>
                             </div>
-                        ))}
+
+                            {/* Icon */}
+                            <div className={`w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10 ${isSpinning ? '' : 'backdrop-blur-sm'} transition-all duration-300`}>
+                                <span className="text-4xl">🎁</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            );
-        }
+                ))}
+            </div>
+        </div>
+    );
+}
