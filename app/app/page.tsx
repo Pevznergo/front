@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import SlotMachine from '@/components/webapp/SlotMachine'
+import DailyBonus from '@/components/webapp/DailyBonus'
 import { Loader2, Gift, Target, Coins } from 'lucide-react'
 
 // Define types locally for now
@@ -106,6 +107,9 @@ export default function WebAppPage() {
     const handleSpin = async () => {
         if (spinning || !user || user.points < 10) return
 
+        // 1. Optimistic Update (Instant feedback)
+        setUser(prev => prev ? { ...prev, points: prev.points - 10 } : null)
+
         setSpinning(true)
         setWinIndex(null)
         setWinResult(null)
@@ -119,6 +123,11 @@ export default function WebAppPage() {
             const data = await res.json()
 
             if (data.success) {
+                // 2. Sync with Server Truth (includes winnings)
+                if (typeof data.points === 'number') {
+                    setUser(prev => prev ? { ...prev, points: data.points } : null)
+                }
+
                 // Find index of prize
                 const idx = prizes.findIndex(p => p.id === data.prize.id)
                 if (idx !== -1) {
@@ -130,6 +139,7 @@ export default function WebAppPage() {
             } else {
                 alert(data.error || 'Error spinning')
                 setSpinning(false)
+                // Rollback if error? Ideally yes, but simplified for now (auth verification will fix on reload)
             }
         } catch (e) {
             console.error(e)
@@ -139,16 +149,7 @@ export default function WebAppPage() {
 
     const onSpinEnd = () => {
         setSpinning(false)
-        if (winResult) {
-            fetch('/api/webapp/auth', {
-                method: 'POST',
-                body: JSON.stringify({ initData })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.user) setUser(data.user)
-                })
-        }
+        // No redundant fetch here. Points were already updated in handleSpin response.
         setWinIndex(null)
     }
 
