@@ -22,7 +22,7 @@ const CARD_HEIGHT = 180; // Larger cards
 const GAP = 20;
 
 export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: SlotMachineProps) {
-    const [offset, setOffset] = useState(0);
+    const [offset, setOffset] = useState(200); // Start at 2nd item (180 + 20)
     const [idleStage, setIdleStage] = useState<'static' | 'hiccup-up' | 'drop'>('static');
 
     // Vertical strip needs less horizontal width, but height
