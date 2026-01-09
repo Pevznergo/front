@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Wheel from '@/components/webapp/Wheel'
-// import { WebAppUser } from '@/types/telegram' // Removed unused import
-import { Loader2, Send } from 'lucide-react'
+import SlotMachine from '@/components/webapp/SlotMachine'
+import { Loader2, Gift, Target, Coins } from 'lucide-react'
 
 // Define types locally for now
 interface Prize {
@@ -36,6 +35,7 @@ export default function WebAppPage() {
             const tg = (window as any).Telegram.WebApp
             tg.ready()
             tg.expand() // Fullscreen
+            tg.setHeaderColor('#FF4500'); // Orange header
 
             const rawInitData = tg.initData
             setInitData(rawInitData)
@@ -66,8 +66,18 @@ export default function WebAppPage() {
                     setLoading(false)
                 })
         } else {
-            // Dev fallback or error
+            // Dev fallback
             setLoading(false)
+            // Mock data for dev
+            if (process.env.NODE_ENV === 'development') {
+                setPrizes([
+                    { id: 1, name: '1000₽', type: 'points', value: '1000', probability: '0.1' },
+                    { id: 2, name: '500₽', type: 'points', value: '500', probability: '0.2' },
+                    { id: 3, name: '-20%', type: 'coupon', value: '-20%', probability: '0.2' },
+                    { id: 4, name: 'iPhone', type: 'physical', value: 'iphone', probability: '0.01' }
+                ])
+                setUser({ telegram_id: 123, first_name: 'Dev', points: 100 })
+            }
         }
     }, [])
 
@@ -92,11 +102,7 @@ export default function WebAppPage() {
                 if (idx !== -1) {
                     setWinIndex(idx)
                     setWinResult(data.prize)
-                    // Update points immediately? Or wait? 
-                    // Let's update points AFTER spin for effect, but we have data.points now
-                    // We can store it in temp state to commit later
                 } else {
-                    // Error finding prize in list?
                     setSpinning(false)
                 }
             } else {
@@ -112,11 +118,8 @@ export default function WebAppPage() {
     const onSpinEnd = () => {
         setSpinning(false)
         if (winResult) {
-            alert(`You won: ${winResult.name}!`)
+            // alert(`You won: ${winResult.name}!`) // Optional: remove alert for smoother UX
             // Refresh user data (points)
-            // Or just fetch auth again? Efficient: Use returned points from spin
-            // Wait, handleSpin got expected points.
-            // Re-fetch auth to be safe and sync.
             fetch('/api/webapp/auth', {
                 method: 'POST',
                 body: JSON.stringify({ initData })
@@ -129,92 +132,77 @@ export default function WebAppPage() {
         setWinIndex(null)
     }
 
-    if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-white" /></div>
+    if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FF4500]"><Loader2 className="animate-spin text-white" /></div>
 
-    if (!user && !loading) {
-        return <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
+    if (!user && !loading && process.env.NODE_ENV !== 'development') {
+        return <div className="flex flex-col items-center justify-center min-h-screen text-center p-4 bg-[#FF4500] text-white">
             <h1 className="text-2xl font-bold mb-4">Welcome to Aporto Prize Wheel</h1>
             <p>Please open this in Telegram.</p>
         </div>
     }
 
     return (
-        <div className="flex flex-col items-center min-h-screen p-4 bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
-            {/* Header / Branding */}
-            <div className="w-full mb-6 z-10 relative">
-                <div className="text-center mb-6">
-                    <h1 className="text-3xl font-black text-white tracking-tight leading-none mb-1 flex items-center justify-center gap-2">
-                        <Send className="w-8 h-8 text-[#229ED9] fill-current" />
-                        КЛУБ СОСЕДЕЙ 🏠
-                    </h1>
-                    <span className="inline-block px-3 py-1 bg-white/10 rounded-full text-xs font-medium tracking-wide text-gray-300 uppercase border border-white/10 backdrop-blur-sm">
-                        ЧАТ НАШЕГО ДОМА
-                    </span>
-                    <p className="mt-3 text-sm text-gray-400 font-medium tracking-wide">
-                        Колесо Призов: <span className="text-white">WB / OZON / iPhone</span>
-                    </p>
+        <div className="flex flex-col min-h-screen bg-[#FF4500] overflow-hidden relative font-sans">
+            {/* Top Bar */}
+            <div className="flex justify-center items-center p-4 relative z-10">
+                {/* Balance Pill */}
+                <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
+                    <span className="font-black text-xl text-black">{user?.points || 0}</span>
+                    <Coins className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                 </div>
 
-                {/* Balance Card */}
-                <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md">
-                    <div className="flex flex-col">
-                        <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Баланс</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold text-yellow-400 font-mono tracking-tighter shadow-yellow-500/20 drop-shadow-sm">
-                                {user?.points || 0}
-                            </span>
-                            <span className="text-xs text-yellow-400/80 font-bold">Баллов</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-400 mb-1">Игрок</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-black font-bold text-xs shadow-lg">
-                                {(user?.first_name || 'U').charAt(0)}
-                            </div>
-                        </div>
-                    </div>
+                {/* Right Actions */}
+                <div className="absolute right-4 flex gap-3">
+                    <button className="flex flex-col items-center text-white/90 hover:text-white transform hover:scale-105 transition-transform">
+                        <Gift className="w-6 h-6 drop-shadow-md" />
+                        <span className="text-[10px] font-bold mt-1 shadow-sm">Призы</span>
+                    </button>
+                    <button className="flex flex-col items-center text-white/90 hover:text-white transform hover:scale-105 transition-transform">
+                        <Target className="w-6 h-6 drop-shadow-md" />
+                        <span className="text-[10px] font-bold mt-1 shadow-sm">Задания</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Wheel Area */}
-            <div className="mb-12 scale-90 sm:scale-100">
-                {prizes.length > 0 && (
-                    <Wheel
-                        prizes={prizes}
-                        spinning={spinning}
-                        winIndex={winIndex}
-                        onSpinEnd={onSpinEnd}
-                    />
-                )}
+            {/* Main Content Area (Centered) */}
+            <div className="flex-1 flex flex-col items-center justify-center relative">
+
+                {/* Slot Machine Display */}
+                <div className="w-full relative py-8">
+                    {/* Decorative Elements (like in screenshot) */}
+                    {/* Can add falling coins or background 3D elements here if needed */}
+
+                    {prizes.length > 0 && (
+                        <SlotMachine
+                            prizes={prizes}
+                            spinning={spinning}
+                            winIndex={winIndex}
+                            onSpinEnd={onSpinEnd}
+                        />
+                    )}
+                </div>
             </div>
 
-            {/* Controls */}
-            <button
-                onClick={handleSpin}
-                disabled={spinning || (user?.points || 0) < 10}
-                className={`
-            w-full max-w-sm py-4 rounded-xl font-bold text-xl uppercase tracking-wider
-            transition-all duration-200 transform active:scale-95
-            ${spinning || (user?.points || 0) < 10
-                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        : 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-lg shadow-yellow-400/20'}
-        `}
-            >
-                {spinning ? 'Spinning...' : 'Spin (-10 Points)'}
-            </button>
+            {/* Bottom Actions */}
+            <div className="p-6 pb-12 w-full max-w-md mx-auto z-10 relative">
+                <button
+                    onClick={handleSpin}
+                    disabled={spinning || (user?.points || 0) < 10}
+                    className={`
+                        w-full py-5 rounded-2xl font-black text-2xl uppercase tracking-wider italic
+                        shadow-[0_6px_0_#e5e5e5] active:shadow-none active:translate-y-[6px]
+                        transition-all duration-150
+                        ${spinning || (user?.points || 0) < 10
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                            : 'bg-white text-black hover:bg-gray-50'}
+                    `}
+                >
+                    {spinning ? 'Крутим...' : 'НУЖНО 10 🟡'}
+                </button>
 
-            {/* Prize List (Optional, simple grid below) */}
-            <div className="mt-12 w-full max-w-md">
-                <h3 className="text-gray-400 text-sm uppercase font-bold mb-4 ml-2">Prizes Available</h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {prizes.map(p => (
-                        <div key={p.id} className="p-3 bg-white/5 rounded-lg border border-white/10 text-xs flex justify-between">
-                            <span>{p.name}</span>
-                            {p.type === 'points' && <span className="text-yellow-400">+{p.value} pts</span>}
-                        </div>
-                    ))}
-                </div>
+                <p className="text-center text-white/60 text-[10px] mt-4 px-4 leading-tight">
+                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline">Условиями акции</a>, <a href="#" className="underline">Правилами сервиса</a> и <a href="#" className="underline">Политикой</a>.
+                </p>
             </div>
         </div>
     )
