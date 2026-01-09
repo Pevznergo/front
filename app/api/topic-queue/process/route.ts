@@ -40,6 +40,14 @@ export async function GET(req: NextRequest) {
         // 2. Mark as processing
         await sql`UPDATE topic_actions_queue SET status = 'processing' WHERE id = ${id}`;
 
+        // VALIDATION: Reject usage of obvious test data (e.g. "100")
+        if (!chat_id || chat_id.length < 5) {
+            const errorMsg = `Invalid Chat ID: ${chat_id}. Marking as failed.`;
+            console.error(errorMsg);
+            await sql`UPDATE topic_actions_queue SET status = 'failed', error = ${errorMsg} WHERE id = ${id}`;
+            return NextResponse.json({ success: false, taskId: id, error: errorMsg });
+        }
+
         try {
             const client = await getTelegramClient();
             const entity = await getChatEntity(client, chat_id);

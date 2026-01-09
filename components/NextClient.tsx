@@ -745,11 +745,12 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         font-weight: 900;
                         line-height: 1;
                         text-transform: uppercase;
-                        margin-bottom: 1mm;
+                        margin-bottom: 3mm; /* Increased spacing from header */
                         white-space: nowrap;
                         display: flex;
                         align-items: center;
                         gap: 1mm;
+                        padding-left: 1mm; /* Indent */
                     }
                     .tg-icon {
                         width: 3mm;
@@ -764,7 +765,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         padding: 0.5mm 1.5mm;
                         border-radius: 2mm;
                         width: fit-content;
-                        margin-bottom: 2mm;
+                        margin-bottom: 0.5mm; /* Reduce gap to prizes */
+                        margin-left: 1mm; /* Indent */
                         text-transform: uppercase;
                     }
                     .cta {
@@ -776,11 +778,12 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     }
                     .prizes {
                         font-family: 'Arial Black', Gadget, sans-serif;
-                        font-size: 13px; /* Larger font */
+                        font-size: 13px;
                         font-weight: 900;
                         color: black;
                         text-transform: uppercase;
-                        margin-top: 1mm;
+                        margin-top: 0mm; /* Tighten up */
+                        margin-left: 1mm; /* Indent */
                         line-height: 1;
                     }
                     @media print {
