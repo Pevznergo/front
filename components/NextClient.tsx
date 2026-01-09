@@ -660,13 +660,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         КЛУБ СОСЕДЕЙ 🏠
                                     </h1>
                                     <div class="features">
-                                        ЧАТ НАШЕГО ДОМА
-                                    </div>
-                                    <div class="cta">
-                                        Колесо Призов:
+                                        ЧАТ СОСЕДЕЙ🏠 КОЛЕСО ПРИЗОВ:
                                     </div>
                                     <div class="prizes">
-                                        WB / OZON / iPhone
+                                        WB/OZON/ iPhone
                                     </div>
                                 </div>
                             </div>
@@ -778,10 +775,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         text-transform: uppercase;
                     }
                     .prizes {
-                        font-size: 9px;
+                        font-family: 'Arial Black', Gadget, sans-serif;
+                        font-size: 13px; /* Larger font */
                         font-weight: 900;
                         color: black;
                         text-transform: uppercase;
+                        margin-top: 1mm;
+                        line-height: 1;
                     }
                     @media print {
                         .no-print { display: none; }
