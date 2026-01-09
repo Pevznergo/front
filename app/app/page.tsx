@@ -45,7 +45,23 @@ export default function WebAppPage() {
             tg.ready()
             tg.expand() // Fullscreen
             tg.setHeaderColor('#FF4500'); // Orange header
-            setInitData(tg.initData)
+
+            const rawInitData = tg.initData
+            setInitData(rawInitData)
+
+            // RESTORED AUTH: Attempt to get real user data
+            fetch('/api/webapp/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData: rawInitData })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.user) {
+                        setUser(data.user) // Use real user data if auth succeeds
+                    }
+                })
+                .catch(err => console.error("Auth failed, using mock:", err))
         }
 
         // --- MOCK DATA MODE (TESTING PERFORMANCE) ---
@@ -134,7 +150,7 @@ export default function WebAppPage() {
     }
 
     // Daily Bonus Handlers (Mocked)
-    const handleDailyClaim = () => {
+    const handleDailyClaim = async () => {
         // Optimistic update
         const reward = [10, 15, 15, 20, 20, 25, 25][dailyStreak - 1] || 10;
         setUser(prev => prev ? { ...prev, points: prev.points + reward } : null);
@@ -144,6 +160,7 @@ export default function WebAppPage() {
         setDailyStreak(prev => Math.min(prev + 1, 7));
 
         setIsDailyOpen(false);
+        return Promise.resolve();
     }
 
     // Check if daily is available
@@ -275,7 +292,7 @@ export default function WebAppPage() {
             <DailyBonus
                 isOpen={isDailyOpen}
                 onClose={() => setIsDailyOpen(false)}
-                streakDays={dailyStreak}
+                streak={dailyStreak}
                 onClaim={handleDailyClaim}
                 lastClaimDate={lastDailyDate}
             />
