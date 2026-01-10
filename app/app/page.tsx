@@ -81,10 +81,13 @@ export default function WebAppPage() {
             // 3. Real Data Fetch for Prizes
             setLoading(true);
             fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.activePrizes) {
+                .then(async res => {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    const data = await res.json();
+                    if (data.activePrizes && data.activePrizes.length > 0) {
                         setPrizes(data.activePrizes);
+                    } else {
+                        throw new Error('No active prizes found');
                     }
                 })
                 .catch(err => {
