@@ -227,7 +227,7 @@ export default function WebAppPage() {
                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
                         </div>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Prizes</span>
+                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
                     </button>
 
                     {/* Tasks */}
@@ -237,8 +237,8 @@ export default function WebAppPage() {
                             <Target className="w-6 h-6 text-white drop-shadow-md" />
                         </div>
                         <div className="flex flex-col items-center leading-none gap-0.5">
-                            <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Tasks</span>
-                            <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">& games</span>
+                            <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Задания</span>
+                            <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">и игры</span>
                         </div>
                     </button>
 
@@ -254,12 +254,12 @@ export default function WebAppPage() {
                                     <div className="absolute inset-0 bg-white/20 animate-pulse" />
                                     <Coins className="w-6 h-6 text-white drop-shadow-md mb-0.5" />
                                     <div className="bg-black/80 px-1 rounded text-[7px] font-black uppercase text-white tracking-widest leading-tight py-0.5">
-                                        CLAIM
+                                        ЗАБИРАЙТЕ
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-center leading-none gap-0.5 mt-1">
-                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md text-[#ffcc00]">Daily</span>
-                                    <span className="text-[9px] font-bold text-white/90 uppercase tracking-wide drop-shadow-md">Coins</span>
+                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md text-[#ffcc00]">Монетки</span>
+                                    <span className="text-[9px] font-bold text-white/90 uppercase tracking-wide drop-shadow-md">за вход</span>
                                 </div>
                             </>
                         ) : (
@@ -275,8 +275,8 @@ export default function WebAppPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-center leading-none gap-0.5">
-                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Daily</span>
-                                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">Coins</span>
+                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Монетки</span>
+                                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">за вход</span>
                                 </div>
                             </>
                         )}
@@ -300,17 +300,17 @@ export default function WebAppPage() {
                     `}
                 >
                     {spinning ? (
-                        <span className="animate-pulse opacity-50">SPINNING...</span>
+                        <span className="animate-pulse opacity-50">КРУТИМ...</span>
                     ) : canSpin ? (
                         <>
-                            <span>SPIN FOR 10</span>
+                            <span>ВРАЩАТЬ ЗА 10</span>
                             <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
                                 <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
                             </div>
                         </>
                     ) : (
                         <>
-                            <span>NEED 10</span>
+                            <span>НУЖНО 10</span>
                             <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
                                 <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
                             </div>
@@ -318,7 +318,7 @@ export default function WebAppPage() {
                     )}
                 </button>
                 <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
-                    By clicking "Spin", I agree to the <a href="#" className="underline hover:text-white">Rules</a>
+                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
                 </p>
             </div>
 

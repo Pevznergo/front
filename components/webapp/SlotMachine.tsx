@@ -258,7 +258,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                     <div
                         key={`${prize.id}-${i}`}
                         ref={el => { itemsRef.current[i] = el; }}
-                        className="flex-shrink-0 relative transition-transform duration-300 transform origin-center"
+                        className="flex-shrink-0 relative transform origin-center"
                         style={{ width: '85%', height: CARD_HEIGHT }}
                     >
                         {/* Card Design */}

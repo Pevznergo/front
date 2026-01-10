@@ -110,9 +110,9 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
 
                 {/* Header */}
                 <div className="text-center mb-8 mt-2">
-                    <h2 className="text-2xl font-bold mb-2">Daily Coins</h2>
+                    <h2 className="text-2xl font-bold mb-2">Монетки за вход</h2>
                     <p className="text-gray-400 text-sm px-6 leading-relaxed">
-                        Log in daily to collect maximum coins for the week
+                        Заходите каждый день, чтобы собрать как можно больше монеток за неделю
                     </p>
                 </div>
 
@@ -173,7 +173,7 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
                             >
                                 {/* Day Label */}
                                 <span className={`text-[10px] font-bold mb-1 ${isToday ? 'text-white' : 'text-gray-500'}`}>
-                                    {isToday ? 'Today' : `Day ${dayNum}`}
+                                    {isToday ? 'Сегодня' : `${dayNum} день`}
                                 </span>
 
                                 {/* Coin/Check Circle */}
@@ -228,7 +228,7 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
 
                 {/* Footer Timer Panel */}
                 <div className="mt-4 bg-[#2c2c2e] rounded-2xl p-4 flex flex-col items-center justify-center border border-white/5">
-                    <span className="text-xs text-gray-500 font-medium mb-1">Next reward in</span>
+                    <span className="text-xs text-gray-500 font-medium mb-1">Новая награда через</span>
                     <span className="text-xl font-mono font-bold text-white tracking-widest">{timeLeft}</span>
                 </div>
             </div>
