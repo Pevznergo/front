@@ -1,92 +1,87 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { verifyTelegramWebAppData } from '@/lib/telegram-auth'
+import { validateTelegramWebAppData } from '@/lib/telegram'
+import { cookies } from 'next/headers'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const body = await req.json()
-        const { initData } = body
+        const { initData } = await req.json()
 
         if (!initData) {
             return NextResponse.json({ error: 'No initData' }, { status: 400 })
         }
 
-        if (!verifyTelegramWebAppData(initData)) {
-            return NextResponse.json({ error: 'Invalid auth' }, { status: 403 })
+        const validation = validateTelegramWebAppData(initData)
+        if (!validation.validatedInput) {
+            return NextResponse.json({ error: 'Invalid initData' }, { status: 401 })
         }
 
-        const urlParams = new URLSearchParams(initData)
-        const userJson = urlParams.get('user')
-        if (!userJson) return NextResponse.json({ error: 'No user' }, { status: 400 })
+        const user = validation.validatedInput.user
+        if (!user) {
+            return NextResponse.json({ error: 'No user data' }, { status: 400 })
+        }
 
-        const user = JSON.parse(userJson)
         const telegramId = user.id
 
-        // 1. Deduct points
-        // We use RETURNING to check if update was successful (i.e. user had enough points)
-        const deduction = await sql`
-      UPDATE app_users 
-      SET points = points - 10,
-          spins_count = spins_count + 1,
-          last_visit = CURRENT_TIMESTAMP
-      WHERE telegram_id = ${telegramId} AND points >= 10
-      RETURNING points
-    `
-
-        if (deduction.length === 0) {
-            return NextResponse.json({ error: 'Insufficient points' }, { status: 400 })
+        // 1. Check Points
+        const userRes = await sql`SELECT points FROM app_users WHERE telegram_id = ${telegramId}`
+        if (userRes.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 })
         }
 
-        // 2. Select Prize
-        const prizes = await sql`
-      SELECT * FROM prizes WHERE is_active = TRUE
-    `
-
-        if (prizes.length === 0) {
-            // Fallback checks
-            return NextResponse.json({ error: 'No prizes configured' }, { status: 500 })
+        if (userRes[0].points < 10) {
+            return NextResponse.json({ error: 'Not enough points' }, { status: 400 })
         }
 
-        // Weighted Random
-        const totalProbability = prizes.reduce((sum: number, p: any) => sum + parseFloat(p.probability), 0)
-        let random = Math.random() * totalProbability
-        let selectedPrize = prizes[prizes.length - 1] // Fallback
+        // 2. Fetch Active Prizes
+        const prizes = await sql`SELECT * FROM prizes WHERE is_active = TRUE`
+
+        // 3. Random Selection (Weighted)
+        const totalWeight = prizes.reduce((sum, p) => sum + parseFloat(p.probability), 0)
+        let random = Math.random() * totalWeight
+        let selectedPrize = prizes[0]
 
         for (const prize of prizes) {
-            random -= parseFloat(prize.probability)
-            if (random <= 0) {
+            if (random < parseFloat(prize.probability)) {
                 selectedPrize = prize
                 break
             }
+            random -= parseFloat(prize.probability)
         }
 
-        // 3. Award Prize
-        let finalPoints = deduction[0].points
-        let winMessage = `You won ${selectedPrize.name}`
+        // 4. Update DB Transaction-like
+        // Deduct points
+        await sql`UPDATE app_users SET points = points - 10, spins_count = spins_count + 1 WHERE telegram_id = ${telegramId}`
 
+        let newPoints = userRes[0].points - 10
+
+        // If prize is points, add them
         if (selectedPrize.type === 'points') {
-            const pointsWon = parseInt(selectedPrize.value)
-            if (!isNaN(pointsWon)) {
-                const award = await sql`
-            UPDATE app_users 
-            SET points = points + ${pointsWon} 
-            WHERE telegram_id = ${telegramId}
-            RETURNING points
-         `
-                finalPoints = award[0].points
-            }
+            const pointsValue = parseInt(selectedPrize.value)
+            await sql`UPDATE app_users SET points = points + ${pointsValue} WHERE telegram_id = ${telegramId}`
+            newPoints += pointsValue
+        } else {
+            // Record physical/coupon prize
+            await sql`
+                INSERT INTO user_prizes (user_id, prize_id, status, expiry_date, code)
+                VALUES (
+                    ${telegramId}, 
+                    ${selectedPrize.id}, 
+                    'active', 
+                    NOW() + INTERVAL '24 hours',
+                    upper(substring(md5(random()::text), 1, 8)) -- Generate simple random code
+                )
+            `
         }
-
-        // Optional: Log win to a history table (skipping for now based on requirements)
 
         return NextResponse.json({
             success: true,
             prize: selectedPrize,
-            points: finalPoints
+            points: newPoints
         })
 
-    } catch (error: any) {
-        console.error('Spin error:', error)
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+    } catch (e) {
+        console.error("Spin error:", e)
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
