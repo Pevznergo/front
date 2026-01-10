@@ -663,7 +663,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     КРУТИ КОЛЕСО ПРИЗОВ КАЖДЫЙ ДЕНЬ:
                                     </div>
                                     <div class="prizes">
-                                        WB/OZON/ iPhone
+                                        WB/OZON/iPhone
                                     </div>
                                 </div>
                             </div>
@@ -1525,7 +1525,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </div>
                             </div>
                             {/* Ecosystems Table */}
-                            <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
+                            <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-slate-800 bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -1555,7 +1555,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 </td>
                                                 <td className="p-5 align-top">
                                                     <div className="flex flex-col gap-2">
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex flex-wrap items-center gap-2">
                                                             <button
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
