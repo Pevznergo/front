@@ -114,7 +114,27 @@ export default function WebAppPage() {
     // Prizes Modal State
     const [isPrizesOpen, setIsPrizesOpen] = useState(false);
 
-    // ... (keep useEffect) ...
+    const handleDailyClaim = async () => {
+        try {
+            const res = await fetch('/api/webapp/claim-daily', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUser(prev => prev ? { ...prev, points: data.newPoints, daily_streak: data.streak, last_daily_claim: new Date().toISOString() } : null);
+                setDailyStreak(data.streak);
+                setLastDailyDate(new Date().toISOString());
+                setIsDailyAvailable(false);
+                setIsDailyOpen(false);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const canSpin = user && user.points >= 10 && !spinning;
 
     const handleSpin = async () => {
         if (spinning || !user || user.points < 10) return
@@ -163,7 +183,6 @@ export default function WebAppPage() {
         }
     }
 
-    // ...
 
     return (
         <main className="min-h-screen bg-[#1c1c1e] text-white overflow-hidden relative font-sans selection:bg-indigo-500/30">
@@ -209,68 +228,78 @@ export default function WebAppPage() {
                         <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
                     </button>
 
-    // ... (down to Spin Button)
-                    <div className={`
+                </div>
+            </div>
+
+            {/* Spin Button */}
+            <div className={`
                 absolute bottom-8 left-6 right-6 z-30 pointer-events-auto transition-opacity duration-300
                 ${spinning ? 'opacity-0 pointer-events-none' : 'opacity-100'}
             `}>
-                        <button
-                            onClick={handleSpin}
-                            disabled={spinning || !canSpin}
-                            className={`
+                <button
+                    onClick={handleSpin}
+                    disabled={spinning || !canSpin}
+                    className={`
                         w-full h-[52px] rounded-2xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
                         shadow-[0_4px_0_rgba(255,255,255,0.2)] active:shadow-none active:translate-y-[4px]
                         transition-all duration-200 border-2 border-white/10
                         ${!canSpin
-                                    ? 'bg-black text-white/50'
-                                    : 'bg-black text-white hover:bg-[#1a1a1a]'}
+                            ? 'bg-black text-white/50'
+                            : 'bg-black text-white hover:bg-[#1a1a1a]'}
                     `}
-                        >
-                            {spinning ? (
-                                <span className="animate-pulse opacity-50">КРУТИМ...</span>
-                            ) : canSpin ? (
-                                <>
-                                    <span>ВРАЩАТЬ ЗА 10</span>
-                                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                        <span className="font-serif font-bold text-xs">$</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <span>НУЖНО 10</span>
-                                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                        <span className="font-serif font-bold text-xs">$</span>
-                                    </div>
-                                </>
-                            )}
-                        </button>
-                        <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
-                            Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
-                        </p>
-                    </div>
+                >
+                    {spinning ? (
+                        <span className="animate-pulse opacity-50">КРУТИМ...</span>
+                    ) : canSpin ? (
+                        <>
+                            <span>ВРАЩАТЬ ЗА 10</span>
+                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
+                                <span className="font-serif font-bold text-xs">$</span>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <span>НУЖНО 10</span>
+                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
+                                <span className="font-serif font-bold text-xs">$</span>
+                            </div>
+                        </>
+                    )}
+                </button>
+                <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
+                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
+                </p>
+            </div>
 
-                    {/* Daily Bonus Modal */}
-                    <DailyBonus
-                        isOpen={isDailyOpen}
-                        onClose={() => setIsDailyOpen(false)}
-                        streak={dailyStreak}
-                        onClaim={handleDailyClaim}
-                        lastClaimDate={lastDailyDate}
+            {/* Daily Bonus Modal */}
+            <DailyBonus
+                isOpen={isDailyOpen}
+                onClose={() => setIsDailyOpen(false)}
+                streak={dailyStreak}
+                onClaim={handleDailyClaim}
+                lastClaimDate={lastDailyDate}
+            />
+
+            {/* Prizes Modal */}
+            <PrizesModal
+                isOpen={isPrizesOpen}
+                onClose={() => setIsPrizesOpen(false)}
+                initData={initData}
+            />
+
+            {/* Win Modal */}
+            <AnimatePresence>
+                {winResult && (
+                    <WinModal
+                        prize={winResult}
+                        onClose={() => {
+                            setWinResult(null)
+                            setWinIndex(null)
+                        }}
                     />
+                )}
+            </AnimatePresence>
 
-                    {/* Win Modal */}
-                    <AnimatePresence>
-                        {winResult && (
-                            <WinModal
-                                prize={winResult}
-                                onClose={() => {
-                                    setWinResult(null)
-                                    setWinIndex(null)
-                                }}
-                            />
-                        )}
-                    </AnimatePresence>
-
-                </div >
-                )
+        </main >
+    )
 }
