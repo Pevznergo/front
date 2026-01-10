@@ -166,111 +166,81 @@ export default function WebAppPage() {
     // ...
 
     return (
-        <main className="min-h-screen bg-[#1c1c1e] text-white overflow-hidden relative font-sans selection:bg-indigo-500/30">
-            {/* Header */}
-            <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-start pointer-events-none">
-                {/* User Info */}
-                <div className="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-md p-1.5 pr-4 rounded-full border border-white/5">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg">
-                        {user?.first_name?.[0] || 'U'}
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white/90 leading-none mb-0.5">{user?.first_name || 'User'}</span>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[10px] bg-yellow-400/20 text-yellow-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-mono">
-                                ⭐️ {user?.points || 0}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Actions */}
-                <div className="flex flex-col gap-3 pointer-events-auto">
-                    {/* Daily Bonus */}
-                    <div className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
-                        <DailyBonus
-                            lastClaimDate={lastDailyDate}
-                            streak={dailyStreak}
-                            onClaim={handleDailyClaim}
-                            isOpen={isDailyOpen}
-                            setIsOpen={setIsDailyOpen}
-                        />
-                    </div>
-
-                    {/* Prizes */}
-                    <button
-                        onClick={() => setIsPrizesOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
-                    >
+        {/* Prizes */ }
+        < button
+                        onClick = {() => setIsPrizesOpen(true)
+}
+className = "flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+    >
                         <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
                         </div>
                         <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
-                    </button>
+                    </button >
 
     // ... (down to Spin Button)
-                    <div className={`
+    <div className={`
                 absolute bottom-8 left-6 right-6 z-30 pointer-events-auto transition-opacity duration-300
                 ${spinning ? 'opacity-0 pointer-events-none' : 'opacity-100'}
             `}>
-                        <button
-                            onClick={handleSpin}
-                            disabled={spinning || !canSpin}
-                            className={`
+        <button
+            onClick={handleSpin}
+            disabled={spinning || !canSpin}
+            className={`
                         w-full h-[52px] rounded-2xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
                         shadow-[0_4px_0_rgba(255,255,255,0.2)] active:shadow-none active:translate-y-[4px]
                         transition-all duration-200 border-2 border-white/10
                         ${!canSpin
-                                    ? 'bg-black text-white/50'
-                                    : 'bg-black text-white hover:bg-[#1a1a1a]'}
+                    ? 'bg-black text-white/50'
+                    : 'bg-black text-white hover:bg-[#1a1a1a]'}
                     `}
-                        >
-                            {spinning ? (
-                                <span className="animate-pulse opacity-50">КРУТИМ...</span>
-                            ) : canSpin ? (
-                                <>
-                                    <span>ВРАЩАТЬ ЗА 10</span>
-                                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                        <span className="font-serif font-bold text-xs">$</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <span>НУЖНО 10</span>
-                                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                        <span className="font-serif font-bold text-xs">$</span>
-                                    </div>
-                                </>
-                            )}
-                        </button>
-                        <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
-                            Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
-                        </p>
+        >
+            {spinning ? (
+                <span className="animate-pulse opacity-50">КРУТИМ...</span>
+            ) : canSpin ? (
+                <>
+                    <span>ВРАЩАТЬ ЗА 10</span>
+                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
+                        <span className="font-serif font-bold text-xs">$</span>
                     </div>
+                </>
+            ) : (
+                <>
+                    <span>НУЖНО 10</span>
+                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
+                        <span className="font-serif font-bold text-xs">$</span>
+                    </div>
+                </>
+            )}
+        </button>
+        <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
+            Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
+        </p>
+    </div>
 
-                    {/* Daily Bonus Modal */}
-                    <DailyBonus
-                        isOpen={isDailyOpen}
-                        onClose={() => setIsDailyOpen(false)}
-                        streak={dailyStreak}
-                        onClaim={handleDailyClaim}
-                        lastClaimDate={lastDailyDate}
-                    />
+{/* Daily Bonus Modal */ }
+<DailyBonus
+    isOpen={isDailyOpen}
+    onClose={() => setIsDailyOpen(false)}
+    streak={dailyStreak}
+    onClaim={handleDailyClaim}
+    lastClaimDate={lastDailyDate}
+/>
 
-                    {/* Win Modal */}
-                    <AnimatePresence>
-                        {winResult && (
-                            <WinModal
-                                prize={winResult}
-                                onClose={() => {
-                                    setWinResult(null)
-                                    setWinIndex(null)
-                                }}
-                            />
-                        )}
-                    </AnimatePresence>
+{/* Win Modal */ }
+<AnimatePresence>
+    {winResult && (
+        <WinModal
+            prize={winResult}
+            onClose={() => {
+                setWinResult(null)
+                setWinIndex(null)
+            }}
+        />
+    )}
+</AnimatePresence>
 
-                </div >
-                )
+        </div >
+    )
 }
