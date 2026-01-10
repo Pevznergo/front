@@ -92,26 +92,13 @@ export default function WebAppPage() {
                 })
                 .catch(err => {
                     console.error("Failed to fetch prizes", err);
-                    // Fallback to mocks
-                    const mockPrizes: Prize[] = [
-                        { id: 1, name: '1000₽', type: 'points', value: '1000', probability: '0.1' },
-                        { id: 2, name: '500₽', type: 'points', value: '500', probability: '0.2' },
-                        { id: 3, name: '-20%', type: 'coupon', value: '-20%', probability: '0.2' },
-                        { id: 4, name: 'iPhone', type: 'physical', value: 'iphone', probability: '0.01' }
-                    ];
-                    setPrizes(mockPrizes);
+                    alert("Failed to load prizes. Please check connection.");
                 })
                 .finally(() => setLoading(false));
         } else {
-            // Fallback for non-Telegram env (e.g. browser dev)
+            // Non-Telegram environment
             setLoading(false);
-            const mockPrizes: Prize[] = [
-                { id: 1, name: '1000₽', type: 'points', value: '1000', probability: '0.1' },
-                { id: 2, name: '500₽', type: 'points', value: '500', probability: '0.2' },
-                { id: 3, name: '-20%', type: 'coupon', value: '-20%', probability: '0.2' },
-                { id: 4, name: 'iPhone', type: 'physical', value: 'iphone', probability: '0.01' }
-            ];
-            setPrizes(mockPrizes);
+            // Leave empty to show "No prizes" state instead of confusing mocks
         }
 
         // Timer

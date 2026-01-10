@@ -125,9 +125,18 @@ export default function PrizesModal({ isOpen, onClose, initData }: PrizesModalPr
                         ) : (
                             // Grid View for "Can Win"
                             <div className="grid grid-cols-2 gap-4 pb-8">
-                                {allPrizes.map((prize) => (
-                                    <PrizeGridItem key={prize.id} prize={prize} />
-                                ))}
+                                {allPrizes.length === 0 ? (
+                                    <div className="col-span-2 flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
+                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
+                                            <Gift className="w-8 h-8 opacity-50" />
+                                        </div>
+                                        <p>Призы пока не добавлены</p>
+                                    </div>
+                                ) : (
+                                    allPrizes.map((prize) => (
+                                        <PrizeGridItem key={prize.id} prize={prize} />
+                                    ))
+                                )}
                             </div>
                         )}
                     </div>
