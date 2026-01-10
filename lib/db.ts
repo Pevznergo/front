@@ -275,22 +275,22 @@ export async function initDatabase() {
         ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
         ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
         ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
-        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!');
+        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
+      `;
+    }
 
     // User Prizes table (New)
     await sqlConnection`
-      CREATE TABLE IF NOT EXISTS user_prizes(
+      CREATE TABLE IF NOT EXISTS user_prizes (
         id SERIAL PRIMARY KEY,
         user_id BIGINT REFERENCES app_users(telegram_id),
         prize_id INTEGER REFERENCES prizes(id),
         won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(50) DEFAULT 'active', --active, used, expired
-        code VARCHAR(255), --generated unique code for coupons
+        status VARCHAR(50) DEFAULT 'active', -- active, used, expired
+        code VARCHAR(255), -- generated unique code for coupons
         expiry_date TIMESTAMP
       )
-        `;
-      `;
-    }
+    `;
 
     console.log('Database initialized successfully')
   } catch (error) {
