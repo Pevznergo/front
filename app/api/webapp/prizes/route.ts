@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { verifyTelegramWebAppData } from '@/lib/telegram-auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
     try {
         const url = new URL(req.url)
