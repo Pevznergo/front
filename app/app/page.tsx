@@ -205,20 +205,16 @@ export default function WebAppPage() {
 
                 {/* Right Actions */}
                 <div className="flex flex-col gap-3 pointer-events-auto">
-                    {/* Daily Bonus Trigger */}
-                    <button
-                        onClick={() => setIsDailyOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
-                    >
-                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {isDailyAvailable ? (
-                                <div className="absolute inset-0 bg-yellow-400/20 animate-pulse" />
-                            ) : null}
-                            <Coins className={`w-6 h-6 drop-shadow-md ${isDailyAvailable ? 'text-yellow-300' : 'text-slate-400'}`} />
-                        </div>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Бонус</span>
-                    </button>
+                    {/* Daily Bonus */}
+                    <div className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                        <DailyBonus
+                            lastClaimDate={lastDailyDate}
+                            streak={dailyStreak}
+                            onClaim={handleDailyClaim}
+                            isOpen={isDailyOpen}
+                            setIsOpen={setIsDailyOpen}
+                        />
+                    </div>
 
                     {/* Prizes */}
                     <button
