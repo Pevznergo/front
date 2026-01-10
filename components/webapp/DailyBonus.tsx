@@ -99,51 +99,51 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
                                     <div
                                         key={index}
                                         onClick={() => state === 'active' ? onClaim() : null}
-                                        className={`
-                                            relative flex flex-col items-center justify-center rounded-2xl p-2 aspect-[4/5]
-                                            transition-all duration-200
-                                            ${state === 'active' ? 'bg-[#3a3a3c] scale-105 shadow-xl cursor-pointer ring-2 ring-white/10 hover:bg-[#4a4a4c]' : ''}
-                                            ${state === 'collected' ? 'bg-[#2c2c2e]' : ''}
-                                            ${state === 'locked' ? 'bg-[#2c2c2e] opacity-50' : ''}
-                                            ${dayNum > 4 && index >= 4 ? 'col-span-1.3' : ''} 
-                                        `}
+                                        className="flex flex-col items-center relative"
                                         style={{
                                             gridColumn: index >= 4 ? 'auto' : 'auto'
                                         }}
                                     >
-                                        {/* Day Label */}
-                                        <span className={`text-[10px] font-bold mb-1 ${isToday ? 'text-white' : 'text-gray-500'}`}>
+                                        {/* Label above card */}
+                                        <span className={`text-[10px] font-bold mb-1.5 ${isToday ? 'text-white' : 'text-gray-500'}`}>
                                             {isToday ? 'Сегодня' : `${dayNum} день`}
                                         </span>
 
-                                        {/* Coin/Check Circle/Active State */}
-                                        {state === 'collected' ? (
-                                            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg relative z-10">
-                                                <Check className="w-6 h-6 text-white" />
-                                            </div>
-                                        ) : state === 'active' ? (
-                                            /* Active Day Presentation */
-                                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.4)] relative z-10 animate-pulse">
-                                                <Coins className="w-6 h-6 text-black" />
-                                            </div>
-                                        ) : (
-                                            /* Locked Day */
-                                            <div className="w-10 h-10 bg-[#3a3a3c] rounded-full flex items-center justify-center shadow-lg relative z-10">
-                                                <div className="font-black text-xs text-white/50">{amount}</div>
-                                            </div>
-                                        )}
+                                        {/* Card Body */}
+                                        <div className={`
+                                            relative w-full aspect-[4/5] rounded-3xl flex flex-col items-center justify-center
+                                            transition-all duration-200
+                                            ${state === 'active' ? 'bg-[#ffe600] scale-105 shadow-[0_0_20px_rgba(255,230,0,0.3)] z-10 cursor-pointer' : ''}
+                                            ${state === 'collected' ? 'bg-[#dcfce7]' : ''}
+                                            ${state === 'locked' ? 'bg-[#2c2c2e]' : ''}
+                                        `}>
+                                            {/* Top Right Badge */}
+                                            {state === 'collected' && (
+                                                <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#22c55e] rounded-full flex items-center justify-center p-0.5">
+                                                    <Check className="w-full h-full text-white stroke-[3]" />
+                                                </div>
+                                            )}
+                                            {state === 'active' && (
+                                                <div className="absolute top-1 right-1">
+                                                    <span className="text-lg leading-none animate-pulse">✨</span>
+                                                </div>
+                                            )}
 
-                                        {/* Amount Value (Background/Behind) */}
-                                        {state !== 'collected' && (
-                                            <div className={`mt-2 font-black text-lg ${state === 'active' ? 'text-white' : 'text-gray-500'}`}>
+                                            {/* Amount Number */}
+                                            <div className={`text-2xl font-black mb-3 ${state === 'locked' ? 'text-white/40' : 'text-black'}`}>
                                                 {amount}
                                             </div>
-                                        )}
-                                        {state === 'collected' && (
-                                            <div className={`mt-2 font-black text-lg text-green-500 opacity-0`}>
-                                                {amount}
+
+                                            {/* Bottom Coin Icon (Overlapping bottom edge) */}
+                                            <div className={`
+                                                absolute -bottom-3.5 w-7 h-7 rounded-full border-[3px] flex items-center justify-center shadow-sm
+                                                ${state === 'active' ? 'bg-[#eab308] border-[#ffe600] text-yellow-900' : ''}
+                                                ${state === 'collected' ? 'bg-[#94a3b8] border-[#dcfce7] text-slate-600' : ''}
+                                                ${state === 'locked' ? 'bg-[#4b5563] border-[#2c2c2e] text-gray-400' : ''}
+                                            `}>
+                                                <Coins className="w-3.5 h-3.5 fill-current" />
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 )
                             })}
@@ -156,8 +156,8 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
                             }
                             .grid-cols-4 > div {
                                 width: calc(25% - 0.75rem);
-                                margin-bottom: 0.75rem;
-                                min-width: 70px;
+                                margin-bottom: 1.5rem; /* Increased margin for overlapping coins */
+                                min-width: 65px;
                             }
                         `}</style>
 
@@ -166,9 +166,9 @@ export default function DailyBonus({ isOpen, onClose, streak, lastClaimDate, onC
                             {!claimedToday ? (
                                 <button
                                     onClick={() => onClaim()}
-                                    className="w-full bg-gradient-to-r from-[#ff9500] to-[#ff5e00] text-white font-black text-xl py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 uppercase tracking-wide"
+                                    className="w-full bg-white text-black font-black text-lg py-4 rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 uppercase tracking-wide italic"
                                 >
-                                    <span>ЗАБРАТЬ</span>
+                                    <span>ЗАБРАТЬ НАГРАДУ</span>
                                 </button>
                             ) : (
                                 <div className="bg-[#2c2c2e] rounded-2xl py-3 px-4 flex flex-col items-center justify-center border border-white/5">
