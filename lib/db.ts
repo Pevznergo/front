@@ -297,6 +297,14 @@ export async function initDatabase() {
       )
     `;
 
+    // Migration: Add missing columns to user_prizes
+    try {
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS expiry_at TIMESTAMP`;
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS promo_code VARCHAR(255)`;
+    } catch (e) {
+      console.warn('Migration warning for user_prizes:', e)
+    }
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)

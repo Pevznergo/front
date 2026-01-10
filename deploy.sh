@@ -26,4 +26,10 @@ pm2 restart aporto || pm2 start npm --name "aporto" -- start
 echo "🔄 Restarting Worker..."
 pm2 restart aporto-worker || pm2 start npm --name "aporto-worker" -- run worker
 
+# 6. Trigger Database Migration
+echo "⏳ Waiting for server to start..."
+sleep 5
+echo "🛠️  Running Database Migration..."
+curl http://localhost:3000/api/init-db || echo "⚠️  Migration trigger failed (server might be starting)"
+
 echo "✅ Deployment Complete!"
