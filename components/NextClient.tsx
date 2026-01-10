@@ -376,7 +376,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats'>('ecosystem');
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('ecosystem');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -1497,756 +1497,184 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             } `}
-                    >
-                        <BarChart className="w-4 h-4" />
                         Статистика
                     </button>
+                <button
+                    onClick={() => setActiveTab('prizes')}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'prizes'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        } `}
+                >
+                    <Gift className="w-4 h-4" />
+                    Призы
+                </button>
+            </div>
+
+            <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="relative w-full md:w-80">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Поиск по коду, адресу или району..."
+                        className="w-full h-12 bg-slate-900/50 border border-white/10 rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
+                    />
                 </div>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20 whitespace-nowrap"
+                >
+                    <MessageSquare className="w-5 h-5" />
+                    <span className="hidden md:inline">Создать чат</span>
+                </button>
+            </div>
+        </div >
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Поиск по коду, адресу или району..."
-                            className="w-full h-12 bg-slate-900/50 border border-white/10 rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600"
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20 whitespace-nowrap"
-                    >
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="hidden md:inline">Создать чат</span>
-                    </button>
-                </div>
-            </div >
+            {
+        activeTab === 'ecosystem' ? (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-            {activeTab === 'ecosystem' ? (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-                    {/* Create Modal */}
-                    {showCreateModal && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-                            <div className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-                                <button
-                                    onClick={() => setShowCreateModal(false)}
-                                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                                            <MessageSquare className="w-5 h-5 text-indigo-400" />
-                                        </div>
-                                        <div className="text-left">
-                                            <h2 className="text-xl font-semibold text-white">Создание экосистемы</h2>
-                                            <p className="text-sm text-slate-400">Введите адрес дома для создания чата</p>
-                                        </div>
-                                    </div>
-
-                                    <form onSubmit={handleSubmit(async (data) => {
-                                        await onSubmit(data);
-                                        setShowCreateModal(false);
-                                    })} className="space-y-4">
-                                        <div className="relative">
-                                            <input
-                                                {...register("title", { required: "Адрес дома обязателен" })}
-                                                placeholder="Напр: ул. Пушкина, д. 10"
-                                                className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
-                                            />
-                                            {errors.title && (
-                                                <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
-                                            )}
-                                        </div>
-
-                                        <div className="relative">
-                                            <input
-                                                {...register("district")}
-                                                placeholder="Район (напр: Хамовники)"
-                                                className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 text-white"
-                                        >
-                                            {loading ? (
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <Send className="w-5 h-5" />
-                                                    ⚡ Создать экосистему
-                                                </>
-                                            )}
-                                        </button>
-
-                                        {error && (
-                                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                                                {error}
-                                            </div>
-                                        )}
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Result Block */}
-                    {result && (
-                        <div className="p-8 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="flex flex-col md:flex-row gap-8 items-center">
-                                <div className="p-4 bg-white rounded-2xl">
-                                    <QRCode value={result.link} size={180} />
-                                </div>
-                                <div className="flex-1 text-left space-y-4">
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-sm font-semibold text-slate-400">Очередь создания ({queue.length})</h3>
-                                            <button
-                                                onClick={handleProcessQueue}
-                                                disabled={batchLoading}
-                                                className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs rounded-lg transition-all flex items-center gap-2"
-                                            >
-                                                {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                                                Обработать сейчас
-                                            </button>
-                                        </div>
-                                        {countdown && (
-                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-4 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
-                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-                                                Следующий чат ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
-                                            </div>
-                                        )}
-                                        <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-3">
-                                        <a
-                                            href={result.link}
-                                            target="_blank"
-                                            className="px-6 h-12 bg-white text-slate-900 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-100 transition-colors"
-                                        >
-                                            <ExternalLink className="w-4 h-4" />
-                                            Открыть чат
-                                        </a>
-                                        <button
-                                            onClick={() => downloadQR(result.link, result.title)}
-                                            className="px-6 h-12 bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 transition-colors"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                            Скачать QR
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* History Table */}
-                    {filteredEcosystems.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <HistoryIcon className="w-4 h-4" />
-                                    <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
-                                </div>
-                                <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
-                                    <button
-                                        onClick={handleRefreshData}
-                                        disabled={loading}
-                                        className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1"
-                                        title="Обновить данные"
-                                    >
-                                        <HistoryIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                                    </button>
-                                    <button
-                                        onClick={() => setStuckFilter('all')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        Все
-                                    </button>
-                                    <button
-                                        onClick={() => setStuckFilter('stuck')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'stuck' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        Оклеены
-                                    </button>
-                                    <button
-                                        onClick={() => setStuckFilter('not_stuck')}
-                                        className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'not_stuck' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/20' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        Не оклеены
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-1 items-center gap-2">
-                                    <div className="relative flex-1 group">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                                        <input
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            placeholder="Поиск по коду/адресу..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                        />
-                                    </div>
-
-                                    <div className="relative w-48 group">
-                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                                        <input
-                                            value={groupSearchTerm}
-                                            onChange={(e) => setGroupSearchTerm(e.target.value)}
-                                            placeholder="По Группе..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                        />
-                                    </div>
-
-                                    <div className="relative shrink-0">
-                                        <select
-                                            value={statusFilter}
-                                            onChange={(e) => setStatusFilter(e.target.value as any)}
-                                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider outline-none cursor-pointer hover:bg-white/10"
-                                        >
-                                            <option value="all" className="bg-slate-900">СТАТУС: ЛЮБОЙ</option>
-                                            <option value="активен" className="bg-slate-900">АКТИВЕН</option>
-                                            <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
-                                            <option value="приклеен" className="bg-slate-900">ПРИКЛЕЕН</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            {/* Ecosystems Table */}
-                            <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-slate-800 bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                            <th className="p-5 w-14 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedGroupIds.size === paginatedEcosystems.length && paginatedEcosystems.length > 0}
-                                                    onChange={handleSelectAllGroups}
-                                                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
-                                                />
-                                            </th>
-                                            <th className="p-5">Код / Экосистема</th>
-                                            <th className="p-5">Статистика</th>
-                                            <th className="p-5 text-right">Действия</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-800/50">
-                                        {paginatedEcosystems.map((item: any) => (
-                                            <tr key={item.tg_chat_id} className={`group hover:bg-slate-800/30 transition-all ${selectedGroupIds.has(item.tg_chat_id) ? 'bg-indigo-500/5' : ''}`}>
-                                                <td className="p-5 text-center align-top pt-6">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedGroupIds.has(item.tg_chat_id)}
-                                                        onChange={() => handleToggleGroupSelect(item.tg_chat_id)}
-                                                        className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
-                                                    />
-                                                </td>
-                                                <td className="p-5 align-top">
-                                                    <div className="flex flex-col gap-2">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <button
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    if (!confirm(`Создать топик с игрой в "${item.title}"?`)) return;
-
-                                                                    try {
-                                                                        const res = await fetch("/api/admin/create-topic-promo", {
-                                                                            method: "POST",
-                                                                            headers: { "Content-Type": "application/json" },
-                                                                            body: JSON.stringify({ chatId: item.tg_chat_id })
-                                                                        });
-                                                                        const data = await res.json();
-                                                                        if (res.ok) {
-                                                                            alert(`Игра создана! Топик: ${data.threadId}\n\nСсылка на приложение:\n${data.appLink}`);
-                                                                        } else {
-                                                                            alert("Ошибка: " + data.error);
-                                                                        }
-                                                                    } catch (err) {
-                                                                        alert("Ошибка сети");
-                                                                    }
-                                                                }}
-                                                                className="p-1.5 hover:bg-yellow-500/20 text-yellow-500 rounded-lg transition-colors"
-                                                                title="Создать игру"
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="11" x2="10" y2="11" /><line x1="8" y1="9" x2="8" y2="13" /><rect width="22" height="14" x="1" y="6" rx="2" ry="2" /><path d="M9 1l2 2 3.5-3.5" /><path d="M15 12h.01" /><path d="M18 11h.01" /></svg>
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingGroup(item);
-                                                                }}
-                                                                className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
-                                                            >
-                                                                <Edit3 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            {item.codes.map((code: string) => (
-                                                                <div key={code} className="flex items-center gap-1">
-                                                                    <button
-                                                                        onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
-                                                                        className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
-                                                                    >
-                                                                        {code}
-                                                                        {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <ClipboardIcon className="w-3 h-3 opacity-50" />}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleUnlinkCode(code, item.title, item.tg_chat_id)}
-                                                                        className="p-1 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-md transition-colors"
-                                                                        title="Отвязать код"
-                                                                    >
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        {editingGroup && editingGroup.tgChatId === item.tg_chat_id ? (
-                                                            <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-indigo-500/30 shadow-lg mt-2">
-                                                                <input
-                                                                    value={editingGroup.title}
-                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
-                                                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
-                                                                    placeholder="Название"
-                                                                />
-                                                                <input
-                                                                    value={editingGroup.district}
-                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
-                                                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
-                                                                    placeholder="Район"
-                                                                />
-                                                                <div className="flex gap-2 pt-1">
-                                                                    <button
-                                                                        onClick={() => handleUpdateEcosystem(item.tg_chat_id)}
-                                                                        className="flex-1 py-2 bg-indigo-600 text-xs font-bold rounded-xl text-white hover:bg-indigo-500 transition-colors shadow-md"
-                                                                    >
-                                                                        Сохранить
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setEditingGroup(null)}
-                                                                        className="py-2 px-4 bg-slate-700 text-xs font-bold rounded-xl text-slate-300 hover:bg-slate-600 transition-colors"
-                                                                    >
-                                                                        Отмена
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="mt-1">
-                                                                <div className="flex items-center gap-2 group/title">
-                                                                    <h3 className="font-semibold text-base text-white">{item.title}</h3>
-                                                                    <button
-                                                                        onClick={() => setEditingGroup({
-                                                                            tgChatId: item.tg_chat_id,
-                                                                            title: item.title,
-                                                                            district: item.district
-                                                                        })}
-                                                                        className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
-                                                                    >
-                                                                        <Edit3 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
-                                                                    <MapPin className="w-3.5 h-3.5" />
-                                                                    {item.district || 'Район не указан'}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-5 align-top">
-                                                    <div className="flex flex-col gap-3">
-                                                        <div className="flex gap-6">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Клики</span>
-                                                                <span className="text-base font-bold text-slate-200">{item.clicks_count}</span>
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Люди</span>
-                                                                <span className="text-base font-bold text-slate-200">{item.member_count}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <select
-                                                                value={item.status || 'не подключен'}
-                                                                onChange={(e) => handleEcosystemStatusChange(item.tg_chat_id, item.codes, e.target.value)}
-                                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border appearance-none cursor-pointer outline-none ${item.status === 'подключен'
-                                                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                                    : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'
-                                                                    }`}
-                                                            >
-                                                                <option value="активен" className="bg-slate-900 text-slate-400">АКТИВЕН</option>
-                                                                <option value="не подключен" className="bg-slate-900 text-slate-400">НЕ ПОДКЛЮЧЕН</option>
-                                                                <option value="подключен" className="bg-slate-900 text-emerald-400">ПОДКЛЮЧЕН</option>
-                                                                <option value="не распечатан" className="bg-slate-900 text-slate-400">НЕ РАСПЕЧАТАН</option>
-                                                                <option value="распечатан" className="bg-slate-900 text-slate-400">РАСПЕЧАТАН</option>
-                                                                <option value="приклеен" className="bg-slate-900 text-indigo-400">ОКЛЕЕН</option>
-                                                            </select>
-
-                                                            {item.is_stuck && (
-                                                                <div className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                                                    ОКЛЕЕН
-                                                                </div>
-                                                            )}
-
-                                                            <button
-                                                                onClick={() => handleRefreshStats(item.codes[0], item.id)}
-                                                                className={`p-1 hover:bg-slate-800 rounded-lg transition-all ml-auto ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600 hover:text-indigo-400'}`}
-                                                                title="Обновить статистику"
-                                                            >
-                                                                <HistoryIcon className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-5 align-top">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck, item.codes)}
-                                                            className={`p-2.5 rounded-xl transition-all border ${item.is_stuck
-                                                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
-                                                                : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
-                                                                }`}
-                                                            title={item.is_stuck ? "Снять метку оклеен" : "Отметить оклеенным"}
-                                                        >
-                                                            <CheckCircle2 className={`w-5 h-5 ${item.is_stuck ? 'fill-indigo-500/20' : ''}`} />
-                                                        </button>
-                                                        <a
-                                                            href={links.find(l => l.tg_chat_id === item.tg_chat_id)?.target_url}
-                                                            target="_blank"
-                                                            className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-transparent"
-                                                            title="Открыть в Telegram"
-                                                        >
-                                                            <ExternalLink className="w-5 h-5" />
-                                                        </a>
-                                                        <button
-                                                            onClick={() => handleDeleteEcosystem(item.tg_chat_id, item.codes)}
-                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl text-slate-400 hover:text-red-400 transition-all border border-transparent"
-                                                            title="Удалить экосистему"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Pagination Controls */}
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
-                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                                        Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalPages}</span>
-                                        <span className="ml-2 text-slate-600">({filteredEcosystems.length} всего)</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                            disabled={currentPage === 1}
-                                            className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                            disabled={currentPage === totalPages}
-                                            className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            ) : activeTab === 'map' ? (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-bold">Карта-Разведчик</h2>
-                                <p className="text-slate-500 text-sm">Найдите дома на карте и добавьте их в очередь создания чатов.</p>
-                            </div>
-                            {scoutedAddresses.length > 0 && (
-                                <button
-                                    onClick={handlePushScoutedToQueue}
-                                    disabled={batchLoading}
-                                    className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white flex items-center gap-3 transition-all shadow-xl shadow-indigo-500/20"
-                                >
-                                    {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />}
-                                    Добавить в очередь ({scoutedAddresses.length})
-                                </button>
-                            )}
-                        </div>
-
-                        <MapScout onAddressesFound={setScoutedAddresses} />
-
-                        {scoutedAddresses.length > 0 && (
-                            <div className="mt-8 space-y-4 text-left">
-                                <div className="flex items-center justify-between px-2">
-                                    <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Предпросмотр адресов для очереди</h3>
-                                    <button onClick={() => setScoutedAddresses([])} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition-all">Очистить список</button>
-                                </div>
-                                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {scoutedAddresses.map((addr, idx) => (
-                                        <div key={idx} className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group transition-all hover:border-white/20">
-                                            <div className="flex-1 w-full space-y-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Название / Адрес</span>
-                                                    <input
-                                                        value={addr.title}
-                                                        onChange={(e) => handleUpdateScouted(idx, { title: e.target.value })}
-                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="w-full md:w-64 space-y-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Район</span>
-                                                    <input
-                                                        value={addr.district || ""}
-                                                        onChange={(e) => handleUpdateScouted(idx, { district: e.target.value })}
-                                                        placeholder="Не указан"
-                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleDeleteScouted(idx)}
-                                                className="p-3 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all self-end md:self-center"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ) : activeTab === 'stats' ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <StatisticsTab />
-                </div>
-            ) : (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
-                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
-                            <QrCode className="w-10 h-10 text-indigo-400" />
-                        </div>
-
-                        <div className="max-w-md mx-auto space-y-2">
-                            <h2 className="text-2xl font-bold">Очередь создания чатов</h2>
-                            <p className="text-slate-400 text-sm">Введите список чатов (Название | Район) по одному на строку.</p>
-                        </div>
-
-                        <div className="max-w-2xl mx-auto space-y-4">
-                            <textarea
-                                value={batchInput}
-                                onChange={(e) => setBatchInput(e.target.value)}
-                                placeholder="ЖК Риверсайд | Приморский&#10;ЖК Квартал | Центральный"
-                                className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white"
-                            />
-
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
-                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-2">Интервал:</span>
-                                    {[10, 15, 20, 30].map(m => (
-                                        <button
-                                            key={m}
-                                            onClick={() => setBatchInterval(m)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${batchInterval === m ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                                        >
-                                            {m} мин
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <button
-                                    onClick={handleAddToQueue}
-                                    disabled={batchLoading || !batchInput.trim()}
-                                    className="h-12 px-8 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl"
-                                >
-                                    {batchLoading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Send className="w-4 h-4" />
-                                            Добавить в очередь ({batchInput.split('\n').filter(l => l.trim()).length})
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Current Queue Display */}
-                        {queue.length > 0 && (
-                            <div className="max-w-4xl mx-auto mt-12 space-y-4 text-left">
-                                <div className="flex items-center justify-between px-2">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2 text-slate-400">
-                                            <Clock className="w-4 h-4" />
-                                            <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
-                                        </div>
-                                        {countdown && (
-                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
-                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-                                                Следующий ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={handleProcessQueue}
-                                        disabled={batchLoading}
-                                        className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold rounded-xl transition-all flex items-center gap-2"
-                                    >
-                                        {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                                        Обработать сейчас
-                                    </button>
-                                </div>
-
-                                <div className="grid gap-2">
-                                    {queue.slice(0, 10).map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group">
-                                            {editingQueueItem?.id === item.id ? (
-                                                <div className="flex-1 flex gap-2">
-                                                    <input
-                                                        className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
-                                                        value={editingQueueItem.title}
-                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, title: e.target.value })}
-                                                    />
-                                                    <input
-                                                        className="w-32 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
-                                                        value={editingQueueItem.district}
-                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, district: e.target.value })}
-                                                    />
-                                                    <button onClick={() => handleUpdateQueueItem(editingQueueItem)} className="text-green-500 hover:text-green-400 p-1"><CheckSquare className="w-4 h-4" /></button>
-                                                    <button onClick={() => setEditingQueueItem(null)} className="text-slate-500 hover:text-slate-400 p-1"><X className="w-4 h-4" /></button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-white">{item.title}</span>
-                                                        <span className="text-[10px] text-slate-500">{item.district}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex flex-col text-right">
-                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
-                                                            <span className="text-xs font-mono text-indigo-400">
-                                                                {new Date(item.scheduled_at).toLocaleTimeString()}
-                                                            </span>
-                                                        </div>
-                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
-                                                            item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                                'bg-slate-500/20 text-slate-500'
-                                                            }`}>
-                                                            {item.status}
-                                                        </span>
-                                                        {item.status === 'pending' && (
-                                                            <div className="hidden group-hover:flex items-center gap-1">
-                                                                <button onClick={() => setEditingQueueItem(item)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                                                                <button onClick={() => handleDeleteQueueItem(item.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {queue.length > 10 && (
-                                        <div className="text-center text-[10px] text-slate-600 uppercase tracking-widest pt-2">
-                                            И еще {queue.length - 10} чатов впереди...
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-
-
-                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
-                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
-                            <QrCode className="w-10 h-10 text-indigo-400" />
-                        </div>
-
-                        <div className="max-w-md mx-auto space-y-2">
-                            <h2 className="text-2xl font-bold">Массовая генерация QR</h2>
-                            <p className="text-slate-400 text-sm">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-4">
+                {/* Create Modal */}
+                {showCreateModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
                             <button
-                                onClick={handleBatchGenerate}
-                                disabled={batchLoading}
-                                className="flex-1 h-16 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl text-lg"
+                                onClick={() => setShowCreateModal(false)}
+                                className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
                             >
-                                {batchLoading ? (
-                                    <Loader2 className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Send className="w-5 h-5" />
-                                        Сгенерировать 200 кодов
-                                    </>
-                                )}
+                                <X className="w-5 h-5" />
                             </button>
 
-                            {selectedIds.size > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <div className="relative group">
-                                        <select
-                                            onChange={(e) => handleBulkUpdateStatus(e.target.value)}
-                                            value=""
-                                            className="h-16 px-6 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-sm border-none outline-none appearance-none cursor-pointer"
-                                        >
-                                            <option value="" disabled>Сменить статус ({selectedIds.size})</option>
-                                            <option value="не распечатан">не распечатан</option>
-                                            <option value="распечатан">распечатан</option>
-                                            <option value="не подключен">не подключен</option>
-                                            <option value="подключен">подключен</option>
-                                            <option value="архив">архив</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
-                                            <Edit3 className="w-4 h-4" />
-                                        </div>
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                        <MessageSquare className="w-5 h-5 text-indigo-400" />
+                                    </div>
+                                    <div className="text-left">
+                                        <h2 className="text-xl font-semibold text-white">Создание экосистемы</h2>
+                                        <p className="text-sm text-slate-400">Введите адрес дома для создания чата</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleSubmit(async (data) => {
+                                    await onSubmit(data);
+                                    setShowCreateModal(false);
+                                })} className="space-y-4">
+                                    <div className="relative">
+                                        <input
+                                            {...register("title", { required: "Адрес дома обязателен" })}
+                                            placeholder="Напр: ул. Пушкина, д. 10"
+                                            className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
+                                        />
+                                        {errors.title && (
+                                            <p className="text-red-400 text-xs mt-1 ml-2">{errors.title.message}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="relative">
+                                        <input
+                                            {...register("district")}
+                                            placeholder="Район (напр: Хамовники)"
+                                            className="w-full h-14 bg-slate-950 border border-white/10 rounded-2xl px-6 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-600 text-white"
+                                        />
                                     </div>
 
                                     <button
-                                        onClick={handlePrintSelected}
-                                        className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20 text-white"
                                     >
-                                        <Printer className="w-6 h-6" />
-                                        Печать
+                                        {loading ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Send className="w-5 h-5" />
+                                                ⚡ Создать экосистему
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {error && (
+                                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                                            {error}
+                                        </div>
+                                    )}
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Result Block */}
+                {result && (
+                    <div className="p-8 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex flex-col md:flex-row gap-8 items-center">
+                            <div className="p-4 bg-white rounded-2xl">
+                                <QRCode value={result.link} size={180} />
+                            </div>
+                            <div className="flex-1 text-left space-y-4">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-semibold text-slate-400">Очередь создания ({queue.length})</h3>
+                                        <button
+                                            onClick={handleProcessQueue}
+                                            disabled={batchLoading}
+                                            className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs rounded-lg transition-all flex items-center gap-2"
+                                        >
+                                            {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                            Обработать сейчас
+                                        </button>
+                                    </div>
+                                    {countdown && (
+                                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-4 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                            Следующий чат ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                        </div>
+                                    )}
+                                    <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    <a
+                                        href={result.link}
+                                        target="_blank"
+                                        className="px-6 h-12 bg-white text-slate-900 rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-100 transition-colors"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        Открыть чат
+                                    </a>
+                                    <button
+                                        onClick={() => downloadQR(result.link, result.title)}
+                                        className="px-6 h-12 bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 hover:bg-slate-700 transition-colors"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Скачать QR
                                     </button>
                                 </div>
-                            )}
-                        </div>
-
-                        {batchResult && (
-                            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
-                                Готово! Создано {batchResult.count} ссылок.
                             </div>
-                        )}
+                        </div>
                     </div>
+                )}
 
+                {/* History Table */}
+                {filteredEcosystems.length > 0 && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-2">
                             <div className="flex items-center gap-2 text-slate-400">
-                                <QrCode className="w-4 h-4" />
-                                <h3 className="text-sm font-medium uppercase tracking-wider">База всех ссылок</h3>
+                                <HistoryIcon className="w-4 h-4" />
+                                <h3 className="text-sm font-medium uppercase tracking-wider">История созданных чатов</h3>
                             </div>
-
                             <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
+                                <button
+                                    onClick={handleRefreshData}
+                                    disabled={loading}
+                                    className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1"
+                                    title="Обновить данные"
+                                >
+                                    <HistoryIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                </button>
                                 <button
                                     onClick={() => setStuckFilter('all')}
                                     className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
@@ -2267,7 +1695,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </button>
                             </div>
 
-                            <div className="flex flex-1 items-center gap-2 max-w-2xl ml-4">
+                            <div className="flex flex-1 items-center gap-2">
                                 <div className="relative flex-1 group">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
                                     <input
@@ -2295,216 +1723,239 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         className="bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider outline-none cursor-pointer hover:bg-white/10"
                                     >
                                         <option value="all" className="bg-slate-900">СТАТУС: ЛЮБОЙ</option>
-                                        <option value="не распечатан" className="bg-slate-900">НЕ РАСПЕЧАТАН</option>
-                                        <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
-                                        <option value="не подключен" className="bg-slate-900">НЕ ПОДКЛЮЧЕН</option>
-                                        <option value="подключен" className="bg-slate-900">ПОДКЛЮЧЕН</option>
                                         <option value="активен" className="bg-slate-900">АКТИВЕН</option>
+                                        <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
                                         <option value="приклеен" className="bg-slate-900">ПРИКЛЕЕН</option>
-                                        <option value="архив" className="bg-slate-900">АРХИВ</option>
                                     </select>
                                 </div>
                             </div>
-
-                            <div className="text-xs text-slate-500 uppercase tracking-widest ml-4">
-                                Всего: {filteredAllLinks.length}
-                            </div>
                         </div>
-
-                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl">
+                        {/* Ecosystems Table */}
+                        <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
-                                        <th className="p-4 w-10">
+                                    <tr className="border-b border-slate-800 bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                        <th className="p-5 w-14 text-center">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedIds.size === links.length && links.length > 0}
-                                                onChange={handleSelectAll}
-                                                className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                                checked={selectedGroupIds.size === paginatedEcosystems.length && paginatedEcosystems.length > 0}
+                                                onChange={handleSelectAllGroups}
+                                                className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
                                             />
                                         </th>
-                                        <th className="p-4 font-semibold">Код</th>
-                                        <th className="p-4 font-semibold">Группа / Привязка</th>
-                                        <th className="p-4 font-semibold">Редирект</th>
-                                        <th className="p-4 font-semibold text-right">Действие</th>
+                                        <th className="p-5">Код / Экосистема</th>
+                                        <th className="p-5">Статистика</th>
+                                        <th className="p-5 text-right">Действия</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {paginatedLinks.map((link) => {
-                                        const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
-                                        return (
-                                            <tr key={link.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedIds.has(link.id) ? 'bg-indigo-500/10' : ''}`}>
-                                                <td className="p-4">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedIds.has(link.id)}
-                                                        onChange={() => handleToggleSelect(link.id)}
-                                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
-                                                    />
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex flex-col gap-1.5">
+                                <tbody className="divide-y divide-slate-800/50">
+                                    {paginatedEcosystems.map((item: any) => (
+                                        <tr key={item.tg_chat_id} className={`group hover:bg-slate-800/30 transition-all ${selectedGroupIds.has(item.tg_chat_id) ? 'bg-indigo-500/5' : ''}`}>
+                                            <td className="p-5 text-center align-top pt-6">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedGroupIds.has(item.tg_chat_id)}
+                                                    onChange={() => handleToggleGroupSelect(item.tg_chat_id)}
+                                                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 checked:bg-indigo-500 transition-colors cursor-pointer"
+                                                />
+                                            </td>
+                                            <td className="p-5 align-top">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
                                                         <button
-                                                            onClick={() => copyToClipboard(shortUrl, `s-${link.id}`)}
-                                                            className="text-white font-mono font-bold text-sm bg-white/5 px-2 py-1 rounded hover:bg-white/10 transition-colors flex items-center gap-2 w-fit"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (!confirm(`Создать топик с игрой в "${item.title}"?`)) return;
+
+                                                                try {
+                                                                    const res = await fetch("/api/admin/create-topic-promo", {
+                                                                        method: "POST",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ chatId: item.tg_chat_id })
+                                                                    });
+                                                                    const data = await res.json();
+                                                                    if (res.ok) {
+                                                                        alert(`Игра создана! Топик: ${data.threadId}\n\nСсылка на приложение:\n${data.appLink}`);
+                                                                    } else {
+                                                                        alert("Ошибка: " + data.error);
+                                                                    }
+                                                                } catch (err) {
+                                                                    alert("Ошибка сети");
+                                                                }
+                                                            }}
+                                                            className="p-1.5 hover:bg-yellow-500/20 text-yellow-500 rounded-lg transition-colors"
+                                                            title="Создать игру"
                                                         >
-                                                            {link.code}
-                                                            <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="11" x2="10" y2="11" /><line x1="8" y1="9" x2="8" y2="13" /><rect width="22" height="14" x="1" y="6" rx="2" ry="2" /><path d="M9 1l2 2 3.5-3.5" /><path d="M15 12h.01" /><path d="M18 11h.01" /></svg>
                                                         </button>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <select
-                                                                value={link.status || 'не распечатан'}
-                                                                onChange={(e) => handleUpdateStatus(link.code, link.id, e.target.value)}
-                                                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter border bg-transparent outline-none cursor-pointer transition-all ${link.status === 'подключен' ? 'border-green-500/20 text-green-500 bg-green-500/5' :
-                                                                    link.status === 'не подключен' ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
-                                                                        link.status === 'распечатан' ? 'border-blue-500/20 text-blue-400 bg-blue-500/5' :
-                                                                            link.status === 'архив' ? 'border-slate-500/20 text-slate-400 bg-slate-500/5' :
-                                                                                'border-slate-500/20 text-slate-500 bg-slate-500/5'
-                                                                    }`}
-                                                            >
-                                                                <option value="не распечатан" className="bg-slate-900">не распечатан</option>
-                                                                <option value="распечатан" className="bg-slate-900">распечатан</option>
-                                                                <option value="не подключен" className="bg-slate-900">не подключен</option>
-                                                                <option value="подключен" className="bg-slate-900">подключен</option>
-                                                                <option value="архив" className="bg-slate-900">архив</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div className="flex gap-2 text-[8px] text-slate-600 uppercase">
-                                                            <span>{link.clicks_count || 0} clks</span>
-                                                            <span>{link.member_count || 0} subs</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex flex-col gap-1.5 text-left">
-                                                        {editingGroup?.id === link.id ? (
-                                                            <div className="space-y-2 p-3 bg-slate-900/50 rounded-xl border border-indigo-500/30">
-                                                                <input
-                                                                    placeholder="Chat ID (напр: -100...)"
-                                                                    value={editingGroup?.tgChatId || ''}
-                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
-                                                                />
-                                                                <input
-                                                                    placeholder="Название группы"
-                                                                    value={editingGroup?.title || ''}
-                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
-                                                                />
-                                                                <input
-                                                                    placeholder="Район"
-                                                                    value={editingGroup?.district || ''}
-                                                                    onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
-                                                                    className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
-                                                                />
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={() => handleUpdateGroup(link.code, link.id)} className="flex-1 py-1 px-2 bg-indigo-600 text-white text-[10px] rounded font-bold">Save</button>
-                                                                    <button onClick={() => setEditingGroup(null)} className="py-1 px-3 bg-white/5 text-slate-500 text-[10px] rounded">Cancel</button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-0.5 max-w-[200px]">
-                                                                {link.tg_chat_id ? (
-                                                                    <>
-                                                                        <div className="text-xs font-semibold text-white truncate">{link.reviewer_name || 'Связанный чат'}</div>
-                                                                        <div className="text-[10px] text-slate-500 flex items-center gap-1">
-                                                                            <MapPin className="w-2.5 h-2.5" />
-                                                                            {link.district || 'Без района'}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2 mt-1">
-                                                                            <button
-                                                                                onClick={() => setEditingGroup({ id: link.id, tgChatId: link.tg_chat_id || '', title: link.reviewer_name || '', district: link.district || '' })}
-                                                                                className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
-                                                                            >
-                                                                                <Edit3 className="w-3 h-3" /> Ред.
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleUnlinkLink(link.code, link.id)}
-                                                                                className="text-[9px] text-red-500/70 hover:text-red-500 transition-colors flex items-center gap-1"
-                                                                                title="Отвязать группу"
-                                                                            >
-                                                                                <Link2Off className="w-3 h-3" />
-                                                                            </button>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => setEditingGroup({ id: link.id, tgChatId: '', title: '', district: '' })}
-                                                                        className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 text-[10px] font-bold hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 w-fit"
-                                                                    >
-                                                                        <LinkIcon className="w-3 h-3" /> Привязать к группе
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex flex-col gap-2 text-left">
-                                                        {editingTarget?.id === link.id ? (
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="text"
-                                                                    value={editingTarget?.value || ''}
-                                                                    onChange={(e) => editingTarget && setEditingTarget({ ...editingTarget, value: e.target.value })}
-                                                                    className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-white"
-                                                                    autoFocus
-                                                                />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingGroup(item);
+                                                            }}
+                                                            className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        {item.codes.map((code: string) => (
+                                                            <div key={code} className="flex items-center gap-1">
                                                                 <button
-                                                                    onClick={() => handleUpdateTarget(link.code, link.id)}
-                                                                    className="px-3 py-1 bg-indigo-600 text-white text-xs rounded font-bold"
+                                                                    onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
+                                                                    className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
                                                                 >
-                                                                    Save
+                                                                    {code}
+                                                                    {copiedId === `e-${code}` ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <ClipboardIcon className="w-3 h-3 opacity-50" />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUnlinkCode(code, item.title, item.tg_chat_id)}
+                                                                    className="p-1 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-md transition-colors"
+                                                                    title="Отвязать код"
+                                                                >
+                                                                    <X className="w-3 h-3" />
                                                                 </button>
                                                             </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2 group/target">
-                                                                <div className={`text-xs truncate max-w-[200px] ${link.target_url ? 'text-slate-400' : 'text-red-400 italic'}`}>
-                                                                    {link.target_url || 'Target не задан'}
-                                                                </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {editingGroup && editingGroup.tgChatId === item.tg_chat_id ? (
+                                                        <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-indigo-500/30 shadow-lg mt-2">
+                                                            <input
+                                                                value={editingGroup.title}
+                                                                onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
+                                                                placeholder="Название"
+                                                            />
+                                                            <input
+                                                                value={editingGroup.district}
+                                                                onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-white focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-600"
+                                                                placeholder="Район"
+                                                            />
+                                                            <div className="flex gap-2 pt-1">
                                                                 <button
-                                                                    onClick={() => setEditingTarget({ id: link.id, value: link.target_url || '' })}
-                                                                    className="opacity-0 group-hover/target:opacity-100 p-1 hover:bg-white/10 rounded text-slate-500 transition-all"
+                                                                    onClick={() => handleUpdateEcosystem(item.tg_chat_id)}
+                                                                    className="flex-1 py-2 bg-indigo-600 text-xs font-bold rounded-xl text-white hover:bg-indigo-500 transition-colors shadow-md"
                                                                 >
-                                                                    <Edit3 className="w-3 h-3" />
+                                                                    Сохранить
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingGroup(null)}
+                                                                    className="py-2 px-4 bg-slate-700 text-xs font-bold rounded-xl text-slate-300 hover:bg-slate-600 transition-colors"
+                                                                >
+                                                                    Отмена
                                                                 </button>
                                                             </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-1">
+                                                            <div className="flex items-center gap-2 group/title">
+                                                                <h3 className="font-semibold text-base text-white">{item.title}</h3>
+                                                                <button
+                                                                    onClick={() => setEditingGroup({
+                                                                        tgChatId: item.tg_chat_id,
+                                                                        title: item.title,
+                                                                        district: item.district
+                                                                    })}
+                                                                    className="opacity-0 group-hover/title:opacity-100 p-1.5 hover:bg-slate-800 text-slate-500 hover:text-indigo-400 rounded-lg transition-all"
+                                                                >
+                                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                                                                <MapPin className="w-3.5 h-3.5" />
+                                                                {item.district || 'Район не указан'}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-5 align-top">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex gap-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Клики</span>
+                                                            <span className="text-base font-bold text-slate-200">{item.clicks_count}</span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Люди</span>
+                                                            <span className="text-base font-bold text-slate-200">{item.member_count}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            value={item.status || 'не подключен'}
+                                                            onChange={(e) => handleEcosystemStatusChange(item.tg_chat_id, item.codes, e.target.value)}
+                                                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border appearance-none cursor-pointer outline-none ${item.status === 'подключен'
+                                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'
+                                                                }`}
+                                                        >
+                                                            <option value="активен" className="bg-slate-900 text-slate-400">АКТИВЕН</option>
+                                                            <option value="не подключен" className="bg-slate-900 text-slate-400">НЕ ПОДКЛЮЧЕН</option>
+                                                            <option value="подключен" className="bg-slate-900 text-emerald-400">ПОДКЛЮЧЕН</option>
+                                                            <option value="не распечатан" className="bg-slate-900 text-slate-400">НЕ РАСПЕЧАТАН</option>
+                                                            <option value="распечатан" className="bg-slate-900 text-slate-400">РАСПЕЧАТАН</option>
+                                                            <option value="приклеен" className="bg-slate-900 text-indigo-400">ОКЛЕЕН</option>
+                                                        </select>
+
+                                                        {item.is_stuck && (
+                                                            <div className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                                ОКЛЕЕН
+                                                            </div>
                                                         )}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    <div className="flex justify-end gap-2 text-slate-500">
+
                                                         <button
-                                                            onClick={() => downloadQR(shortUrl, `QR_${link.code}`)}
-                                                            className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
-                                                            title="Скачать QR"
+                                                            onClick={() => handleRefreshStats(item.codes[0], item.id)}
+                                                            className={`p-1 hover:bg-slate-800 rounded-lg transition-all ml-auto ${refreshingId === item.id ? 'animate-spin text-indigo-400' : 'text-slate-600 hover:text-indigo-400'}`}
+                                                            title="Обновить статистику"
                                                         >
-                                                            <QrCode className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteLink(link.id, link.code)}
-                                                            className="p-2.5 hover:bg-red-500/10 rounded-xl hover:text-red-500 transition-all"
-                                                            title="Удалить"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <HistoryIcon className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                </div>
+                                            </td>
+                                            <td className="p-5 align-top">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleToggleStuck(item.tg_chat_id, !!item.is_stuck, item.codes)}
+                                                        className={`p-2.5 rounded-xl transition-all border ${item.is_stuck
+                                                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-sm'
+                                                            : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-indigo-400'
+                                                            }`}
+                                                        title={item.is_stuck ? "Снять метку оклеен" : "Отметить оклеенным"}
+                                                    >
+                                                        <CheckCircle2 className={`w-5 h-5 ${item.is_stuck ? 'fill-indigo-500/20' : ''}`} />
+                                                    </button>
+                                                    <a
+                                                        href={links.find(l => l.tg_chat_id === item.tg_chat_id)?.target_url}
+                                                        target="_blank"
+                                                        className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all border border-transparent"
+                                                        title="Открыть в Telegram"
+                                                    >
+                                                        <ExternalLink className="w-5 h-5" />
+                                                    </a>
+                                                    <button
+                                                        onClick={() => handleDeleteEcosystem(item.tg_chat_id, item.codes)}
+                                                        className="p-2.5 hover:bg-red-500/10 rounded-xl text-slate-400 hover:text-red-400 transition-all border border-transparent"
+                                                        title="Удалить экосистему"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
 
-                        {/* Pagination Controls for QR Links */}
-                        {totalQrPages > 1 && (
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
                             <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
                                 <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                                    Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalQrPages}</span>
-                                    <span className="ml-2 text-slate-600">({filteredAllLinks.length} всего)</span>
+                                    Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalPages}</span>
+                                    <span className="ml-2 text-slate-600">({filteredEcosystems.length} всего)</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -2515,8 +1966,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
                                     <button
-                                        onClick={() => setCurrentPage(prev => Math.min(totalQrPages, prev + 1))}
-                                        disabled={currentPage === totalQrPages}
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage === totalPages}
                                         className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     >
                                         <ChevronRight className="w-4 h-4" />
@@ -2525,101 +1976,663 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             </div>
                         )}
                     </div>
-                </div>
-            )
-            }
-            {/* Topic Action Modal - Moved to global scope */}
-            {
-                showTopicModal && (
-                    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                        <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
-                                <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                )}
+            </div>
+        ) : activeTab === 'map' ? (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-bold">Карта-Разведчик</h2>
+                            <p className="text-slate-500 text-sm">Найдите дома на карте и добавьте их в очередь создания чатов.</p>
+                        </div>
+                        {scoutedAddresses.length > 0 && (
+                            <button
+                                onClick={handlePushScoutedToQueue}
+                                disabled={batchLoading}
+                                className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white flex items-center gap-3 transition-all shadow-xl shadow-indigo-500/20"
+                            >
+                                {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />}
+                                Добавить в очередь ({scoutedAddresses.length})
+                            </button>
+                        )}
+                    </div>
+
+                    <MapScout onAddressesFound={setScoutedAddresses} />
+
+                    {scoutedAddresses.length > 0 && (
+                        <div className="mt-8 space-y-4 text-left">
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Предпросмотр адресов для очереди</h3>
+                                <button onClick={() => setScoutedAddresses([])} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition-all">Очистить список</button>
                             </div>
-
-                            <div className="space-y-4 text-left">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
-                                    <select
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                        value={topicActionData.topicName}
-                                        onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
-                                    >
-                                        <option value="📢 Новости">📢 Новости</option>
-                                        <option value="🗣 Флудилка">🗣 Флудилка</option>
-                                        <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
-                                        <option value="🛠 Услуги">🛠 Услуги</option>
-                                        <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
-                                    </select>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
-                                    <textarea
-                                        className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                        placeholder="Введите текст сообщения..."
-                                        value={topicActionData.message}
-                                        onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
-                                    />
-                                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={topicActionData.pin}
-                                            onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
-                                            className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
-                                        />
-                                        <span className="text-xs text-slate-400">Закрепить сообщение</span>
-                                    </label>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5 pt-2">
-                                    <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
-                                    <div className="flex gap-2">
+                            <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                {scoutedAddresses.map((addr, idx) => (
+                                    <div key={idx} className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group transition-all hover:border-white/20">
+                                        <div className="flex-1 w-full space-y-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Название / Адрес</span>
+                                                <input
+                                                    value={addr.title}
+                                                    onChange={(e) => handleUpdateScouted(idx, { title: e.target.value })}
+                                                    className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="w-full md:w-64 space-y-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Район</span>
+                                                <input
+                                                    value={addr.district || ""}
+                                                    onChange={(e) => handleUpdateScouted(idx, { district: e.target.value })}
+                                                    placeholder="Не указан"
+                                                    className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                                                />
+                                            </div>
+                                        </div>
                                         <button
-                                            onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
-                                            className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                            onClick={() => handleDeleteScouted(idx)}
+                                            className="p-3 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all self-end md:self-center"
                                         >
-                                            Закрыть (Read-Only)
-                                        </button>
-                                        <button
-                                            onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
-                                            className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
-                                        >
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        ) : activeTab === 'stats' ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <StatisticsTab />
+            </div>
+        ) : activeTab === 'prizes' ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <PrizesTab />
+            </div>
+        ) : (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
+                <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                    <QrCode className="w-10 h-10 text-indigo-400" />
+                </div>
+
+                <div className="max-w-md mx-auto space-y-2">
+                    <h2 className="text-2xl font-bold">Очередь создания чатов</h2>
+                    <p className="text-slate-400 text-sm">Введите список чатов (Название | Район) по одному на строку.</p>
+                </div>
+
+                <div className="max-w-2xl mx-auto space-y-4">
+                    <textarea
+                        value={batchInput}
+                        onChange={(e) => setBatchInput(e.target.value)}
+                        placeholder="ЖК Риверсайд | Приморский&#10;ЖК Квартал | Центральный"
+                        className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white"
+                    />
+
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
+                            <span className="text-[10px] text-slate-500 uppercase font-bold pl-2">Интервал:</span>
+                            {[10, 15, 20, 30].map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => setBatchInterval(m)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${batchInterval === m ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    {m} мин
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={handleAddToQueue}
+                            disabled={batchLoading || !batchInput.trim()}
+                            className="h-12 px-8 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl"
+                        >
+                            {batchLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    Добавить в очередь ({batchInput.split('\n').filter(l => l.trim()).length})
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Current Queue Display */}
+                {queue.length > 0 && (
+                    <div className="max-w-4xl mx-auto mt-12 space-y-4 text-left">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                    <Clock className="w-4 h-4" />
+                                    <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
                                 </div>
+                                {countdown && (
+                                    <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                        Следующий ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleProcessQueue}
+                                disabled={batchLoading}
+                                className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold rounded-xl transition-all flex items-center gap-2"
+                            >
+                                {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                Обработать сейчас
+                            </button>
+                        </div>
+
+                        <div className="grid gap-2">
+                            {queue.slice(0, 10).map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group">
+                                    {editingQueueItem?.id === item.id ? (
+                                        <div className="flex-1 flex gap-2">
+                                            <input
+                                                className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                value={editingQueueItem.title}
+                                                onChange={(e) => setEditingQueueItem({ ...editingQueueItem, title: e.target.value })}
+                                            />
+                                            <input
+                                                className="w-32 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                value={editingQueueItem.district}
+                                                onChange={(e) => setEditingQueueItem({ ...editingQueueItem, district: e.target.value })}
+                                            />
+                                            <button onClick={() => handleUpdateQueueItem(editingQueueItem)} className="text-green-500 hover:text-green-400 p-1"><CheckSquare className="w-4 h-4" /></button>
+                                            <button onClick={() => setEditingQueueItem(null)} className="text-slate-500 hover:text-slate-400 p-1"><X className="w-4 h-4" /></button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-white">{item.title}</span>
+                                                <span className="text-[10px] text-slate-500">{item.district}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex flex-col text-right">
+                                                    <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
+                                                    <span className="text-xs font-mono text-indigo-400">
+                                                        {new Date(item.scheduled_at).toLocaleTimeString()}
+                                                    </span>
+                                                </div>
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
+                                                    item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-slate-500/20 text-slate-500'
+                                                    }`}>
+                                                    {item.status}
+                                                </span>
+                                                {item.status === 'pending' && (
+                                                    <div className="hidden group-hover:flex items-center gap-1">
+                                                        <button onClick={() => setEditingQueueItem(item)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={() => handleDeleteQueueItem(item.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                            {queue.length > 10 && (
+                                <div className="text-center text-[10px] text-slate-600 uppercase tracking-widest pt-2">
+                                    И еще {queue.length - 10} чатов впереди...
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+
+
+            <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
+                <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                    <QrCode className="w-10 h-10 text-indigo-400" />
+                </div>
+
+                <div className="max-w-md mx-auto space-y-2">
+                    <h2 className="text-2xl font-bold">Массовая генерация QR</h2>
+                    <p className="text-slate-400 text-sm">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                    <button
+                        onClick={handleBatchGenerate}
+                        disabled={batchLoading}
+                        className="flex-1 h-16 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl text-lg"
+                    >
+                        {batchLoading ? (
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                        ) : (
+                            <>
+                                <Send className="w-5 h-5" />
+                                Сгенерировать 200 кодов
+                            </>
+                        )}
+                    </button>
+
+                    {selectedIds.size > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="relative group">
+                                <select
+                                    onChange={(e) => handleBulkUpdateStatus(e.target.value)}
+                                    value=""
+                                    className="h-16 px-6 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-sm border-none outline-none appearance-none cursor-pointer"
+                                >
+                                    <option value="" disabled>Сменить статус ({selectedIds.size})</option>
+                                    <option value="не распечатан">не распечатан</option>
+                                    <option value="распечатан">распечатан</option>
+                                    <option value="не подключен">не подключен</option>
+                                    <option value="подключен">подключен</option>
+                                    <option value="архив">архив</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
+                                    <Edit3 className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handlePrintSelected}
+                                className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
+                            >
+                                <Printer className="w-6 h-6" />
+                                Печать
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {batchResult && (
+                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                        Готово! Создано {batchResult.count} ссылок.
+                    </div>
+                )}
+            </div>
+
+            <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2 text-slate-400">
+                        <QrCode className="w-4 h-4" />
+                        <h3 className="text-sm font-medium uppercase tracking-wider">База всех ссылок</h3>
+                    </div>
+
+                    <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-tighter shrink-0">
+                        <button
+                            onClick={() => setStuckFilter('all')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'all' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Все
+                        </button>
+                        <button
+                            onClick={() => setStuckFilter('stuck')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'stuck' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Оклеены
+                        </button>
+                        <button
+                            onClick={() => setStuckFilter('not_stuck')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${stuckFilter === 'not_stuck' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Не оклеены
+                        </button>
+                    </div>
+
+                    <div className="flex flex-1 items-center gap-2 max-w-2xl ml-4">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                            <input
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Поиск по коду/адресу..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                            />
+                        </div>
+
+                        <div className="relative w-48 group">
+                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                            <input
+                                value={groupSearchTerm}
+                                onChange={(e) => setGroupSearchTerm(e.target.value)}
+                                placeholder="По Группе..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
+                            />
+                        </div>
+
+                        <div className="relative shrink-0">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as any)}
+                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider outline-none cursor-pointer hover:bg-white/10"
+                            >
+                                <option value="all" className="bg-slate-900">СТАТУС: ЛЮБОЙ</option>
+                                <option value="не распечатан" className="bg-slate-900">НЕ РАСПЕЧАТАН</option>
+                                <option value="распечатан" className="bg-slate-900">РАСПЕЧАТАН</option>
+                                <option value="не подключен" className="bg-slate-900">НЕ ПОДКЛЮЧЕН</option>
+                                <option value="подключен" className="bg-slate-900">ПОДКЛЮЧЕН</option>
+                                <option value="активен" className="bg-slate-900">АКТИВЕН</option>
+                                <option value="приклеен" className="bg-slate-900">ПРИКЛЕЕН</option>
+                                <option value="архив" className="bg-slate-900">АРХИВ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="text-xs text-slate-500 uppercase tracking-widest ml-4">
+                        Всего: {filteredAllLinks.length}
+                    </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-slate-500">
+                                <th className="p-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.size === links.length && links.length > 0}
+                                        onChange={handleSelectAll}
+                                        className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                    />
+                                </th>
+                                <th className="p-4 font-semibold">Код</th>
+                                <th className="p-4 font-semibold">Группа / Привязка</th>
+                                <th className="p-4 font-semibold">Редирект</th>
+                                <th className="p-4 font-semibold text-right">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedLinks.map((link) => {
+                                const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
+                                return (
+                                    <tr key={link.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedIds.has(link.id) ? 'bg-indigo-500/10' : ''}`}>
+                                        <td className="p-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(link.id)}
+                                                onChange={() => handleToggleSelect(link.id)}
+                                                className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                            />
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex flex-col gap-1.5">
+                                                <button
+                                                    onClick={() => copyToClipboard(shortUrl, `s-${link.id}`)}
+                                                    className="text-white font-mono font-bold text-sm bg-white/5 px-2 py-1 rounded hover:bg-white/10 transition-colors flex items-center gap-2 w-fit"
+                                                >
+                                                    {link.code}
+                                                    <ExternalLink className={`w-3 h-3 ${copiedId === `s-${link.id}` ? 'text-green-400' : 'text-slate-500'}`} />
+                                                </button>
+
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        value={link.status || 'не распечатан'}
+                                                        onChange={(e) => handleUpdateStatus(link.code, link.id, e.target.value)}
+                                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter border bg-transparent outline-none cursor-pointer transition-all ${link.status === 'подключен' ? 'border-green-500/20 text-green-500 bg-green-500/5' :
+                                                            link.status === 'не подключен' ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
+                                                                link.status === 'распечатан' ? 'border-blue-500/20 text-blue-400 bg-blue-500/5' :
+                                                                    link.status === 'архив' ? 'border-slate-500/20 text-slate-400 bg-slate-500/5' :
+                                                                        'border-slate-500/20 text-slate-500 bg-slate-500/5'
+                                                            }`}
+                                                    >
+                                                        <option value="не распечатан" className="bg-slate-900">не распечатан</option>
+                                                        <option value="распечатан" className="bg-slate-900">распечатан</option>
+                                                        <option value="не подключен" className="bg-slate-900">не подключен</option>
+                                                        <option value="подключен" className="bg-slate-900">подключен</option>
+                                                        <option value="архив" className="bg-slate-900">архив</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="flex gap-2 text-[8px] text-slate-600 uppercase">
+                                                    <span>{link.clicks_count || 0} clks</span>
+                                                    <span>{link.member_count || 0} subs</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex flex-col gap-1.5 text-left">
+                                                {editingGroup?.id === link.id ? (
+                                                    <div className="space-y-2 p-3 bg-slate-900/50 rounded-xl border border-indigo-500/30">
+                                                        <input
+                                                            placeholder="Chat ID (напр: -100...)"
+                                                            value={editingGroup?.tgChatId || ''}
+                                                            onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, tgChatId: e.target.value })}
+                                                            className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
+                                                        />
+                                                        <input
+                                                            placeholder="Название группы"
+                                                            value={editingGroup?.title || ''}
+                                                            onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                                            className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
+                                                        />
+                                                        <input
+                                                            placeholder="Район"
+                                                            value={editingGroup?.district || ''}
+                                                            onChange={(e) => editingGroup && setEditingGroup({ ...editingGroup, district: e.target.value })}
+                                                            className="w-full bg-slate-950 border border-white/5 rounded px-2 py-1.5 text-[11px] outline-none text-white"
+                                                        />
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleUpdateGroup(link.code, link.id)} className="flex-1 py-1 px-2 bg-indigo-600 text-white text-[10px] rounded font-bold">Save</button>
+                                                            <button onClick={() => setEditingGroup(null)} className="py-1 px-3 bg-white/5 text-slate-500 text-[10px] rounded">Cancel</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col gap-0.5 max-w-[200px]">
+                                                        {link.tg_chat_id ? (
+                                                            <>
+                                                                <div className="text-xs font-semibold text-white truncate">{link.reviewer_name || 'Связанный чат'}</div>
+                                                                <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                                                                    <MapPin className="w-2.5 h-2.5" />
+                                                                    {link.district || 'Без района'}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <button
+                                                                        onClick={() => setEditingGroup({ id: link.id, tgChatId: link.tg_chat_id || '', title: link.reviewer_name || '', district: link.district || '' })}
+                                                                        className="text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                                                                    >
+                                                                        <Edit3 className="w-3 h-3" /> Ред.
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleUnlinkLink(link.code, link.id)}
+                                                                        className="text-[9px] text-red-500/70 hover:text-red-500 transition-colors flex items-center gap-1"
+                                                                        title="Отвязать группу"
+                                                                    >
+                                                                        <Link2Off className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => setEditingGroup({ id: link.id, tgChatId: '', title: '', district: '' })}
+                                                                className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400 text-[10px] font-bold hover:bg-indigo-500/20 transition-all flex items-center gap-1.5 w-fit"
+                                                            >
+                                                                <LinkIcon className="w-3 h-3" /> Привязать к группе
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex flex-col gap-2 text-left">
+                                                {editingTarget?.id === link.id ? (
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={editingTarget?.value || ''}
+                                                            onChange={(e) => editingTarget && setEditingTarget({ ...editingTarget, value: e.target.value })}
+                                                            className="flex-1 bg-slate-900 border border-indigo-500/50 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-white"
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            onClick={() => handleUpdateTarget(link.code, link.id)}
+                                                            className="px-3 py-1 bg-indigo-600 text-white text-xs rounded font-bold"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 group/target">
+                                                        <div className={`text-xs truncate max-w-[200px] ${link.target_url ? 'text-slate-400' : 'text-red-400 italic'}`}>
+                                                            {link.target_url || 'Target не задан'}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setEditingTarget({ id: link.id, value: link.target_url || '' })}
+                                                            className="opacity-0 group-hover/target:opacity-100 p-1 hover:bg-white/10 rounded text-slate-500 transition-all"
+                                                        >
+                                                            <Edit3 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex justify-end gap-2 text-slate-500">
+                                                <button
+                                                    onClick={() => downloadQR(shortUrl, `QR_${link.code}`)}
+                                                    className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
+                                                    title="Скачать QR"
+                                                >
+                                                    <QrCode className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteLink(link.id, link.code)}
+                                                    className="p-2.5 hover:bg-red-500/10 rounded-xl hover:text-red-500 transition-all"
+                                                    title="Удалить"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination Controls for QR Links */}
+                {totalQrPages > 1 && (
+                    <div className="flex items-center justify-between px-2 pt-4 border-t border-white/5">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                            Страница <span className="text-white">{currentPage}</span> из <span className="text-white">{totalQrPages}</span>
+                            <span className="ml-2 text-slate-600">({filteredAllLinks.length} всего)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalQrPages, prev + 1))}
+                                disabled={currentPage === totalQrPages}
+                                className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+    }
+    {/* Topic Action Modal - Moved to global scope */ }
+    {
+        showTopicModal && (
+            <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold">Управление топиками ({selectedGroupIds.size})</h2>
+                        <button onClick={() => setShowTopicModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                    </div>
+
+                    <div className="space-y-4 text-left">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Выберите топик</label>
+                            <select
+                                className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                value={topicActionData.topicName}
+                                onChange={(e) => setTopicActionData({ ...topicActionData, topicName: e.target.value })}
+                            >
+                                <option value="📢 Новости">📢 Новости</option>
+                                <option value="🗣 Флудилка">🗣 Флудилка</option>
+                                <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
+                                <option value="🛠 Услуги">🛠 Услуги</option>
+                                <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Сообщение (необязательно)</label>
+                            <textarea
+                                className="w-full h-32 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                placeholder="Введите текст сообщения..."
+                                value={topicActionData.message}
+                                onChange={(e) => setTopicActionData({ ...topicActionData, message: e.target.value })}
+                            />
+                            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={topicActionData.pin}
+                                    onChange={(e) => setTopicActionData({ ...topicActionData, pin: e.target.checked })}
+                                    className="w-4 h-4 rounded border-white/10 bg-white/5 checked:bg-indigo-500"
+                                />
+                                <span className="text-xs text-slate-400">Закрепить сообщение</span>
+                            </label>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 pt-2">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 pl-1">Доступ к топику</label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'close' ? undefined : 'close' })}
+                                    className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'close' ? 'bg-red-500/20 border-red-500/50 text-red-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                >
+                                    Закрыть (Read-Only)
+                                </button>
+                                <button
+                                    onClick={() => setTopicActionData({ ...topicActionData, closedAction: topicActionData.closedAction === 'open' ? undefined : 'open' })}
+                                    className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${topicActionData.closedAction === 'open' ? 'bg-green-500/20 border-green-500/50 text-green-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                >
+                                </button>
                             </div>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            </div>
+        )
+    }
 
-            {/* Bulk Actions Fixed Bar */}
-            {
-                selectedGroupIds.size > 0 && (
-                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
-                            <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
-                        </div>
-                        <div className="w-px h-8 bg-white/10 mx-2" />
-                        <button
-                            onClick={() => setShowTopicModal(true)}
-                            className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
-                        >
-                            <MessageSquare className="w-4 h-4" />
-                            Управление топиками
-                        </button>
-                        <button
-                            onClick={() => setSelectedGroupIds(new Set())}
-                            className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                )
-            }
+    {/* Bulk Actions Fixed Bar */ }
+    {
+        selectedGroupIds.size > 0 && (
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 px-6 py-4 bg-slate-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-tighter">Выбрано групп</span>
+                    <span className="text-lg font-black text-white">{selectedGroupIds.size}</span>
+                </div>
+                <div className="w-px h-8 bg-white/10 mx-2" />
+                <button
+                    onClick={() => setShowTopicModal(true)}
+                    className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                >
+                    <MessageSquare className="w-4 h-4" />
+                    Управление топиками
+                </button>
+                <button
+                    onClick={() => setSelectedGroupIds(new Set())}
+                    className="p-3 hover:bg-white/5 text-slate-500 hover:text-white rounded-xl transition-all"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
+        )
+    }
         </div >
     );
 }

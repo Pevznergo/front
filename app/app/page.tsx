@@ -185,18 +185,18 @@ export default function WebAppPage() {
 
 
     return (
-        <main className="min-h-screen bg-[#1c1c1e] text-white overflow-hidden relative font-sans selection:bg-indigo-500/30">
+        <main className="min-h-screen bg-[#ff5500] text-white overflow-hidden relative font-sans selection:bg-white/30">
             {/* Header */}
             <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-start pointer-events-none">
                 {/* User Info */}
-                <div className="flex items-center gap-3 pointer-events-auto bg-black/40 backdrop-blur-md p-1.5 pr-4 rounded-full border border-white/5">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg">
+                <div className="flex items-center gap-3 pointer-events-auto bg-black/20 backdrop-blur-md p-1.5 pr-4 rounded-full border border-white/10 shadow-lg">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-b from-white to-gray-200 flex items-center justify-center text-sm font-bold shadow-md text-black border-2 border-white">
                         {user?.first_name?.[0] || 'U'}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white/90 leading-none mb-0.5">{user?.first_name || 'User'}</span>
+                        <span className="text-xs font-bold text-white leading-none mb-0.5 drop-shadow-sm">{user?.first_name || 'User'}</span>
                         <div className="flex items-center gap-1">
-                            <span className="text-[10px] bg-yellow-400/20 text-yellow-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-mono">
+                            <span className="text-[10px] bg-black/40 text-yellow-300 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono border border-white/10 shadow-inner">
                                 ⭐️ {user?.points || 0}
                             </span>
                         </div>
@@ -204,32 +204,32 @@ export default function WebAppPage() {
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex flex-col gap-3 pointer-events-auto">
+                <div className="flex flex-col gap-4 pointer-events-auto">
                     {/* Daily Bonus Trigger */}
                     <button
                         onClick={() => setIsDailyOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+                        className="flex flex-col items-center gap-1 group active:scale-95 transition-transform"
                     >
-                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="w-14 h-14 bg-gradient-to-b from-orange-400 to-orange-600 rounded-2xl border-b-4 border-orange-800 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:brightness-110 transition-all">
+                            <div className="absolute inset-x-0 top-0 h-[2px] bg-white/40" />
                             {isDailyAvailable ? (
                                 <div className="absolute inset-0 bg-yellow-400/20 animate-pulse" />
                             ) : null}
-                            <Coins className={`w-6 h-6 drop-shadow-md ${isDailyAvailable ? 'text-yellow-300' : 'text-slate-400'}`} />
+                            <Coins className={`w-7 h-7 drop-shadow-sm ${isDailyAvailable ? 'text-yellow-100' : 'text-white'}`} />
                         </div>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Бонус</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-wide drop-shadow-md bg-black/20 px-2 py-0.5 rounded-full">Бонус</span>
                     </button>
 
                     {/* Prizes */}
                     <button
                         onClick={() => setIsPrizesOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+                        className="flex flex-col items-center gap-1 group active:scale-95 transition-transform"
                     >
-                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
+                        <div className="w-14 h-14 bg-gradient-to-b from-teal-400 to-teal-600 rounded-2xl border-b-4 border-teal-800 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:brightness-110 transition-all">
+                            <div className="absolute inset-x-0 top-0 h-[2px] bg-white/40" />
+                            <Gift className="w-7 h-7 text-white drop-shadow-sm" />
                         </div>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-wide drop-shadow-md bg-black/20 px-2 py-0.5 rounded-full">Призы</span>
                     </button>
 
                 </div>
@@ -244,34 +244,34 @@ export default function WebAppPage() {
                     onClick={handleSpin}
                     disabled={spinning || !canSpin}
                     className={`
-                        w-full h-[52px] rounded-2xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
-                        shadow-[0_4px_0_rgba(255,255,255,0.2)] active:shadow-none active:translate-y-[4px]
-                        transition-all duration-200 border-2 border-white/10
+                        w-full h-16 rounded-3xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
+                        shadow-[0_6px_0_#ccc,0_15px_20px_rgba(0,0,0,0.2)] active:shadow-[0_2px_0_#ccc] active:translate-y-[4px]
+                        transition-all duration-150 border-2 border-white
                         ${!canSpin
-                            ? 'bg-black text-white/50'
-                            : 'bg-black text-white hover:bg-[#1a1a1a]'}
+                            ? 'bg-gray-200 text-gray-400 border-gray-300'
+                            : 'bg-white text-black hover:bg-gray-50'}
                     `}
                 >
                     {spinning ? (
                         <span className="animate-pulse opacity-50">КРУТИМ...</span>
                     ) : canSpin ? (
                         <>
-                            <span>ВРАЩАТЬ ЗА 10</span>
-                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                <span className="font-serif font-bold text-xs">$</span>
+                            <span className="drop-shadow-sm">НУЖНО 10</span>
+                            <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_2px_0_#ca8a04] border border-yellow-500 text-black">
+                                <span className="font-serif font-black text-sm">$</span>
                             </div>
                         </>
                     ) : (
                         <>
                             <span>НУЖНО 10</span>
-                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner text-black">
-                                <span className="font-serif font-bold text-xs">$</span>
+                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center shadow-inner text-gray-500">
+                                <span className="font-serif font-bold text-sm">$</span>
                             </div>
                         </>
                     )}
                 </button>
-                <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
-                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
+                <p className="text-center text-white/60 text-[10px] mt-4 uppercase tracking-wider font-bold drop-shadow-md">
+                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white decoration-white/50">Правилами</a>
                 </p>
             </div>
 
