@@ -164,6 +164,10 @@ function StatisticsTab() {
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
+            </div>
+        </div>
+    );
+}
 
 
 
