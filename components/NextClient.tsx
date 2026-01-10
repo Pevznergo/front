@@ -1983,9 +1983,20 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <tr key={prize.id} className="group hover:bg-slate-800/30 transition-all">
                                             <td className="p-5">
                                                 <div className="flex items-center gap-3">
-                                                    {prize.image_url && (
-                                                        <img src={prize.image_url} alt={prize.name} className="w-10 h-10 object-cover rounded-lg" />
-                                                    )}
+                                                    {prize.image_url ? (
+                                                        <img
+                                                            src={prize.image_url}
+                                                            alt={prize.name}
+                                                            className="w-10 h-10 object-cover rounded-lg bg-slate-800"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div className={`w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center ${prize.image_url ? 'hidden' : ''}`}>
+                                                        <Gift className="w-5 h-5 text-slate-500" />
+                                                    </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-semibold text-white">{prize.name}</span>
                                                         {prize.description && <span className="text-xs text-slate-500 line-clamp-1">{prize.description}</span>}
