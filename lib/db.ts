@@ -299,8 +299,15 @@ export async function initDatabase() {
 
     // Migration: Add missing columns to user_prizes
     try {
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS telegram_id BIGINT`;
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS prize_id INTEGER`;
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
       await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS expiry_at TIMESTAMP`;
       await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS promo_code VARCHAR(255)`;
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS is_used BOOLEAN DEFAULT FALSE`;
+
+      // Ensure constraints exist (Postgres doesn't support IF NOT EXISTS for constraints easily in one line, 
+      // so we assume if column exists, FK might need manual check, but usually adding columns is the main issue)
     } catch (e) {
       console.warn('Migration warning for user_prizes:', e)
     }
