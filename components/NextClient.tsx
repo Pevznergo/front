@@ -11,7 +11,7 @@ import {
     X,
     ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
-    Clipboard as ClipboardIcon
+    Clipboard as ClipboardIcon, Plus, Gift, Edit
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -434,9 +434,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('ecosystem');
-    const [batchLoading, setBatchLoading] = useState(false);
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
