@@ -10,11 +10,12 @@ export async function GET(req: Request) {
         const initData = searchParams.get('initData')
 
         // Fetch "Active" Prizes (Can Win) - PUBLIC INFO
-        const activePrizes = await sql`
+        // Fetch ALL and filter in JS to avoid SQL type mismatches (bool vs int)
+        const allPrizes = await sql`
             SELECT * FROM prizes 
-            WHERE is_active = TRUE 
             ORDER BY probability ASC
         `
+        const activePrizes = allPrizes.filter((p: any) => p.is_active === true || p.is_active === 1 || p.is_active === 'true');
         // Removed "AND probability > 0" to show all active prizes even if prob is 0 (e.g. manual grant)
         // Or if you want to hide 0 prob items from "Can Win", keep it. The user said "not show prizes", maybe they put 0?
         // Let's keep it lenient: show all active.
@@ -59,6 +60,6 @@ export async function GET(req: Request) {
 
     } catch (error: any) {
         console.error('User prizes error:', error)
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+        return NextResponse.json({ error: error.message || 'Internal Error' }, { status: 500 })
     }
 }

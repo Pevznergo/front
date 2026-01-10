@@ -82,17 +82,18 @@ export default function WebAppPage() {
             setLoading(true);
             fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}`)
                 .then(async res => {
-                    if (!res.ok) throw new Error('Network response was not ok');
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error || 'Network response was not ok');
+                    }
                     const data = await res.json();
-                    if (data.activePrizes && data.activePrizes.length > 0) {
+                    if (data.activePrizes) {
                         setPrizes(data.activePrizes);
-                    } else {
-                        throw new Error('No active prizes found');
                     }
                 })
                 .catch(err => {
                     console.error("Failed to fetch prizes", err);
-                    alert("Failed to load prizes. Please check connection.");
+                    alert(`Failed to load prizes: ${err.message}`);
                 })
                 .finally(() => setLoading(false));
         } else {
