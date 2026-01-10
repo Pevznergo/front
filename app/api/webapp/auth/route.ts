@@ -42,7 +42,7 @@ VALUES(
 )
     `
             return NextResponse.json({
-                user: { ...user, points: 20 },
+                user: { ...user, points: 20, daily_streak: 0, last_daily_claim: null },
                 isNew: true,
                 message: 'User created users + 20 points'
             })

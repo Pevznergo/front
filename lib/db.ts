@@ -234,10 +234,18 @@ export async function initDatabase() {
         username VARCHAR(255),
         points INTEGER DEFAULT 0,
         spins_count INTEGER DEFAULT 0,
+        daily_streak INTEGER DEFAULT 0,
+        last_daily_claim TIMESTAMP,
         last_visit TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Migration for existing users
+    try {
+      await sqlConnection`ALTER TABLE app_users ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0`;
+      await sqlConnection`ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_daily_claim TIMESTAMP`;
+    } catch (e) { }
 
     // Prizes table
     await sqlConnection`

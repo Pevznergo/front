@@ -48,6 +48,9 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
         };
     }, []);
 
+    // Refs for items to apply transforming
+    const itemsRef = useRef<(HTMLDivElement | null)[]>([]);
+
     // --- ANIMATION ENGINE (requestAnimationFrame) ---
     // This runs OUTSIDE the React Render Loop for 60fps smoothness
     const animateScroll = (startPos: number, endPos: number, duration: number, onComplete?: () => void) => {
@@ -68,6 +71,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             if (stripRef.current) {
                 // Force GPU layer with translate3d
                 stripRef.current.style.transform = `translate3d(0, -${currentOffset}px, 0)`;
+                updateItemScales(currentOffset);
             }
 
             if (progress < 1) {
@@ -79,6 +83,60 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
 
         animationRef.current = requestAnimationFrame(tick);
     };
+
+    // Helper to update scales based on distance from center
+    const updateItemScales = (offset: number) => {
+        if (!stripRef.current) return;
+
+        // Strip center position relative to top of strip
+        // Viewport center is at 50% of container height.
+        // Container height is what? It's "h-full" in parent. Let's assume window height or parent height.
+        // The strip is centered vertically in parent with "top: 50%, marginTop: -CARD_HEIGHT/2".
+        // Actually, logic:
+        // The "Center" of the viewframe corresponds to `offset`.
+        // Because we translate(0, -offset).
+        // So the item at `offset` is exactly in the middle of the "slot".
+
+        // Iterate all items
+        itemsRef.current.forEach((el, index) => {
+            if (!el) return;
+
+            // Item center position in the strip
+            const itemCenter = index * ITEM_SIZE + CARD_HEIGHT / 2;
+
+            // Current "Visual Center" in the strip coordinates is `offset + CARD_HEIGHT/2`?
+            // Wait. We translate strip up by `offset`. 
+            // So pixel `offset` of the strip aligns with the top of the view container (or roughly the window center if we ignored the top:50% logic).
+            // Let's refine.
+            // stripRef style: top: 50%, marginTop: -CARD_HEIGHT/2.
+            // visual_center_y = 0 relative to that origin.
+            // Effect check: translate is -offset.
+            // So the point in the strip at `y = offset` is at local y=0.
+
+            // So we want distance between `index * ITEM_SIZE` (item top) and `offset`.
+            // Ideally distance between Item Center and Offset Center.
+            // Item Center = index * ITEM_SIZE + CARD_HEIGHT/2.
+            // Target Center = offset + CARD_HEIGHT/2.
+
+            const dist = Math.abs(itemCenter - (offset + CARD_HEIGHT / 2));
+
+            // Max distance to affect scale. Say 1.5 items away.
+            const maxDist = ITEM_SIZE * 1.5;
+
+            let scale = 0.75; // Default small
+
+            if (dist < maxDist) {
+                // Interpolate from 0.75 to 1.0
+                // dist 0 -> 1.0
+                // dist maxDist -> 0.75
+                const ratio = 1 - (dist / maxDist);
+                scale = 0.75 + (0.25 * ratio);
+            }
+
+            el.style.transform = `scale(${scale})`;
+            // Optional: Adjust opacity or blur dynamically too if needed, but scale is the request.
+        });
+    }
 
     // --- SPIN LOGIC ---
     useEffect(() => {
@@ -99,6 +157,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             // Instant Reset to start position (invisible jump if items match)
             if (stripRef.current) {
                 stripRef.current.style.transform = `translate3d(0, -${startOffset}px, 0)`;
+                updateItemScales(startOffset);
             }
 
             // Start Animation
@@ -117,6 +176,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             const initialPixelOffset = startIdx * ITEM_SIZE;
             currentOffsetRef.current = initialPixelOffset;
             stripRef.current.style.transform = `translate3d(0, -${initialPixelOffset}px, 0)`;
+            updateItemScales(initialPixelOffset);
         }
     }, [prizes.length, ITEM_SIZE]);
 
@@ -143,6 +203,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                         currentOffsetRef.current = resetOffset;
                         if (stripRef.current) {
                             stripRef.current.style.transform = `translate3d(0, -${resetOffset}px, 0)`;
+                            updateItemScales(resetOffset);
                         }
                     }
                 });
@@ -196,7 +257,8 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                 {extendedPrizes.map((prize, i) => (
                     <div
                         key={`${prize.id}-${i}`}
-                        className="flex-shrink-0 relative transition-transform duration-300 transform"
+                        ref={el => { itemsRef.current[i] = el; }}
+                        className="flex-shrink-0 relative transition-transform duration-300 transform origin-center"
                         style={{ width: '85%', height: CARD_HEIGHT }}
                     >
                         {/* Card Design */}

@@ -345,11 +345,14 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         const associatedLinks = links.filter(l => l.tg_chat_id === eco.tg_chat_id);
         const codes = associatedLinks.map(l => l.code);
         const totalClicks = associatedLinks.reduce((sum, l) => sum + (l.clicks_count || 0), 0);
+        // Fix: Derive stuck status from links since it's not on the ecosystem record itself
+        const isStuck = associatedLinks.some(l => l.is_stuck);
 
         return {
             ...eco,
             codes,
             total_clicks: totalClicks,
+            is_stuck: isStuck,
             // For searchability by code:
             code: codes.join(', ')
         };
