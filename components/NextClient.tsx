@@ -660,7 +660,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         ЧАТ СОСЕДЕЙ🏠
                                     </h1>
                                     <div class="features">
-                                    КРУТИ КОЛЕСО ПРИЗОВ КАЖДЫЙ ДЕНЬ
+                                    КРУТИ КОЛЕСО ПРИЗОВ КАЖДЫЙ ДЕНЬ:
                                     </div>
                                     <div class="prizes">
                                         WB/OZON/ iPhone
