@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import SlotMachine from '@/components/webapp/SlotMachine'
 import DailyBonus from '@/components/webapp/DailyBonus'
 import { Loader2, Gift, Target, Coins } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
+import WinModal from '@/components/webapp/WinModal'
+import PrizesModal from '@/components/webapp/PrizesModal'
 
 // Define types locally for now
 interface Prize {
@@ -29,6 +32,7 @@ export default function WebAppPage() {
     const [spinning, setSpinning] = useState(false)
     const [winIndex, setWinIndex] = useState<number | null>(null)
     const [winResult, setWinResult] = useState<Prize | null>(null)
+    const [isPrizesOpen, setIsPrizesOpen] = useState(false)
 
     // Daily Bonus State
     const [isDailyOpen, setIsDailyOpen] = useState(false);
@@ -205,8 +209,8 @@ export default function WebAppPage() {
                 )}
             </div>
 
-            {/* 2. UI Overlay Layer */}
-            <div className="absolute inset-0 z-20 pointer-events-none">
+            {/* 2. UI Overlay Layer - Hidden during spin */}
+            <div className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-500 ${spinning ? 'opacity-0' : 'opacity-100'}`}>
 
                 {/* Top Right: Balance */}
                 <div className="absolute top-4 right-4 pointer-events-auto">
@@ -222,7 +226,10 @@ export default function WebAppPage() {
                 <div className="absolute top-20 right-4 flex flex-col gap-6 items-center pointer-events-auto">
 
                     {/* Prizes */}
-                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                    <button
+                        onClick={() => setIsPrizesOpen(true)}
+                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+                    >
                         <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
@@ -295,12 +302,16 @@ export default function WebAppPage() {
                         shadow-[0_4px_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[4px]
                         transition-all duration-200
                         ${!canSpin
-                            ? 'bg-white text-black' // Design choice from screenshot: Button is White "NUZHNO 10"
-                            : 'bg-white text-black hover:bg-gray-50'}
+                            ? 'bg-black text-white' // Black bg, White text for idle
+                            : 'bg-black text-white' // Always Black for Spin
+                        }
                     `}
                 >
                     {spinning ? (
-                        <span className="animate-pulse opacity-50">КРУТИМ...</span>
+                        <>
+                            <Loader2 className="animate-spin mr-2" />
+                            <span className="animate-pulse opacity-50">КРУТИМ...</span>
+                        </>
                     ) : canSpin ? (
                         <>
                             <span>ВРАЩАТЬ ЗА 10</span>
@@ -330,6 +341,26 @@ export default function WebAppPage() {
                 onClaim={handleDailyClaim}
                 lastClaimDate={lastDailyDate}
             />
+
+            {/* Win Modal */}
+            <AnimatePresence>
+                {/* Prizes Modal */}
+                <PrizesModal
+                    isOpen={isPrizesOpen}
+                    onClose={() => setIsPrizesOpen(false)}
+                    initData={initData}
+                />
+
+                {winResult && (
+                    <WinModal
+                        prize={winResult}
+                        onClose={() => {
+                            setWinResult(null)
+                            // Also reset spin state here just in case, though onSpinEnd handles it
+                        }}
+                    />
+                )}
+            </AnimatePresence>
 
         </div>
     )

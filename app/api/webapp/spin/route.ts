@@ -75,9 +75,18 @@ export async function POST(req: Request) {
          `
                 finalPoints = award[0].points
             }
+        } else {
+            // Record physical/coupon prize
+            await sql`
+                INSERT INTO user_prizes (telegram_id, prize_id, expiry_at, promo_code)
+                VALUES (
+                    ${telegramId}, 
+                    ${selectedPrize.id}, 
+                    NOW() + INTERVAL '24 hours',
+                    ${selectedPrize.type === 'coupon' ? 'PR3AF7T2' : null} -- Example static code, ideally dynamic
+                )
+            `
         }
-
-        // Optional: Log win to a history table (skipping for now based on requirements)
 
         return NextResponse.json({
             success: true,

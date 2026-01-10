@@ -257,10 +257,16 @@ export async function initDatabase() {
         value VARCHAR(255), -- '50', '10%', 'iPhone'
         probability DECIMAL(5,2) DEFAULT 0, -- percentage 0-100
         image_url TEXT,
+        quantity INTEGER, -- NULL = Unlimited
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Migration: Add quantity column if not exists
+    try {
+      await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS quantity INTEGER`;
+    } catch (e) { }
 
     // Seed prizes if empty
     const existingPrizes = await sqlConnection`SELECT count(*) as count FROM prizes`;
@@ -277,6 +283,19 @@ export async function initDatabase() {
         ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
       `;
     }
+
+    // User Prizes table (New)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS user_prizes (
+        id SERIAL PRIMARY KEY,
+        telegram_id BIGINT REFERENCES app_users(telegram_id),
+        prize_id INTEGER REFERENCES prizes(id),
+        won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expiry_at TIMESTAMP,
+        promo_code VARCHAR(255),
+        is_used BOOLEAN DEFAULT FALSE
+      )
+    `;
 
     console.log('Database initialized successfully')
   } catch (error) {

@@ -164,6 +164,258 @@ function StatisticsTab() {
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
+
+                {/* --- PRIZES TAB --- */}
+                {activeTab === 'prizes' && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-bold">Управление Призами</h2>
+                            <button
+                                onClick={() => {
+                                    setEditingPrize(null);
+                                    setPrizeForm({
+                                        name: '',
+                                        type: 'points',
+                                        value: '',
+                                        probability: 0,
+                                        quantity: -1,
+                                        image_url: '',
+                                        description: '',
+                                        is_active: true
+                                    });
+                                    setIsPrizeModalOpen(true);
+                                }}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white shadow-lg flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Добавить приз
+                            </button>
+                        </div>
+
+                        {/* Prizes Table */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-white/5 text-slate-400 font-medium uppercase tracking-wider text-xs">
+                                    <tr>
+                                        <th className="p-4 w-12 text-center">ID</th>
+                                        <th className="p-4">Картинка</th>
+                                        <th className="p-4">Название</th>
+                                        <th className="p-4">Тип / Значение</th>
+                                        <th className="p-4">Вероятность</th>
+                                        <th className="p-4">Кол-во</th>
+                                        <th className="p-4 text-center">Статус</th>
+                                        <th className="p-4 text-right">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/10">
+                                    {prizes.map((prize) => (
+                                        <tr key={prize.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="p-4 text-center text-slate-500 font-mono">#{prize.id}</td>
+                                            <td className="p-4">
+                                                <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+                                                    {prize.image_url ? (
+                                                        <img src={prize.image_url} alt={prize.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Gift className="w-6 h-6 text-slate-600" />
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 font-bold text-white">{prize.name}</td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-white font-medium capitalize">{prize.type}</span>
+                                                    <span className="text-xs text-slate-500">{prize.value}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 font-mono text-yellow-400">{prize.probability}%</td>
+                                            <td className="p-4">
+                                                {prize.quantity === null || prize.quantity < 0 ? (
+                                                    <span className="text-infinity text-xl leading-none">∞</span>
+                                                ) : (
+                                                    <span className="font-mono text-white">{prize.quantity} шт.</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${prize.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                    {prize.is_active ? 'Активен' : 'Скрыт'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingPrize(prize);
+                                                            setPrizeForm({
+                                                                name: prize.name,
+                                                                type: prize.type,
+                                                                value: prize.value,
+                                                                probability: parseFloat(prize.probability),
+                                                                quantity: prize.quantity ?? -1,
+                                                                image_url: prize.image_url || '',
+                                                                description: prize.description || '',
+                                                                is_active: prize.is_active
+                                                            });
+                                                            setIsPrizeModalOpen(true);
+                                                        }}
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('Удалить этот приз?')) {
+                                                                await fetch(`/api/admin/prizes?id=${prize.id}`, { method: 'DELETE' });
+                                                                // Refresh
+                                                                const res = await fetch('/api/admin/prizes');
+                                                                setPrizes(await res.json());
+                                                            }
+                                                        }}
+                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* PRIZE MODAL */}
+                {isPrizeModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-[#1e1e1e] border border-white/10 rounded-3xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
+                            <button
+                                onClick={() => setIsPrizeModalOpen(false)}
+                                className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+
+                            <h3 className="text-xl font-bold">{editingPrize ? 'Редактировать Приз' : 'Новый Приз'}</h3>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Название</label>
+                                    <input
+                                        value={prizeForm.name}
+                                        onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+                                        placeholder="Например: Скидка 50%"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Тип</label>
+                                    <select
+                                        value={prizeForm.type}
+                                        onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium appearance-none"
+                                    >
+                                        <option value="points">Баллы</option>
+                                        <option value="coupon">Купон</option>
+                                        <option value="physical">Товар</option>
+                                        <option value="status">Статус</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Значение / ID</label>
+                                    <input
+                                        value={prizeForm.value}
+                                        onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+                                        placeholder="50, iphone, discount_20"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Вероятность (%)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={prizeForm.probability}
+                                        onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Количество</label>
+                                    <input
+                                        type="number"
+                                        value={prizeForm.quantity}
+                                        onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+                                        placeholder="-1 для бесконечности"
+                                    />
+                                    <p className="text-[10px] text-slate-500 ml-1">-1 или пусто для бесконечности</p>
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">URL Картинки</label>
+                                    <input
+                                        value={prizeForm.image_url}
+                                        onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold uppercase ml-1">Описание</label>
+                                    <textarea
+                                        value={prizeForm.description}
+                                        onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 transition-colors font-medium h-24 resize-none"
+                                        placeholder="Описание приза..."
+                                    />
+                                </div>
+                                <div className="col-span-2 flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                                    <input
+                                        type="checkbox"
+                                        checked={prizeForm.is_active}
+                                        onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
+                                        className="w-5 h-5 rounded border-white/20 bg-black/30 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-0"
+                                    />
+                                    <span className="font-medium text-sm">Активен (участвует в розыгрыше)</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={async () => {
+                                    const payload = {
+                                        ...prizeForm,
+                                        quantity: (prizeForm.quantity === -1 || isNaN(prizeForm.quantity)) ? null : prizeForm.quantity
+                                    };
+
+                                    const method = editingPrize ? 'PUT' : 'POST';
+                                    const body = editingPrize ? { id: editingPrize.id, ...payload } : payload;
+
+                                    try {
+                                        const res = await fetch('/api/admin/prizes', {
+                                            method,
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        });
+
+                                        if (res.ok) {
+                                            setIsPrizeModalOpen(false);
+                                            // Refresh
+                                            const listRes = await fetch('/api/admin/prizes');
+                                            setPrizes(await listRes.json());
+                                        } else {
+                                            alert('Ошибка сохранения');
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                        alert('Ошибка сети');
+                                    }
+                                }}
+                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95"
+                            >
+                                {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -182,7 +434,9 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats'>('ecosystem');
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('ecosystem');
+    const [batchLoading, setBatchLoading] = useState(false);
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -211,6 +465,22 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [currentPage, setCurrentPage] = useState(1);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [topicActionProgress, setTopicActionProgress] = useState<{ current: number, total: number } | null>(null);
+
+    // Prizes State
+    const [prizes, setPrizes] = useState<any[]>([]);
+    const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
+    const [editingPrize, setEditingPrize] = useState<any | null>(null);
+    const [prizeForm, setPrizeForm] = useState({
+        name: '',
+        type: 'points',
+        value: '',
+        probability: 0,
+        quantity: -1, // -1 or null for unlimited
+        image_url: '',
+        description: '',
+        is_active: true
+    });
+
     const ITEMS_PER_PAGE = 20;
 
     // Filter logic
@@ -257,6 +527,18 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, stuckFilter, statusFilter, groupSearchTerm]);
+
+    // Fetch Prizes
+    useEffect(() => {
+        if (activeTab === 'prizes') {
+            fetch('/api/admin/prizes')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setPrizes(data);
+                })
+                .catch(err => console.error("Failed to fetch prizes", err));
+        }
+    }, [activeTab]);
 
     const handleToggleGroupSelect = (tgChatId: string) => {
         setSelectedGroupIds(prev => {
@@ -1307,6 +1589,16 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         <BarChart className="w-4 h-4" />
                         Статистика
                     </button>
+                    <button
+                        onClick={() => setActiveTab('prizes')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'prizes'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <Gift className="w-4 h-4" />
+                        Призы
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
@@ -1843,6 +2135,136 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             ) : activeTab === 'stats' ? (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <StatisticsTab />
+                </div>
+            ) : activeTab === 'prizes' ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center justify-between px-4">
+                        <h2 className="text-2xl font-bold text-white">Управление Призами</h2>
+                        <button
+                            onClick={() => {
+                                setEditingPrize(null);
+                                setPrizeForm({
+                                    name: '',
+                                    type: 'points',
+                                    value: '',
+                                    probability: 0,
+                                    quantity: -1,
+                                    image_url: '',
+                                    description: '',
+                                    is_active: true
+                                });
+                                setIsPrizeModalOpen(true);
+                            }}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white flex items-center gap-2 transition-all shadow-xl shadow-indigo-500/20 whitespace-nowrap"
+                        >
+                            <Gift className="w-5 h-5" />
+                            Создать приз
+                        </button>
+                    </div>
+
+                    {prizes.length === 0 ? (
+                        <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-4">
+                            <Gift className="w-16 h-16 text-slate-500 mx-auto" />
+                            <h3 className="text-xl font-semibold text-white">Призы пока не созданы</h3>
+                            <p className="text-slate-400">Нажмите "Создать приз", чтобы добавить первый приз для розыгрыша.</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-800 bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                        <th className="p-5">Название</th>
+                                        <th className="p-5">Тип</th>
+                                        <th className="p-5">Значение</th>
+                                        <th className="p-5">Вероятность</th>
+                                        <th className="p-5">Количество</th>
+                                        <th className="p-5">Активен</th>
+                                        <th className="p-5 text-right">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/50">
+                                    {prizes.map((prize) => (
+                                        <tr key={prize.id} className="group hover:bg-slate-800/30 transition-all">
+                                            <td className="p-5">
+                                                <div className="flex items-center gap-3">
+                                                    {prize.image_url && (
+                                                        <img src={prize.image_url} alt={prize.name} className="w-10 h-10 object-cover rounded-lg" />
+                                                    )}
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold text-white">{prize.name}</span>
+                                                        {prize.description && <span className="text-xs text-slate-500 line-clamp-1">{prize.description}</span>}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-5">
+                                                <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                    {prize.type === 'points' ? 'Баллы' : prize.type === 'item' ? 'Предмет' : prize.type}
+                                                </span>
+                                            </td>
+                                            <td className="p-5 text-white">{prize.value}</td>
+                                            <td className="p-5 text-white">{prize.probability}%</td>
+                                            <td className="p-5 text-white">{prize.quantity === null || prize.quantity === -1 ? '∞' : prize.quantity}</td>
+                                            <td className="p-5">
+                                                {prize.is_active ? (
+                                                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Да</span>
+                                                ) : (
+                                                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Нет</span>
+                                                )}
+                                            </td>
+                                            <td className="p-5 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingPrize(prize);
+                                                            setPrizeForm({
+                                                                name: prize.name,
+                                                                type: prize.type,
+                                                                value: prize.value,
+                                                                probability: prize.probability,
+                                                                quantity: prize.quantity === null ? -1 : prize.quantity,
+                                                                image_url: prize.image_url,
+                                                                description: prize.description,
+                                                                is_active: prize.is_active
+                                                            });
+                                                            setIsPrizeModalOpen(true);
+                                                        }}
+                                                        className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-indigo-400 transition-all border border-transparent"
+                                                        title="Редактировать приз"
+                                                    >
+                                                        <Edit3 className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!confirm(`Вы уверены, что хотите удалить приз "${prize.name}"?`)) return;
+                                                            try {
+                                                                const res = await fetch('/api/admin/prizes', {
+                                                                    method: 'DELETE',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ id: prize.id })
+                                                                });
+                                                                if (res.ok) {
+                                                                    setPrizes(prev => prev.filter(p => p.id !== prize.id));
+                                                                } else {
+                                                                    alert('Ошибка при удалении');
+                                                                }
+                                                            } catch (e) {
+                                                                console.error(e);
+                                                                alert('Ошибка сети');
+                                                            }
+                                                        }}
+                                                        className="p-2.5 hover:bg-red-500/10 rounded-xl text-slate-400 hover:text-red-400 transition-all border border-transparent"
+                                                        title="Удалить приз"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
