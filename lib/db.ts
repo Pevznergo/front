@@ -256,7 +256,6 @@ export async function initDatabase() {
         type VARCHAR(50) NOT NULL, -- 'points', 'coupon', 'physical'
         value VARCHAR(255), -- '50', '10%', 'iPhone'
         probability DECIMAL(5,2) DEFAULT 0, -- percentage 0-100
-        quantity INTEGER DEFAULT 100, -- available stock
         image_url TEXT,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -275,20 +274,7 @@ export async function initDatabase() {
         ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
         ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
         ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
-        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!');
-
-    // User Prizes table (New)
-    await sqlConnection`
-      CREATE TABLE IF NOT EXISTS user_prizes(
-        id SERIAL PRIMARY KEY,
-        user_id BIGINT REFERENCES app_users(telegram_id),
-        prize_id INTEGER REFERENCES prizes(id),
-        won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(50) DEFAULT 'active', --active, used, expired
-        code VARCHAR(255), --generated unique code for coupons
-        expiry_date TIMESTAMP
-      )
-        `;
+        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
       `;
     }
 
