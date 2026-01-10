@@ -646,6 +646,36 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
+    const handleSavePrize = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const method = editingPrize ? 'PUT' : 'POST';
+            const body = editingPrize ? { ...prizeForm, id: editingPrize.id } : prizeForm;
+
+            const res = await fetch('/api/admin/prizes', {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                if (editingPrize) {
+                    setPrizes(prev => prev.map(p => p.id === editingPrize.id ? data : p));
+                } else {
+                    setPrizes(prev => [data, ...prev]);
+                }
+                setIsPrizeModalOpen(false);
+                setEditingPrize(null);
+            } else {
+                alert(data.error || 'Ошибка при сохранении');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Ошибка сети');
+        }
+    };
+
     const handlePrintSelected = async () => {
         if (selectedIds.size === 0) {
             alert("Выберите QR-коды для печати.");
@@ -2596,6 +2626,123 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     </div>
                 )
             }
+            {/* Admin Prize Modal */}
+            {isPrizeModalOpen && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-white">{editingPrize ? 'Редактировать приз' : 'Создать новый приз'}</h2>
+                            <button onClick={() => setIsPrizeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                        </div>
+
+                        <form onSubmit={handleSavePrize} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Название</label>
+                                <input
+                                    required
+                                    value={prizeForm.name}
+                                    onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                    placeholder="Например: Скидка 50%"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Тип</label>
+                                    <select
+                                        value={prizeForm.type}
+                                        onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
+                                    >
+                                        <option value="points">Баллы</option>
+                                        <option value="item">Предмет (iPhone)</option>
+                                        <option value="coupon">Купон/Промо</option>
+                                        <option value="status">Статус</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Значение</label>
+                                    <input
+                                        required
+                                        value={prizeForm.value}
+                                        onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="500, PROMO123"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Вероятность (%)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        required
+                                        value={prizeForm.probability}
+                                        onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="0.1"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={prizeForm.quantity}
+                                        onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="-1 для бесконечности"
+                                    />
+                                    <div className="text-[10px] text-slate-500 text-right pr-1">-1 = Бесконечно</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">URL картинки</label>
+                                <input
+                                    value={prizeForm.image_url || ''}
+                                    onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Описание</label>
+                                <textarea
+                                    value={prizeForm.description || ''}
+                                    onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 min-h-[80px]"
+                                    placeholder="Описание приза..."
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 py-2">
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    checked={prizeForm.is_active}
+                                    onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
+                                    className="w-5 h-5 rounded border-white/10 bg-slate-950 checked:bg-indigo-600"
+                                />
+                                <label htmlFor="is_active" className="text-sm font-semibold text-white cursor-pointer select-none">
+                                    Активен (участвует в розыгрыше)
+                                </label>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20 mt-4"
+                            >
+                                {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
