@@ -224,12 +224,17 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FF6000] via-[#FF6000]/90 to-transparent z-10 pointer-events-none" />
 
             {/* Spin Indicators (Always Visible now) */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 z-20">
-                <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 right-0 z-20 rotate-180">
-                <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
-            </div>
+            {/* Spin Indicators (Show only when spinning) */}
+            {spinning && (
+                <>
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 z-20 animate-pulse">
+                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
+                    </div>
+                    <div className="absolute top-1/2 -translate-y-1/2 right-0 z-20 rotate-180 animate-pulse">
+                        <div className="w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[30px] border-l-white drop-shadow-md filter drop-shadow-lg" />
+                    </div>
+                </>
+            )}
 
             {/* Background Pattern */}
             <div
