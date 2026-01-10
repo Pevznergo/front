@@ -226,7 +226,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         quantity: -1, // -1 or null for unlimited
         image_url: '',
         description: '',
-        is_active: true
+        is_active: true,
+        file: null as File | null
     });
 
     const ITEMS_PER_PAGE = 20;
@@ -650,12 +651,28 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         e.preventDefault();
         try {
             const method = editingPrize ? 'PUT' : 'POST';
-            const body = editingPrize ? { ...prizeForm, id: editingPrize.id } : prizeForm;
+
+            const formData = new FormData();
+            if (editingPrize) formData.append('id', editingPrize.id.toString());
+            formData.append('name', prizeForm.name);
+            formData.append('type', prizeForm.type);
+            formData.append('value', prizeForm.value);
+            formData.append('probability', prizeForm.probability.toString());
+            formData.append('quantity', prizeForm.quantity.toString());
+            formData.append('description', prizeForm.description || '');
+            formData.append('is_active', String(prizeForm.is_active));
+
+            // Keep existing image_url if no new file
+            formData.append('image_url', prizeForm.image_url || '');
+
+            if (prizeForm.file) {
+                formData.append('file', prizeForm.file);
+            }
 
             const res = await fetch('/api/admin/prizes', {
                 method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                // Do NOT set Content-Type header for FormData, browser sets it with boundary
+                body: formData
             });
 
             const data = await res.json();
@@ -1929,7 +1946,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     quantity: -1,
                                     image_url: '',
                                     description: '',
-                                    is_active: true
+                                    is_active: true,
+                                    file: null
                                 });
                                 setIsPrizeModalOpen(true);
                             }}
@@ -2002,7 +2020,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                 quantity: prize.quantity === null ? -1 : prize.quantity,
                                                                 image_url: prize.image_url,
                                                                 description: prize.description,
-                                                                is_active: prize.is_active
+                                                                is_active: prize.is_active,
+                                                                file: null
                                                             });
                                                             setIsPrizeModalOpen(true);
                                                         }}
@@ -2015,10 +2034,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                         onClick={async () => {
                                                             if (!confirm(`Вы уверены, что хотите удалить приз "${prize.name}"?`)) return;
                                                             try {
-                                                                const res = await fetch('/api/admin/prizes', {
-                                                                    method: 'DELETE',
-                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                    body: JSON.stringify({ id: prize.id })
+                                                                const res = await fetch(`/api/admin/prizes?id=${prize.id}`, {
+                                                                    method: 'DELETE'
                                                                 });
                                                                 if (res.ok) {
                                                                     setPrizes(prev => prev.filter(p => p.id !== prize.id));
@@ -2701,13 +2718,34 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">URL картинки</label>
-                                <input
-                                    value={prizeForm.image_url || ''}
-                                    onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
-                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                    placeholder="https://..."
-                                />
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Изображение</label>
+                                <div className="flex flex-col gap-2">
+                                    {(prizeForm.image_url || prizeForm.file) && (
+                                        <div className="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden border border-white/10">
+                                            <img
+                                                src={prizeForm.file ? URL.createObjectURL(prizeForm.file) : prizeForm.image_url}
+                                                alt="Preview"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0];
+                                            if (file) setPrizeForm({ ...prizeForm, file });
+                                        }}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                                    />
+                                    {/* Fallback to URL if needed */}
+                                    <input
+                                        value={prizeForm.image_url || ''}
+                                        onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none text-slate-500 placeholder:text-slate-700"
+                                        placeholder="Или прямая ссылка..."
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">

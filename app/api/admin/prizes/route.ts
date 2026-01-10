@@ -13,18 +13,45 @@ export async function GET(req: Request) {
     }
 }
 
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
+
 export async function POST(req: Request) {
     try {
-        const body = await req.json()
-        const { name, type, value, probability, image_url, description, quantity } = body
+        const formData = await req.formData()
+        const name = formData.get('name') as string
+        const type = formData.get('type') as string
+        const value = formData.get('value') as string
+        const probability = formData.get('probability') as string
+        const description = formData.get('description') as string
+        const quantity = formData.get('quantity') as string
+        const file = formData.get('file') as File | null
+        let image_url = formData.get('image_url') as string
 
         if (!name || !type || !value) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
+        // Handle File Upload
+        if (file) {
+            const bytes = await file.arrayBuffer()
+            const buffer = Buffer.from(bytes)
+
+            // Ensure directory exists
+            const uploadDir = join(process.cwd(), 'public/uploads/prizes')
+            await mkdir(uploadDir, { recursive: true })
+
+            // Generate unique filename
+            const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`
+            const filepath = join(uploadDir, filename)
+
+            await writeFile(filepath, buffer)
+            image_url = `/uploads/prizes/${filename}`
+        }
+
         const newPrize = await sql`
             INSERT INTO prizes (name, type, value, probability, image_url, description, quantity)
-            VALUES (${name}, ${type}, ${value}, ${probability || 0}, ${image_url}, ${description}, ${quantity})
+            VALUES (${name}, ${type}, ${value}, ${probability || 0}, ${image_url || ''}, ${description || ''}, ${quantity})
             RETURNING *
         `
 
@@ -37,11 +64,37 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
     try {
-        const body = await req.json()
-        const { id, name, type, value, probability, image_url, description, quantity, is_active } = body
+        const formData = await req.formData()
+        const id = formData.get('id') as string
+        const name = formData.get('name') as string
+        const type = formData.get('type') as string
+        const value = formData.get('value') as string
+        const probability = formData.get('probability') as string
+        const description = formData.get('description') as string
+        const quantity = formData.get('quantity') as string
+        const is_active = formData.get('is_active') === 'true'
+        const file = formData.get('file') as File | null
+        let image_url = formData.get('image_url') as string
 
         if (!id) {
             return NextResponse.json({ error: 'ID required' }, { status: 400 })
+        }
+
+        // Handle File Upload
+        if (file) {
+            const bytes = await file.arrayBuffer()
+            const buffer = Buffer.from(bytes)
+
+            // Ensure directory exists
+            const uploadDir = join(process.cwd(), 'public/uploads/prizes')
+            await mkdir(uploadDir, { recursive: true })
+
+            // Generate unique filename
+            const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`
+            const filepath = join(uploadDir, filename)
+
+            await writeFile(filepath, buffer)
+            image_url = `/uploads/prizes/${filename}`
         }
 
         const updatedPrize = await sql`
@@ -50,8 +103,8 @@ export async function PUT(req: Request) {
                 type = ${type}, 
                 value = ${value}, 
                 probability = ${probability}, 
-                image_url = ${image_url}, 
-                description = ${description}, 
+                image_url = ${image_url || null}, 
+                description = ${description || null}, 
                 quantity = ${quantity},
                 is_active = ${is_active}
             WHERE id = ${id}
