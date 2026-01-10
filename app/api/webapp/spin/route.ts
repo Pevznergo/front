@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { verifyTelegramWebAppData } from '@/lib/telegram-auth'
+import { validateTelegramWebAppData } from '@/lib/telegram'
 import { cookies } from 'next/headers'
 
 export async function POST(req: NextRequest) {
@@ -11,18 +11,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No initData' }, { status: 400 })
         }
 
-        const isValid = verifyTelegramWebAppData(initData)
-        if (!isValid) {
+        const validation = validateTelegramWebAppData(initData)
+        if (!validation.validatedInput) {
             return NextResponse.json({ error: 'Invalid initData' }, { status: 401 })
         }
 
-        const urlParams = new URLSearchParams(initData)
-        const userJson = urlParams.get('user')
-        if (!userJson) {
+        const user = validation.validatedInput.user
+        if (!user) {
             return NextResponse.json({ error: 'No user data' }, { status: 400 })
         }
 
-        const user = JSON.parse(userJson)
         const telegramId = user.id
 
         // 1. Check Points

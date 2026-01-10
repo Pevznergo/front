@@ -166,6 +166,7 @@ export default function WebAppPage() {
     // ...
 
     return (
+        // ...
         {/* Prizes */ }
         < button
                         onClick = {() => setIsPrizesOpen(true)
