@@ -54,20 +54,25 @@ export default function QueueConsole() {
     };
 
     const handleDelete = async (id: number, source: string) => {
-        if (!confirm("Удалить задачу?")) return;
+        if (!confirm(`Удалить задачу #${id}?`)) return;
         try {
+            console.log(`Deleting task ${id} from source ${source}`);
             const res = await fetch("/api/queue/delete-task", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id, source })
             });
+
+            const data = await res.json();
+
             if (res.ok) {
                 fetchQueue();
             } else {
-                alert("Ошибка удаления");
+                alert(`Ошибка удаления: ${data.error || res.statusText}`);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
+            alert(`Ошибка сети: ${e.message}`);
         }
     };
 
