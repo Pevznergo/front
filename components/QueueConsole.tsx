@@ -75,8 +75,10 @@ export default function QueueConsole() {
 
             if (res.ok) {
                 if (data.count === 0) {
-                    alert("Задача не найдена (возможно, уже удалена). Обновляю список...");
+                    alert("Задача не найдена (уже удалена). Убираю из списка.");
                 }
+                // Optimistically remove from UI to handle cache delay
+                setTasks(prev => prev.filter(t => !(t.id === id && (t.source || 'topic') === source)));
                 fetchQueue();
             } else {
                 alert(`Ошибка удаления: ${data.error || res.statusText}`);

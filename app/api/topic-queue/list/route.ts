@@ -87,7 +87,12 @@ export async function GET(req: NextRequest) {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }).slice(0, 50);
 
-        return NextResponse.json({ tasks: unifiedTasks });
+        return NextResponse.json({ tasks: unifiedTasks }, {
+            headers: {
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
