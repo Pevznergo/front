@@ -60,40 +60,7 @@ async function processChatCreationQueue() {
         `;
         log(`Task #${task.id} completed. Chat ID: ${result.chatId}`);
 
-        // ---------------------------------------------------------
-        // AUTOMATION: Create "Wheel of Fortune" Topic & Message
-        // ---------------------------------------------------------
-        try {
-            const token = process.env.TELEGRAM_BOT_TOKEN;
-            if (token && result.chatId) {
-                const bot = new Bot(token);
-                const targetChatId = result.chatId.toString().startsWith("-") ? result.chatId.toString() : "-100" + result.chatId;
-
-                // Wait 2s for rights propagation
-                await new Promise(r => setTimeout(r, 2000));
-
-                log(`Creating promo topic for ${targetChatId}...`);
-
-                // A. Create Topic
-                const topic = await bot.api.createForumTopic(targetChatId, "🎁 Колесо Фортуны");
-                const threadId = topic.message_thread_id;
-
-                // B. Send Button
-                const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
-                const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
-
-                await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
-                    message_thread_id: threadId,
-                    reply_markup: keyboard,
-                    parse_mode: "Markdown",
-                });
-
-                log(`Promo topic created: ${threadId}`);
-            }
-        } catch (botError: any) {
-            errorLog(`Failed to automate promo topic:`, botError);
-            // Do not fail the task
-        }
+        // AUTOMATION: Promo topic is now handled via topic_actions_queue (scheduled in lib/chat.ts)
 
         // Return true to indicate we did work (so we can check again immediately)
         return true;

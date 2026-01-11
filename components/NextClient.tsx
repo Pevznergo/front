@@ -951,7 +951,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             const items = filteredScouted.map((addr, idx) => ({
                 title: `${addr.street}, ${addr.house}`,
                 district: addr.district || "",
-                scheduled_at: new Date(now.getTime() + (idx + 1) * 60000).toISOString()
+                // scheduled_at is now handled by server (Smart Scheduling)
             }));
 
             const res = await fetch("/api/queue", {

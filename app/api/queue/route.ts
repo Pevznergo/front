@@ -18,9 +18,20 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     let addedCount = 0;
     try {
-        // Check if there are any active tasks in the queue
-        const activeTasks = await sql`SELECT id FROM chat_creation_queue WHERE status IN ('pending', 'processing')`;
-        const isQueueEmpty = activeTasks.length === 0;
+        // Get the last scheduled time to determine start point
+        const pendingTasks = await sql`SELECT MAX(scheduled_at) as t FROM chat_creation_queue WHERE status = 'pending'`;
+
+        // Accumulator for scheduling
+        // If there are pending tasks, start after the last one.
+        // If queue is empty, start from NOW.
+        let scheduleAccumulator: Date = pendingTasks[0]?.t ? new Date(pendingTasks[0].t) : new Date();
+
+        // Safety: If last scheduled time is in the past (queue stalled?), reset to NOW to avoid burst
+        if (scheduleAccumulator < now) {
+            scheduleAccumulator = new Date();
+        }
+
+        const isQueueOriginallyEmpty = !pendingTasks[0]?.t;
 
         for (let i = 0; i < batch.length; i++) {
             const item = batch[i];
@@ -32,24 +43,30 @@ export async function POST(req: NextRequest) {
             const existingQueue = await sql`SELECT id FROM chat_creation_queue WHERE title = ${title} AND status IN ('pending', 'processing', 'completed')`;
             if (existingQueue.length > 0) continue;
 
-            // If queue is empty, schedule the first added item immediately
-            let scheduledAt: Date;
-            if (isQueueEmpty && addedCount === 0) {
-                scheduledAt = new Date(now.getTime() + 10000); // 10 seconds in the future to visualize queue
+            // SCHEDULING LOGIC:
+            // 1. If queue was empty AND this is the first item -> Schedule IMMEDIATELY (now)
+            // 2. Otherwise -> Add random delay (3-10 minutes) to the accumulator
+
+            if (isQueueOriginallyEmpty && addedCount === 0) {
+                // First item of an empty queue: Immediate
+                // Ensure a tiny delay (5s) just to let UI settle, or 0.
+                scheduleAccumulator = new Date(now.getTime() + 2000);
             } else {
-                const offsetMs = (addedCount * intervalMinutes * 60 * 1000) + (Math.random() * 5 * 60 * 1000);
-                scheduledAt = new Date(now.getTime() + offsetMs);
+                // Random delay 3-10 minutes
+                const delayMinutes = 3 + Math.floor(Math.random() * 8); // 3 to 10
+                scheduleAccumulator = new Date(scheduleAccumulator.getTime() + delayMinutes * 60 * 1000);
             }
 
             await sql`
-                INSERT INTO chat_creation_queue (title, district, scheduled_at, status)
-                VALUES (${title}, ${item.district || null}, ${scheduledAt}, 'pending')
+                INSERT INTO chat_creation_queue (title, district, scheduled_at, status, created_at)
+                VALUES (${title}, ${item.district || null}, ${scheduleAccumulator}, 'pending', NOW())
             `;
             addedCount++;
         }
 
         // Trigger processing in the background (non-blocking)
         if (addedCount > 0) {
+            // ... trigger logic ...
             const protocol = req.headers.get("x-forwarded-proto") || "http";
             const host = req.headers.get("host");
             const baseUrl = `${protocol}://${host}`;
