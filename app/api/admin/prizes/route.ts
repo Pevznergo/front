@@ -6,7 +6,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
     try {
         const prizes = await sql`SELECT * FROM prizes ORDER BY id ASC`
-        return NextResponse.json(prizes)
+        return NextResponse.json(prizes, {
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            }
+        })
     } catch (error) {
         console.error('Error fetching prizes:', error)
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
@@ -46,7 +52,8 @@ export async function POST(req: Request) {
             const filepath = join(uploadDir, filename)
 
             await writeFile(filepath, buffer)
-            image_url = `/uploads/prizes/${filename}`
+            // Use Dynamic API Route
+            image_url = `/api/uploads/prizes/${filename}`
         }
 
         const newPrize = await sql`
@@ -94,7 +101,8 @@ export async function PUT(req: Request) {
             const filepath = join(uploadDir, filename)
 
             await writeFile(filepath, buffer)
-            image_url = `/uploads/prizes/${filename}`
+            // Use Dynamic API Route to serve image immediately without rebuild
+            image_url = `/api/uploads/prizes/${filename}`
         }
 
         const updatedPrize = await sql`
