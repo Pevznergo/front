@@ -142,6 +142,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
         if (spinning && winIndex !== null) {
             setIsSpinning(true);
             hasCalledEndRef.current = false; // Reset lock
+            if (animationRef.current) cancelAnimationFrame(animationRef.current); // STOP PREVIOUS
 
             // REVERSED DIRECTION LOGIC:
             // "Other direction" means items should move UP (Strip moves UP).
@@ -161,7 +162,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             }
 
             // Start Animation
-            animateScroll(startOffset, targetOffset, 6000, () => {
+            animateScroll(startOffset, targetOffset, 5000, () => {
                 if (!hasCalledEndRef.current) {
                     hasCalledEndRef.current = true;
                     setIsSpinning(false);

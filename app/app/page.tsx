@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import SlotMachine from '@/components/webapp/SlotMachine'
 import DailyBonus from '@/components/webapp/DailyBonus'
 import { Loader2, Gift, Target, Coins } from 'lucide-react'
@@ -173,7 +173,7 @@ export default function WebAppPage() {
         }
     }
 
-    const onSpinEnd = () => {
+    const onSpinEnd = useCallback(() => {
         setSpinning(false)
         // Wait a moment after stopping before showing the modal (Fixation effect)
         setTimeout(() => {
@@ -181,7 +181,7 @@ export default function WebAppPage() {
             setWinIndex(null)
             setPendingPrize(null)
         }, 1200);
-    }
+    }, [pendingPrize])
 
     // Real Daily Bonus Handler
     const handleDailyClaim = async () => {
