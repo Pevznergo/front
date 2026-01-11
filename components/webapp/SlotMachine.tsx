@@ -60,11 +60,8 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Easing: BackOut (Overshoot and settle)
-            // c1 = 1.70158 (Standard overshoot amount)
-            const c1 = 1.70158;
-            const c3 = c1 + 1;
-            const ease = 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2);
+            // Easing: QuintOut (Fast start, very slow finish)
+            const ease = 1 - Math.pow(1 - progress, 5);
 
             const currentOffset = startPos + (endPos - startPos) * ease;
 
@@ -161,7 +158,7 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
             }
 
             // Start Animation
-            animateScroll(startOffset, targetOffset, 4000, () => {
+            animateScroll(startOffset, targetOffset, 6000, () => {
                 setIsSpinning(false);
                 onSpinEnd();
             });

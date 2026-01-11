@@ -122,6 +122,8 @@ export default function WebAppPage() {
 
     }, [])
 
+    const [pendingPrize, setPendingPrize] = useState<Prize | null>(null)
+
     const handleSpin = async () => {
         if (spinning || !user || user.points < 10) return
 
@@ -131,6 +133,7 @@ export default function WebAppPage() {
         setSpinning(true)
         setWinIndex(null)
         setWinResult(null)
+        setPendingPrize(null)
 
         try {
             // MOCK SPIN RESPONSE (Simulate Network)
@@ -153,12 +156,12 @@ export default function WebAppPage() {
                 const idx = prizes.findIndex(p => p.id === data.prize.id)
                 if (idx !== -1) {
                     setWinIndex(idx)
-                    setWinResult(data.prize)
+                    setPendingPrize(data.prize)
                 } else {
                     // Fallback if prize not found in local list (e.g. was just added)
                     // We just show the prize data returned from server
                     setWinIndex(0); // Default to first item just to spin
-                    setWinResult(data.prize);
+                    setPendingPrize(data.prize);
                 }
             } else {
                 alert('Error spinning (Mock)')
@@ -172,8 +175,12 @@ export default function WebAppPage() {
 
     const onSpinEnd = () => {
         setSpinning(false)
-        // No redundant fetch here. Points were already updated in handleSpin response.
-        setWinIndex(null)
+        // Wait a moment after stopping before showing the modal (Fixation effect)
+        setTimeout(() => {
+            setWinResult(pendingPrize)
+            setWinIndex(null)
+            setPendingPrize(null)
+        }, 500);
     }
 
     // Real Daily Bonus Handler
