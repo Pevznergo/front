@@ -274,11 +274,13 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                                 <img
                                     src={prize.image_url}
                                     alt={prize.name}
-                                    className="relative z-10 w-full h-full object-contain drop-shadow-xl"
+                                    className="relative z-10 w-[80%] h-[80%] object-contain drop-shadow-xl"
                                 />
-                                {/* Optional: Small text label at bottom? The screenshot has pretty text on images. 
-                                    Let's add a small label just in case image is unclear, 
-                                    but keep it subtle or distinct. */ }
+                                <div className="absolute bottom-6 z-20 bg-white px-4 py-1.5 rounded-full shadow-lg transform translate-y-2">
+                                    <span className="text-black font-extrabold text-sm uppercase tracking-wide whitespace-nowrap">
+                                        {prize.name}
+                                    </span>
+                                </div>
                             </div>
                         ) : (
                             /* Fallback Card Design (Text) */
