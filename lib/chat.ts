@@ -202,12 +202,12 @@ export async function createEcosystem(title: string, district: string | null) {
         try {
             // Task 1: Welcome Message for Candidates
             await sql`
-                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
+                INSERT INTO unified_queue (type, payload, status, scheduled_at, created_at)
                 VALUES (
-                    ${channelId.toString()}, 
-                    'message', 
+                    'send_message',
                     ${JSON.stringify({
-                topicId: adminTopicId, // Use direct ID
+                chat_id: channelId.toString(),
+                topicId: adminTopicId,
                 message: "‼️ ВЫБОР АДМИНА - Чтобы стать кандидатом в голосовании за выбор Админа Чата, оставьте здесь любое сообщение.",
                 pin: false
             })},
@@ -219,11 +219,11 @@ export async function createEcosystem(title: string, district: string | null) {
 
             // Task 2: Admin Election Poll
             await sql`
-                INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
+                INSERT INTO unified_queue (type, payload, status, scheduled_at, created_at)
                 VALUES (
-                    ${channelId.toString()}, 
-                    'poll', 
+                    'create_poll',
                     ${JSON.stringify({
+                chat_id: channelId.toString(),
                 topicId: adminTopicId,
                 question: "Выбираем АДмина",
                 options: ["Вариант 1", "Вариант 2"],
@@ -243,11 +243,10 @@ export async function createEcosystem(title: string, district: string | null) {
     // Task 3: Schedule "Wheel of Fortune" Promo (Visible in Queue Console)
     try {
         await sql`
-            INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
+            INSERT INTO unified_queue (type, payload, status, scheduled_at, created_at)
             VALUES (
-                ${channelId.toString()},
                 'create_promo',
-                ${JSON.stringify({ title: "🎁 Колесо Фортуны" })}, 
+                ${JSON.stringify({ chat_id: channelId.toString(), title: "🎁 Колесо Фортуны" })}, 
                 'pending',
                 NOW() + INTERVAL '5 SECONDS',
                 NOW()

@@ -12,12 +12,15 @@ export async function POST(req: NextRequest) {
     await initDatabase();
 
     try {
+        const unified = await sql`DELETE FROM unified_queue WHERE status = 'failed' RETURNING id`;
+
+        // Cleanup legacy too, just in case
         const topicResult = await sql`DELETE FROM topic_actions_queue WHERE status = 'failed' RETURNING id`;
         const createResult = await sql`DELETE FROM chat_creation_queue WHERE status = 'failed' RETURNING id`;
 
-        const count = topicResult.length + createResult.length;
+        const count = unified.length + topicResult.length + createResult.length;
 
-        return NextResponse.json({ success: true, count, details: { topic: topicResult.length, create: createResult.length } });
+        return NextResponse.json({ success: true, count });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

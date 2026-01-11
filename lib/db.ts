@@ -203,7 +203,20 @@ export async function initDatabase() {
       )
     `;
 
-    // Topic Actions Queue (New)
+    // Unified Queue (Replaces topic_actions_queue and chat_creation_queue)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS unified_queue (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL, -- 'create_chat', 'create_topic', 'send_message', 'create_promo', etc.
+        payload JSONB NOT NULL,    -- { title, district } OR { chat_id, topic_name, ... }
+        status VARCHAR(50) DEFAULT 'pending',
+        error TEXT,
+        scheduled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Topic Actions Queue (Deprecated - Kept for legacy data safety until migration complete)
     await sqlConnection`
       CREATE TABLE IF NOT EXISTS topic_actions_queue (
         id SERIAL PRIMARY KEY,

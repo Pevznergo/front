@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { batch, intervalMinutes = 10 } = await req.json();
+    const { batch } = await req.json();
 
     if (!Array.isArray(batch) || batch.length === 0) {
         return NextResponse.json({ error: "Batch is empty" }, { status: 400 });
@@ -18,15 +18,13 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     let addedCount = 0;
     try {
-        // Get the last scheduled time to determine start point
-        const pendingTasks = await sql`SELECT MAX(scheduled_at) as t FROM chat_creation_queue WHERE status = 'pending'`;
+        // Get the last scheduled time from UNIFIED queue
+        // We only care about pending tasks generally, or specifically 'create_chat' if we want to sequence chats?
+        // Let's sequence everything to avoid flood limits.
+        const pendingTasks = await sql`SELECT MAX(scheduled_at) as t FROM unified_queue WHERE status = 'pending'`;
 
-        // Accumulator for scheduling
-        // If there are pending tasks, start after the last one.
-        // If queue is empty, start from NOW.
         let scheduleAccumulator: Date = pendingTasks[0]?.t ? new Date(pendingTasks[0].t) : new Date();
 
-        // Safety: If last scheduled time is in the past (queue stalled?), reset to NOW to avoid burst
         if (scheduleAccumulator < now) {
             scheduleAccumulator = new Date();
         }
@@ -40,39 +38,44 @@ export async function POST(req: NextRequest) {
             const existingLinks = await sql`SELECT id FROM short_links WHERE reviewer_name = ${title}`;
             if (existingLinks.length > 0) continue;
 
-            const existingQueue = await sql`SELECT id FROM chat_creation_queue WHERE title = ${title} AND status IN ('pending', 'processing', 'completed')`;
+            // Check existence in unified_queue (checking types that create chats)
+            const existingQueue = await sql`
+                SELECT id FROM unified_queue 
+                WHERE type = 'create_chat' 
+                  AND payload->>'title' = ${title} 
+                  AND status IN ('pending', 'processing')
+            `;
             if (existingQueue.length > 0) continue;
 
-            // SCHEDULING LOGIC:
-            // 1. If queue was empty AND this is the first item -> Schedule IMMEDIATELY (now)
-            // 2. Otherwise -> Add random delay (3-10 minutes) to the accumulator
-
             if (isQueueOriginallyEmpty && addedCount === 0) {
-                // First item of an empty queue: Immediate
-                // Ensure a tiny delay (5s) just to let UI settle, or 0.
                 scheduleAccumulator = new Date(now.getTime() + 2000);
             } else {
-                // Random delay 3-10 minutes
-                const delayMinutes = 3 + Math.floor(Math.random() * 8); // 3 to 10
+                const delayMinutes = 3 + Math.floor(Math.random() * 8);
                 scheduleAccumulator = new Date(scheduleAccumulator.getTime() + delayMinutes * 60 * 1000);
             }
 
             await sql`
-                INSERT INTO chat_creation_queue (title, district, scheduled_at, status, created_at)
-                VALUES (${title}, ${item.district || null}, ${scheduleAccumulator}, 'pending', NOW())
+                INSERT INTO unified_queue (type, payload, scheduled_at, status, created_at)
+                VALUES (
+                    'create_chat',
+                    ${JSON.stringify({ title, district: item.district || null })},
+                    ${scheduleAccumulator}, 
+                    'pending', 
+                    NOW()
+                )
             `;
             addedCount++;
         }
 
-        // Trigger processing in the background (non-blocking)
         if (addedCount > 0) {
-            // ... trigger logic ...
             const protocol = req.headers.get("x-forwarded-proto") || "http";
             const host = req.headers.get("host");
             const baseUrl = `${protocol}://${host}`;
             const secret = process.env.APP_SECRET_KEY || "";
             const secretParam = secret ? `?secret=${secret}` : "";
 
+            // Call the NEW unified processor (to be created) or generic process endpoint
+            // For now, let's assume we reuse /api/queue/process but updated, or specific
             fetch(`${baseUrl}/api/queue/process${secretParam}`).catch(e => console.error("Trigger error:", e));
         }
 
