@@ -95,14 +95,16 @@ export async function GET(req: NextRequest) {
 
     try {
         const queue = await sql`
-            SELECT * FROM chat_creation_queue 
-            WHERE status != 'completed' 
+            SELECT id, payload->>'title' as title, payload->>'district' as district, status, error, scheduled_at, created_at
+            FROM unified_queue 
+            WHERE type = 'create_chat' AND status != 'completed' 
             ORDER BY scheduled_at ASC
         `;
 
         const nextTask = await sql`
-            SELECT title, scheduled_at FROM chat_creation_queue 
-            WHERE status = 'pending' 
+            SELECT payload->>'title' as title, scheduled_at 
+            FROM unified_queue 
+            WHERE type = 'create_chat' AND status = 'pending' 
             ORDER BY scheduled_at ASC 
             LIMIT 1
         `;
@@ -131,14 +133,35 @@ export async function PATCH(req: NextRequest) {
     await initDatabase();
 
     try {
-        await sql`
-            UPDATE chat_creation_queue 
-            SET 
-                title = COALESCE(${title}, title),
-                district = COALESCE(${district}, district),
-                scheduled_at = COALESCE(${scheduledAt}, scheduled_at)
-            WHERE id = ${id}
-        `;
+        // We need to fetch existing payload to update it partially if needed, 
+        // but SQL jsonb_set is better. simplified: update payload merging new data.
+        // For simplicity, let's read-modify-write or just assume we have all data?
+        // Let's use jsonb_set or just re-construct if we want robust. 
+        // But simpler: just update scheduled_at as that's the main thing.
+        // Editing title/district in queue is rare?
+        // Let's update scheduled_at directly, and payload if title/district provided.
+
+        if (title || district) {
+            const current = await sql`SELECT payload FROM unified_queue WHERE id = ${id}`;
+            if (current.length > 0) {
+                const newPayload = { ...current[0].payload, ...({ title, district }) };
+                // Remove undefined keys
+                if (!title) delete (newPayload as any).title; // wait, if not provided keep old. spread does that? no.
+                // { ...old, ...(title ? {title} : {}) }
+                const updates: any = {};
+                if (title) updates.title = title;
+                if (district) updates.district = district;
+
+                const finalPayload = { ...current[0].payload, ...updates };
+
+                await sql`UPDATE unified_queue SET payload = ${JSON.stringify(finalPayload)} WHERE id = ${id}`;
+            }
+        }
+
+        if (scheduledAt) {
+            await sql`UPDATE unified_queue SET scheduled_at = ${scheduledAt} WHERE id = ${id}`;
+        }
+
         return NextResponse.json({ success: true });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
@@ -160,7 +183,7 @@ export async function DELETE(req: NextRequest) {
     await initDatabase();
 
     try {
-        await sql`DELETE FROM chat_creation_queue WHERE id = ${id}`;
+        await sql`DELETE FROM unified_queue WHERE id = ${id}`;
         return NextResponse.json({ success: true });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
