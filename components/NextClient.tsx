@@ -640,10 +640,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     };
 
     const handleSelectAll = () => {
-        if (selectedIds.size === links.length) {
+        const filteredIds = filteredAllLinks.map(l => l.id);
+        const isAllSelected = filteredIds.length > 0 && filteredIds.every(id => selectedIds.has(id));
+
+        if (isAllSelected) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(links.map(l => l.id)));
+            setSelectedIds(new Set(filteredIds));
         }
     };
 
