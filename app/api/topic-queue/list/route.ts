@@ -30,7 +30,12 @@ export async function GET(req: NextRequest) {
             `;
         }
 
-        const formattedTasks = tasks.map(t => ({
+        const validTasks = tasks || [];
+
+        // Diagnostic: Total count in table
+        const totalCount = await sql`SELECT count(*) FROM unified_queue`;
+
+        const formattedTasks = validTasks.map(t => ({
             unique_id: `task-${t.id}`,
             id: t.id,
             chat_id: t.payload?.chat_id || 'N/A', // Helper to show chat ID if present
@@ -43,7 +48,13 @@ export async function GET(req: NextRequest) {
             payload: t.payload
         }));
 
-        return NextResponse.json({ tasks: formattedTasks }, {
+        return NextResponse.json({
+            tasks: formattedTasks,
+            debug: {
+                totalInTable: totalCount[0]?.count,
+                fetched: formattedTasks.length
+            }
+        }, {
             headers: {
                 'Cache-Control': 'no-store, max-age=0, must-revalidate',
                 'Pragma': 'no-cache'
