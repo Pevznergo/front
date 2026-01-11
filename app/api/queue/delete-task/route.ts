@@ -18,15 +18,16 @@ export async function POST(req: NextRequest) {
     await initDatabase();
 
     try {
+        let result;
         if (source === 'topic') {
-            await sql`DELETE FROM topic_actions_queue WHERE id = ${id}`;
+            result = await sql`DELETE FROM topic_actions_queue WHERE id = ${id} RETURNING id`;
         } else if (source === 'create') {
-            await sql`DELETE FROM chat_creation_queue WHERE id = ${id}`;
+            result = await sql`DELETE FROM chat_creation_queue WHERE id = ${id} RETURNING id`;
         } else {
             return NextResponse.json({ error: "Invalid source" }, { status: 400 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, count: result.length });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
