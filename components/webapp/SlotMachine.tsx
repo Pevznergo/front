@@ -137,6 +137,12 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
 
     const hasCalledEndRef = useRef(false);
 
+    // Stable callback ref to prevent Effect restarts
+    const onSpinEndRef = useRef(onSpinEnd);
+    useEffect(() => {
+        onSpinEndRef.current = onSpinEnd;
+    }, [onSpinEnd]);
+
     // --- SPIN LOGIC ---
     useEffect(() => {
         if (spinning && winIndex !== null) {
@@ -166,12 +172,13 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                 if (!hasCalledEndRef.current) {
                     hasCalledEndRef.current = true;
                     setIsSpinning(false);
-                    onSpinEnd();
+                    if (onSpinEndRef.current) onSpinEndRef.current();
                 }
             });
 
         }
-    }, [spinning, winIndex, prizes.length, ITEM_SIZE, onSpinEnd]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [spinning, winIndex, prizes.length, ITEM_SIZE]); // Removed onSpinEnd from deps!
 
     // Initial Setup
     useEffect(() => {
