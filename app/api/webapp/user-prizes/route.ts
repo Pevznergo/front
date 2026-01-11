@@ -3,6 +3,8 @@ import { sql } from '@/lib/db'
 import { verifyTelegramWebAppData } from '@/lib/telegram-auth'
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET(req: Request) {
     try {
