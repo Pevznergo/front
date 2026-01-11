@@ -5,7 +5,10 @@ import { Bot, InlineKeyboard } from "grammy";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
+    // Basic protection (can be secret key or admin session)
     const secret = req.headers.get("X-Secret-Key") || req.nextUrl.searchParams.get("secret");
     const session = await getServerSession(authOptions);
     const isAdmin = session?.user?.email === "pevznergo@gmail.com";
@@ -53,6 +56,7 @@ export async function GET(req: NextRequest) {
 
         const triggerNext = (delayMs = 0) => {
             const secretParam = secret ? `&secret=${secret}` : "";
+            // Use a cache-busting timestamp
             const url = `${baseUrl}/api/queue/process?t=${Date.now()}${secretParam}`;
             setTimeout(() => {
                 fetch(url).catch(e => console.error("Self-trigger error:", e));
@@ -62,8 +66,10 @@ export async function GET(req: NextRequest) {
         // 2. Decide timing
         if (!force && diffMs > 0) {
             if (diffMs < 15000) {
+                // Short wait: server-side sleep
                 await new Promise(resolve => setTimeout(resolve, diffMs));
             } else {
+                // Long wait: return and wake up later
                 triggerNext(diffMs + 1000);
                 return NextResponse.json({
                     message: `Next task scheduled for later`,
@@ -96,15 +102,16 @@ export async function GET(req: NextRequest) {
                 const token = process.env.TELEGRAM_BOT_TOKEN;
                 if (!token) throw new Error("Bot token missing");
                 const bot = new Bot(token);
+                // Handle both raw ID and -100 prefix
                 const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
 
-                // Wait for propagation
+                // Wait for rights propagation
                 if (!force) await new Promise(r => setTimeout(r, 2000));
 
                 const topic = await bot.api.createForumTopic(targetChatId, title);
                 const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
                 const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
-                await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ**", {
+                await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
                     message_thread_id: topic.message_thread_id,
                     reply_markup: keyboard,
                     parse_mode: "Markdown",
@@ -112,24 +119,22 @@ export async function GET(req: NextRequest) {
                 resultData = { threadId: topic.message_thread_id };
 
             } else if (['send_message', 'create_poll'].includes(type)) {
-                // Simplified handling for fallback - ideally shared with worker.ts logic
-                // For now, let's assume worker handles these primarily, but if forced we might fail?
-                // Or we could try to implement client logic here? Client creation is heavy.
-                // Let's implement minimal TG client support or skip if not optimal for serverless?
-                // Given createEcosystem uses getTelegramClient, we can use it here too.
-                // BUT importing gramjs client in serverless route often timeouts.
-                // Let's rely on worker for these, or implement simplified version if critical.
-                // User wants "Run Immediately". If worker is dead, this endpoint should work.
-                // I will assume getTelegramClient works here (it's used in createEcosystem).
-                // For brevity, skipping full implementation here, focusing on main task types.
-                // Actually, let's mark as pending for worker if we can't handle?
-                // Or just implement simple?
-                // Let's stick to create_chat and create_promo (Bot API) for stability in API routes.
-                // Complex GramJS stuff might be better in worker.
-                if (type === 'send_message' || type === 'create_poll') {
-                    // For now, re-queue or skip? 
-                    // Let's Try to process if possible, but minimal.
-                }
+                // Minimal handling for essential task types to support "Run Now" even without worker.js
+                // Note: Ideally worker.js handles this using GramJS for "user" actions. 
+                // If we are here (API route), we probably don't have the User Client easily unless we rewrite getTelegramClient to be serverless-safe.
+                // For now, we will mark these as PENDING-WORKER or just skip re-processing if worker handles them.
+                // But since the user wants "Run Now", maybe we should try?
+                // Let's assume the worker is the main processor for these.
+                // We will simply return success = true (but no-op) so the queue advances? 
+                // No, that would lose the task.
+                // Let's just leave them as 'pending' if we can't process? No, we set status='processing'.
+                // We must revert status to 'pending' if we can't handle it here.
+                // So "Run Immediately" for these types will effectively do nothing if worker is dead.
+                // But for 'create_chat' and 'create_promo' (Bot API), this route works.
+
+                // Revert status to pending so worker can pick it up
+                await sql`UPDATE unified_queue SET status = 'pending' WHERE id = ${task.id}`;
+                return NextResponse.json({ message: "Task type requires worker process", type });
             }
 
             await sql`UPDATE unified_queue SET status = 'completed', error = NULL WHERE id = ${task.id}`;
@@ -144,7 +149,7 @@ export async function GET(req: NextRequest) {
         } catch (error: any) {
             console.error(`Queue processing error for task ${task.id}:`, error);
 
-            // FloodWait
+            // Turn FloodWait into a valid Date/Interval
             if (error.seconds || error.errorMessage?.startsWith('FLOOD_WAIT_')) {
                 const waitSeconds = error.seconds || parseInt(error.errorMessage.split('_')[2], 10) || 60;
                 await setFloodWait(waitSeconds);
@@ -168,5 +173,3 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }
-
-export const dynamic = "force-dynamic";

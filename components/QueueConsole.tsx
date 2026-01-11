@@ -68,32 +68,49 @@ export default function QueueConsole() {
         }
     };
 
+    const handleRunNow = async (id: number) => {
+        try {
+            // Set scheduled_at to Now
+            await fetch("/api/queue", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, scheduledAt: new Date().toISOString() })
+            });
+            // Trigger process immediately
+            await fetch("/api/queue/process?force=true");
+            fetchQueue();
+        } catch (e) { console.error(e); }
+    };
+
     const handleDelete = async (id: number, source: string) => {
         if (!confirm(`Удалить задачу #${id}?`)) return;
         try {
-            console.log(`Deleting task ${id} from source ${source}`);
+            console.log(`Deleting task ${id}`);
+            // Optimistically remove immediately to prevent flicker
+            setTasks(prev => prev.filter(t => t.id !== id));
+
             const res = await fetch("/api/queue/delete-task", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, source })
+                body: JSON.stringify({ id, source }) // source mainly for legacy compat
             });
 
             const data = await res.json();
 
             if (res.ok) {
                 if (data.count === 0) {
-                    const debugInfo = JSON.stringify(data.debug, null, 2);
-                    alert(`Не удалено (count=0).\nДиагностика:\n${debugInfo}\n\nВозможно, задача в другой таблице или уже удалена.`);
+                    console.warn("Delete count 0 (maybe already deleted)");
                 }
-                // Optimistically remove from UI to handle cache delay
-                setTasks(prev => prev.filter(t => !(t.id === id && (t.source || 'topic') === source)));
-                fetchQueue();
+                // Delay next fetch slightly to allow DB commit propagation
+                setTimeout(fetchQueue, 500);
             } else {
                 alert(`Ошибка удаления: ${data.error || res.statusText}`);
+                fetchQueue(); // Revert if failed
             }
         } catch (e: any) {
             console.error(e);
             alert(`Ошибка сети: ${e.message}`);
+            fetchQueue();
         }
     };
 
@@ -212,9 +229,18 @@ export default function QueueConsole() {
                                         )}
 
                                         {timeLeft && task.status === 'pending' && (
-                                            <div className="flex items-center gap-1 text-amber-400 text-[10px] bg-amber-500/10 p-1 rounded">
-                                                <Clock className="w-3 h-3" />
-                                                Wait: {timeLeft}
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-1 text-amber-400 text-[10px] bg-amber-500/10 p-1 rounded">
+                                                    <Clock className="w-3 h-3" />
+                                                    Wait: {timeLeft}
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRunNow(task.id)}
+                                                    className="p-1 bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white rounded transition-colors"
+                                                    title="Запустить сейчас (Run Now)"
+                                                >
+                                                    <Play className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         )}
                                     </div>
