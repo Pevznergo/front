@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, AlertCircle, Clock, CheckCircle2, ChevronRight, ChevronLeft, Eye, EyeOff, Play } from "lucide-react";
+import { Loader2, AlertCircle, Clock, CheckCircle2, ChevronRight, ChevronLeft, Eye, EyeOff, Play, Trash2 } from "lucide-react";
 
 interface QueueTask {
     unique_id: string;
@@ -50,6 +50,24 @@ export default function QueueConsole() {
             console.error(e);
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const handleDelete = async (id: number, source: string) => {
+        if (!confirm("Удалить задачу?")) return;
+        try {
+            const res = await fetch("/api/queue/delete-task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, source })
+            });
+            if (res.ok) {
+                fetchQueue();
+            } else {
+                alert("Ошибка удаления");
+            }
+        } catch (e) {
+            console.error(e);
         }
     };
 
@@ -104,7 +122,7 @@ export default function QueueConsole() {
                             </div>
                         ) : (
                             tasks.map(task => (
-                                <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2">
+                                <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2 group relative">
                                     <div className="flex items-center justify-between">
                                         <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${task.status === 'processing' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
                                             task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
@@ -113,7 +131,16 @@ export default function QueueConsole() {
                                             }`}>
                                             {task.status}
                                         </span>
-                                        <span className="text-[9px] text-slate-500 font-mono">#{task.id}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] text-slate-500 font-mono">#{task.id}</span>
+                                            <button
+                                                onClick={() => handleDelete(task.id, task.source || 'topic')}
+                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded transition-all"
+                                                title="Удалить задачу"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="font-mono text-white/80 truncate">
