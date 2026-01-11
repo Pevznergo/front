@@ -34,6 +34,12 @@ export default function QueueConsole() {
         }
     };
 
+    useEffect(() => {
+        fetchQueue();
+        const interval = setInterval(fetchQueue, 5000);
+        return () => clearInterval(interval);
+    }, [showCompleted]);
+
     const handleProcess = async () => {
         setIsProcessing(true);
         try {
