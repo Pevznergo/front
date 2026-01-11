@@ -216,6 +216,30 @@ async function processTopicActionsQueue() {
                     title: payloadObj.title
                 }));
             }
+        } else if (action_type === 'create_promo') {
+            // Use Bot API for Keyboard logic (simpler/safer than GramJS for this)
+            const token = process.env.TELEGRAM_BOT_TOKEN;
+            if (!token) throw new Error("Bot token missing for create_promo");
+
+            const bot = new Bot(token);
+            // Ensure ID format for Bot API
+            const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
+
+            log(`Executing create_promo for ${targetChatId}`);
+
+            // 1. Create Topic
+            const topic = await bot.api.createForumTopic(targetChatId, "🎁 Колесо Фортуны");
+            const threadId = topic.message_thread_id;
+
+            // 2. Send Message with Button
+            const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
+            const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
+
+            await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
+                message_thread_id: threadId,
+                reply_markup: keyboard,
+                parse_mode: "Markdown",
+            });
         }
 
         await sql`UPDATE topic_actions_queue SET status = 'completed' WHERE id = ${id}`;

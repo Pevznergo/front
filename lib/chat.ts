@@ -240,6 +240,24 @@ export async function createEcosystem(title: string, district: string | null) {
         }
     }
 
+    // Task 3: Schedule "Wheel of Fortune" Promo (Visible in Queue Console)
+    try {
+        await sql`
+            INSERT INTO topic_actions_queue (chat_id, action_type, payload, status, scheduled_for, created_at)
+            VALUES (
+                ${channelId.toString()},
+                'create_promo',
+                ${JSON.stringify({ title: "🎁 Колесо Фортуны" })}, 
+                'pending',
+                NOW() + INTERVAL '5 SECONDS',
+                NOW()
+            )
+        `;
+        console.log("Scheduled create_promo task.");
+    } catch (e) {
+        console.error("Failed to schedule create_promo task:", e);
+    }
+
     return {
         inviteLink,
         chatId: channelId.toString()
