@@ -276,8 +276,8 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                                     alt={prize.name}
                                     className="relative z-10 w-[80%] h-[80%] object-contain drop-shadow-xl"
                                 />
-                                <div className="absolute bottom-6 z-20 bg-white px-4 py-1.5 rounded-full shadow-lg transform translate-y-2">
-                                    <span className="text-black font-extrabold text-sm uppercase tracking-wide whitespace-nowrap">
+                                <div className="absolute bottom-4 z-20 bg-white px-2 py-1 transform -skew-x-12 shadow-md border-b-4 border-gray-200">
+                                    <span className="text-black font-black text-xs sm:text-sm uppercase tracking-tighter italic whitespace-nowrap px-1">
                                         {prize.name}
                                     </span>
                                 </div>

@@ -80,7 +80,7 @@ export default function WebAppPage() {
                 .catch(err => console.error("Auth failed, using mock:", err))
             // 3. Real Data Fetch for Prizes
             setLoading(true);
-            fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}`)
+            fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}&t=${Date.now()}`)
                 .then(async res => {
                     if (!res.ok) {
                         const errData = await res.json().catch(() => ({}));
