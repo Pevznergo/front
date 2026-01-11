@@ -740,7 +740,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         ЧАТ СОСЕДЕЙ🏠
                                     </h1>
                                     <div class="features">
-                                    КРУТИ КОЛЕСО ПРИЗОВ КАЖДЫЙ ДЕНЬ:
+                                    КОЛЕСО ПРИЗОВ:
                                     </div>
                                     <div class="prizes">
                                         WB/OZON/iPhone
@@ -821,11 +821,11 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     .main-title {
                         margin: 0;
                         padding: 0;
-                        font-size: 10px;
+                        font-size: 15px; /* Maximized */
                         font-weight: 900;
                         line-height: 1;
                         text-transform: uppercase;
-                        margin-bottom: 3mm; /* Increased spacing from header */
+                        margin-bottom: 1mm; /* Reduced spacing */
                         white-space: nowrap;
                         display: flex;
                         align-items: center;
@@ -833,12 +833,12 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         padding-left: 1mm; /* Indent */
                     }
                     .tg-icon {
-                        width: 3mm;
-                        height: 3mm;
+                        width: 4.5mm;
+                        height: 4.5mm;
                         flex-shrink: 0;
                     }
                     .features {
-                        font-size: 9px;
+                        font-size: 11px; /* Maximized */
                         font-weight: 700;
                         color: #000;
                         background: #eee;
@@ -862,7 +862,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         font-weight: 900;
                         color: black;
                         text-transform: uppercase;
-                        margin-top: 0mm; /* Tighten up */
+                        margin-top: 1mm; /* Tighten up */
                         margin-left: 1mm; /* Indent */
                         line-height: 1;
                     }
