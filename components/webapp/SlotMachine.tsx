@@ -263,38 +263,39 @@ export default function SlotMachine({ prizes, spinning, winIndex, onSpinEnd }: S
                     <div
                         key={`${prize.id}-${i}`}
                         ref={el => { itemsRef.current[i] = el; }}
-                        className="flex-shrink-0 relative transform origin-center"
-                        style={{ width: '85%', height: CARD_HEIGHT }}
+                        className="flex-shrink-0 relative transform origin-center flex items-center justify-center"
+                        style={{ width: '100%', height: CARD_HEIGHT }}
                     >
-                        {/* Card Design */}
-                        <div className={`
-                            w-full h-full rounded-3xl flex items-center justify-between px-8 relative overflow-hidden
-                            ${i % 2 === 0 ? 'bg-[#ff5500]' : 'bg-[#ff6600]'} 
-                            shadow-[0_8px_0_rgba(0,0,0,0.15)] 
-                        `}>
-                            {/* Dynamic Blurs: Only show when NOT spinning */}
-                            <div className={`absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
-                            <div className={`absolute bottom-[-20%] right-[-10%] w-32 h-32 bg-white/5 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
-
-                            {/* Prize Value */}
-                            <div className="text-white z-10">
-                                {prize.type === 'coupon' ? (
-                                    <div className="text-6xl font-black italic drop-shadow-sm tracking-tighter">{prize.value}</div>
-                                ) : prize.type === 'physical' ? (
-                                    <div className="text-4xl font-black italic drop-shadow-sm">iPhone 15</div>
-                                ) : (
-                                    <div className="text-6xl font-black italic drop-shadow-sm flex items-baseline">
-                                        {prize.value}<span className="text-4xl ml-1">₽</span>
-                                    </div>
-                                )}
-                                <div className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1 ml-1">{prize.name}</div>
+                        {/* Prize Image (Priority) */}
+                        {prize.image_url ? (
+                            <div className="relative w-full h-full flex items-center justify-center">
+                                {/* Glow/Backlight behind image */}
+                                <div className="absolute w-32 h-32 bg-white/20 blur-2xl rounded-full" />
+                                <img
+                                    src={prize.image_url}
+                                    alt={prize.name}
+                                    className="relative z-10 w-full h-full object-contain drop-shadow-xl"
+                                />
+                                {/* Optional: Small text label at bottom? The screenshot has pretty text on images. 
+                                    Let's add a small label just in case image is unclear, 
+                                    but keep it subtle or distinct. */ }
                             </div>
-
-                            {/* Icon */}
-                            <div className={`w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10 ${isSpinning ? '' : 'backdrop-blur-sm'} transition-all duration-300`}>
-                                <span className="text-4xl">🎁</span>
+                        ) : (
+                            /* Fallback Card Design (Text) */
+                            <div className={`
+                                w-[85%] h-full rounded-3xl flex items-center justify-between px-8 relative overflow-hidden mx-auto
+                                ${i % 2 === 0 ? 'bg-[#ff5500]' : 'bg-[#ff6600]'} 
+                                shadow-[0_8px_0_rgba(0,0,0,0.15)] 
+                            `}>
+                                <div className={`absolute top-[-20%] left-[-10%] w-20 h-20 bg-white/10 rounded-full ${isSpinning ? '' : 'blur-xl'} transition-all duration-300`} />
+                                <div className="text-white z-10">
+                                    <div className="text-4xl font-black italic drop-shadow-sm">{prize.name}</div>
+                                </div>
+                                <div className={`w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border border-white/20 shadow-inner z-10`}>
+                                    <span className="text-4xl">🎁</span>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 ))}
             </div>
