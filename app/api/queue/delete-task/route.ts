@@ -9,37 +9,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, source } = await req.json();
+    const { id } = await req.json();
 
-    if (!id || !source) {
-        return NextResponse.json({ error: "ID and Source are required" }, { status: 400 });
+    if (!id) {
+        return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
     await initDatabase();
 
     try {
-        // Diagnostic: Check where this ID actually exists
-        const existsInTopic = await sql`SELECT id FROM topic_actions_queue WHERE id = ${id}`;
-        const existsInCreate = await sql`SELECT id FROM chat_creation_queue WHERE id = ${id}`;
+        const result = await sql`DELETE FROM unified_queue WHERE id = ${id} RETURNING id`;
 
-        let result;
-        if (source === 'topic') {
-            result = await sql`DELETE FROM topic_actions_queue WHERE id = ${id} RETURNING id`;
-        } else if (source === 'create') {
-            result = await sql`DELETE FROM chat_creation_queue WHERE id = ${id} RETURNING id`;
-        } else {
-            return NextResponse.json({ error: "Invalid source" }, { status: 400 });
-        }
+        // Also try to clean up legacy just in case (optional, but good for transition)
+        // await sql`DELETE FROM topic_actions_queue WHERE id = ${id}`;
+        // await sql`DELETE FROM chat_creation_queue WHERE id = ${id}`;
 
         return NextResponse.json({
             success: true,
-            count: result.length,
-            debug: {
-                requestedId: id,
-                requestedSource: source,
-                existsInTopic: existsInTopic.length > 0,
-                existsInCreate: existsInCreate.length > 0
-            }
+            count: result.length
         });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
