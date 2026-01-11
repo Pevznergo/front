@@ -22,9 +22,14 @@ export default function QueueConsole() {
     const [showCompleted, setShowCompleted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    const [now, setNow] = useState(Date.now());
+
     const fetchQueue = async () => {
         try {
-            const res = await fetch(`/api/topic-queue/list?show_completed=${showCompleted}`);
+            // Add timestamp to prevent caching
+            const res = await fetch(`/api/topic-queue/list?show_completed=${showCompleted}&t=${Date.now()}`, {
+                cache: 'no-store'
+            });
             if (res.ok) {
                 const data = await res.json();
                 setTasks(data.tasks || []);
@@ -36,7 +41,10 @@ export default function QueueConsole() {
 
     useEffect(() => {
         fetchQueue();
-        const interval = setInterval(fetchQueue, 5000);
+        const interval = setInterval(() => {
+            fetchQueue();
+            setNow(Date.now()); // Update timer
+        }, 1000); // Update every second for countdown
         return () => clearInterval(interval);
     }, [showCompleted]);
 
@@ -66,6 +74,9 @@ export default function QueueConsole() {
             const data = await res.json();
 
             if (res.ok) {
+                if (data.count === 0) {
+                    alert("Задача не найдена (возможно, уже удалена). Обновляю список...");
+                }
                 fetchQueue();
             } else {
                 alert(`Ошибка удаления: ${data.error || res.statusText}`);
@@ -74,6 +85,15 @@ export default function QueueConsole() {
             console.error(e);
             alert(`Ошибка сети: ${e.message}`);
         }
+    };
+
+    const getTimeRemaining = (scheduledDate: string) => {
+        const diff = new Date(scheduledDate).getTime() - now;
+        if (diff <= 0) return null;
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
     };
 
     const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'processing').length;
@@ -126,46 +146,49 @@ export default function QueueConsole() {
                                 Очередь пуста
                             </div>
                         ) : (
-                            tasks.map(task => (
-                                <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2 group relative">
-                                    <div className="flex items-center justify-between">
-                                        <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${task.status === 'processing' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
-                                            task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                                                    'bg-slate-500/20 text-slate-400'
-                                            }`}>
-                                            {task.status}
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[9px] text-slate-500 font-mono">#{task.id}</span>
-                                            <button
-                                                onClick={() => handleDelete(task.id, task.source || 'topic')}
-                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded transition-all"
-                                                title="Удалить задачу"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
+                            tasks.map(task => {
+                                const timeLeft = task.scheduled_for ? getTimeRemaining(task.scheduled_for) : null;
+                                return (
+                                    <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2 group relative">
+                                        <div className="flex items-center justify-between">
+                                            <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${task.status === 'processing' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
+                                                task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                    task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                                        'bg-slate-500/20 text-slate-400'
+                                                }`}>
+                                                {task.status}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] text-slate-500 font-mono">#{task.id}</span>
+                                                <button
+                                                    onClick={() => handleDelete(task.id, task.source || 'topic')}
+                                                    className="opacity-100 p-1 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded transition-all"
+                                                    title="Удалить задачу"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </div>
+
+                                        <div className="font-mono text-white/80 truncate">
+                                            {task.action_type}
+                                        </div>
+
+                                        {task.error && (
+                                            <div className="text-red-400 break-words bg-red-950/30 p-1 rounded border border-red-500/20 text-[9px]">
+                                                {task.error}
+                                            </div>
+                                        )}
+
+                                        {timeLeft && task.status === 'pending' && (
+                                            <div className="flex items-center gap-1 text-amber-400 text-[10px] bg-amber-500/10 p-1 rounded">
+                                                <Clock className="w-3 h-3" />
+                                                Wait: {timeLeft}
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <div className="font-mono text-white/80 truncate">
-                                        {task.action_type}
-                                    </div>
-
-                                    {task.error && (
-                                        <div className="text-red-400 break-words bg-red-950/30 p-1 rounded border border-red-500/20 text-[9px]">
-                                            {task.error}
-                                        </div>
-                                    )}
-
-                                    {task.scheduled_for && new Date(task.scheduled_for) > new Date() && (
-                                        <div className="flex items-center gap-1 text-amber-400 text-[10px] bg-amber-500/10 p-1 rounded">
-                                            <Clock className="w-3 h-3" />
-                                            Wait {(new Date(task.scheduled_for).getTime() - Date.now()) / 1000 | 0}s (FloodWait)
-                                        </div>
-                                    )}
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
