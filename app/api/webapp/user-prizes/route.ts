@@ -11,18 +11,16 @@ export async function GET(req: Request) {
 
         // Fetch "Active" Prizes (Can Win) - PUBLIC INFO
         // Fetch ALL and filter in JS to avoid SQL type mismatches (bool vs int)
-        const allPrizes = await sql`
+        // DEBUG: Fetch ALL prizes to see what's in DB
+        const allPrizesDebug = await sql`SELECT * FROM prizes ORDER BY id DESC`
+
+        // Fetch "Active" Prizes (Can Win) - PUBLIC INFO
+        // SQL Filter is usually more reliable if schema is correct
+        const activePrizes = await sql`
             SELECT * FROM prizes 
+            WHERE is_active = TRUE 
             ORDER BY probability ASC
         `
-        const activePrizes = allPrizes.filter((p: any) => p.is_active === true || p.is_active === 1 || p.is_active === 'true');
-        // Removed "AND probability > 0" to show all active prizes even if prob is 0 (e.g. manual grant)
-        // Or if you want to hide 0 prob items from "Can Win", keep it. The user said "not show prizes", maybe they put 0?
-        // Let's keep it lenient: show all active.
-        // Actually, the Wheel needs prob > 0 to spin? 
-        // Let's stick to showing ALL active prizes in the "Can Win" list.
-        // But for Wheel logic (processed in backend /spin), it uses prob.
-        // Let's ensure the SQL is: SELECT * FROM prizes WHERE is_active = TRUE ORDER BY probability ASC
 
         let userPrizes: any[] = []
 
@@ -55,7 +53,9 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             userPrizes,
-            activePrizes
+            activePrizes,
+            debugTotalCount: allPrizesDebug.length,
+            debugAllPrizes: allPrizesDebug // Exposed for checking
         }, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
