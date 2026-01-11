@@ -131,8 +131,12 @@ export async function createEcosystem(title: string, district: string | null) {
         });
     }
 
-    // 3.5 Invite Bots
+    // 3.5 Invite Bots & Promote to Admin
     const bots = ['aportopost_bot', 'justaskmari_bot', 'aportomessage_bot', 'aportostats_bot'];
+
+    // Bots that need Admin rights (to create topics, pin, etc.)
+    const adminBots = ['aportopost_bot', 'aportomessage_bot'];
+
     for (const bot of bots) {
         try {
             await client.invoke(
@@ -143,7 +147,28 @@ export async function createEcosystem(title: string, district: string | null) {
             );
             console.log(`Invited bot ${bot} to chat`);
 
-            if (bot === 'justaskmari_bot') {
+            if (adminBots.includes(bot)) {
+                const botEntity = await client.getEntity(bot);
+                await client.invoke(new Api.channels.EditAdmin({
+                    channel: channel,
+                    userId: botEntity,
+                    adminRights: new Api.ChatAdminRights({
+                        changeInfo: true,
+                        postMessages: true,
+                        editMessages: true,
+                        deleteMessages: true,
+                        banUsers: true,
+                        inviteUsers: true,
+                        pinMessages: true,
+                        addAdmins: false,
+                        anonymous: false,
+                        manageCall: true,
+                        other: true // meaningful for some clients
+                    }),
+                    rank: "Bot Admin"
+                }));
+                console.log(`Promoted ${bot} to Admin`);
+            } else if (bot === 'justaskmari_bot') {
                 try {
                     const botEntity = await client.getEntity(bot);
                     await client.invoke(
@@ -153,7 +178,7 @@ export async function createEcosystem(title: string, district: string | null) {
                             bannedRights: new Api.ChatBannedRights({
                                 untilDate: 0,
                                 viewMessages: false,
-                                sendMessages: true, // BANNED: Cannot send messages
+                                sendMessages: true, // BANNED
                                 sendMedia: true,
                                 sendStickers: true,
                                 sendGifs: true,
@@ -173,7 +198,7 @@ export async function createEcosystem(title: string, district: string | null) {
                 }
             }
         } catch (e) {
-            console.warn(`Failed to invite bot ${bot}:`, e);
+            console.warn(`Failed to invite/promote bot ${bot}:`, e);
         }
     }
 
@@ -367,12 +392,14 @@ export async function checkDuplicateEcosystem(title: string, district: string | 
     // This is a fuzzy check because existing titles in DB might be formatted differently
 
     if (house && street) {
-        // Check if there is any ecosystem where title ILIKE %street% AND title ILIKE %house%
-        // This prevents "Street 56" vs "56 Street" vs "Street, 56"
+        // Use Regex to match House number strictly as a whole word (to avoid 2 matching 12)
+        // \y matches word boundary in Postgres Regex
+        const housePattern = '\\y' + house + '\\y';
+
         const existing = await sql`
             SELECT id, title FROM ecosystems 
             WHERE title ILIKE ${'%' + street + '%'} 
-              AND title ILIKE ${'%' + house + '%'}
+              AND title ~* ${housePattern}
               LIMIT 1
          `;
 

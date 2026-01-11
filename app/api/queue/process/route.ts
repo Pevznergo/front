@@ -164,6 +164,17 @@ export async function GET(req: NextRequest) {
                 return NextResponse.json({ success: false, status: 'postponed', waitSeconds });
             }
 
+            // Handle Duplicates as "Completed with Warning" (Skipped)
+            const isDuplicate = error.message && (
+                error.message.includes("Duplicate") ||
+                error.message.includes("Already exists")
+            );
+
+            if (isDuplicate) {
+                await sql`UPDATE unified_queue SET status = 'completed', error = ${"Skipped: " + error.message} WHERE id = ${task.id}`;
+                return NextResponse.json({ success: true, status: 'skipped', message: error.message });
+            }
+
             await sql`UPDATE unified_queue SET status = 'failed', error = ${error.message} WHERE id = ${task.id}`;
             triggerNext(5000);
             return NextResponse.json({ success: false, error: error.message }, { status: 500 });
