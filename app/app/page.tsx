@@ -180,7 +180,7 @@ export default function WebAppPage() {
             setWinResult(pendingPrize)
             setWinIndex(null)
             setPendingPrize(null)
-        }, 500);
+        }, 1200);
     }
 
     // Real Daily Bonus Handler
@@ -371,7 +371,7 @@ export default function WebAppPage() {
                     initData={initData}
                 />
 
-                {winResult && (
+                {winResult && !spinning && (
                     <WinModal
                         prize={winResult}
                         onClose={() => {
