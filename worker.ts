@@ -82,7 +82,7 @@ async function processChatCreationQueue() {
                 const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
                 const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
-                await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+                await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
                     message_thread_id: threadId,
                     reply_markup: keyboard,
                     parse_mode: "Markdown",
