@@ -133,6 +133,27 @@ export default function QueueConsole() {
                             >
                                 {isProcessing ? <Loader2 className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                             </button>
+                            {tasks.some(t => t.status === 'failed') && (
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("Удалить ВСЕ задачи со статусом Failed?")) return;
+                                        try {
+                                            const res = await fetch("/api/queue/clear-failed", { method: "POST" });
+                                            const data = await res.json();
+                                            if (res.ok) {
+                                                alert(`Удалено ${data.count} ошибок.`);
+                                                fetchQueue();
+                                            } else {
+                                                alert(data.error);
+                                            }
+                                        } catch (e: any) { alert(e.message) }
+                                    }}
+                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                    title="Clear All Failed Tasks"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            )}
                             <button
                                 onClick={() => setShowCompleted(!showCompleted)}
                                 className={`text-slate-400 hover:text-white transition-colors ${showCompleted ? 'text-indigo-400' : ''}`}
