@@ -126,6 +126,7 @@ async function processUnifiedQueue() {
             await cleanSystemMessages(chat_id.toString());
             console.log(`Cleaned system messages for ${chat_id}`);
 
+        } else if (task.type === 'update_chat_permissions') {
             const { chat_id } = payload;
             if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token missing");
             const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
