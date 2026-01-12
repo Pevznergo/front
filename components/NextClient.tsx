@@ -1431,6 +1431,30 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
+                    <button
+                        onClick={async () => {
+                            if (!confirm("Запустить проверку прав для ВСЕХ чатов? Это добавит задачи в очередь.")) return;
+                            try {
+                                setLoading(true);
+                                const res = await fetch("/api/admin/check-permissions-all", { method: "POST" });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert(data.message);
+                                } else {
+                                    alert("Ошибка: " + data.error);
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Ошибка сети");
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="p-3 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500 rounded-xl transition-all shadow-xl shadow-yellow-500/10"
+                        title="Проверить права во всех чатах"
+                    >
+                        <CheckSquare className="w-5 h-5" />
+                    </button>
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input

@@ -125,6 +125,34 @@ async function processUnifiedQueue() {
             const { cleanSystemMessages } = require('./lib/chat');
             await cleanSystemMessages(chat_id.toString());
             console.log(`Cleaned system messages for ${chat_id}`);
+
+        } else if (task.type === 'update_chat_permissions') {
+            const { chat_id } = payload;
+            if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token missing");
+            const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+            const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
+
+            // Permissions: All ON except Pin, Topics, Info
+            await bot.api.setChatPermissions(targetChatId, {
+                can_send_messages: true,
+                can_send_audios: true,
+                can_send_documents: true,
+                can_send_photos: true,
+                can_send_videos: true,
+                can_send_video_notes: true,
+                can_send_voice_notes: true,
+                can_send_polls: true,
+                can_send_other_messages: true,
+                can_add_web_page_previews: true,
+                can_invite_users: true,
+
+                // RESTRICTED:
+                can_change_info: false,
+                can_pin_messages: false,
+                can_manage_topics: false
+            });
+            console.log(`Updated permissions for ${chat_id}`);
+
         } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {
             // Re-use legacy logic adapted for unified payload
             const client = await getTelegramClient();
