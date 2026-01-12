@@ -2705,7 +2705,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     >
                                         <option value="📢 Новости">📢 Новости</option>
                                         <option value="🗣 Флудилка">🗣 Флудилка</option>
-                                        <option value="🛒 БАРАХОЛКА">🛒 БАРАХОЛКА</option>
+                                        <option value="🛒 Скидки и Промокоды">🛒 Скидки и Промокоды</option>
                                         <option value="🛠 Услуги">🛠 Услуги</option>
                                         <option value="‼️ ВЫБОР АДМИНА">‼️ ВЫБОР АДМИНА</option>
                                     </select>
