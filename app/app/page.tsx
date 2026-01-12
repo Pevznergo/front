@@ -68,12 +68,20 @@ export default function WebAppPage() {
                         setLastDailyDate(data.user.last_daily_claim)
 
                         // Check availability
+
+                        let available = false;
                         if (!data.user.last_daily_claim) {
-                            setIsDailyAvailable(true)
+                            available = true;
                         } else {
                             const last = new Date(data.user.last_daily_claim).toDateString()
                             const today = new Date().toDateString()
-                            setIsDailyAvailable(last !== today)
+                            available = (last !== today)
+                        }
+                        setIsDailyAvailable(available)
+
+                        // Auto-open if available
+                        if (available) {
+                            setIsDailyOpen(true)
                         }
                     }
                 })
