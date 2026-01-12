@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql, initDatabase, getFloodWait, setFloodWait } from "@/lib/db";
-import { createEcosystem, pinForumTopic } from "@/lib/chat";
+import { createEcosystem, pinTelegramTopic, ensureBotAdminRights } from "@/lib/chat";
 import { Bot, InlineKeyboard } from "grammy";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -108,6 +108,13 @@ export async function GET(req: NextRequest) {
                 // Wait for rights propagation
                 if (!force) await new Promise(r => setTimeout(r, 2000));
 
+                // Ensure Bot has Admin Rights (Manage Topics)
+                try {
+                    await ensureBotAdminRights(chat_id.toString(), 'aportomessage_bot');
+                } catch (e) {
+                    console.error("Failed to ensure bot rights:", e);
+                }
+
                 const topic = await bot.api.createForumTopic(targetChatId, title);
                 const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
                 const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
@@ -123,7 +130,7 @@ export async function GET(req: NextRequest) {
                     // Close the Topic (Read Only)
                     await bot.api.closeForumTopic(targetChatId, topic.message_thread_id);
                     // Pin the Topic (Top of list)
-                    await pinForumTopic(chat_id.toString(), topic.message_thread_id, true);
+                    await pinTelegramTopic(chat_id.toString(), topic.message_thread_id, true);
                 } catch (e) {
                     console.error("Failed to pin/close promo:", e);
                 }

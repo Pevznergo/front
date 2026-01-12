@@ -163,7 +163,9 @@ export async function createEcosystem(title: string, district: string | null) {
                         addAdmins: false,
                         anonymous: false,
                         manageCall: true,
-                        other: true // meaningful for some clients
+                        other: true,
+                        // @ts-ignore
+                        manageTopics: true
                     }),
                     rank: "Bot Admin"
                 }));
@@ -415,4 +417,45 @@ export async function checkDuplicateEcosystem(title: string, district: string | 
             throw new Error(`Duplicate: Chat "${title}" already exists.`);
         }
     }
+}
+
+export async function pinTelegramTopic(chatId: string, topicId: number, pinned: boolean = true) {
+    const client = await getTelegramClient();
+    const entity = await getChatEntity(client, chatId);
+
+    await client.invoke(new Api.channels.UpdatePinnedForumTopic({
+        channel: entity,
+        topicId: topicId,
+        pinned: pinned
+    }));
+}
+
+export async function ensureBotAdminRights(chatId: string, botUsername: string) {
+    const client = await getTelegramClient();
+    const entity = await getChatEntity(client, chatId);
+    const botEntity = await client.getEntity(botUsername);
+
+    console.log(`Ensuring admin rights for ${botUsername} in ${chatId}...`);
+
+    await client.invoke(new Api.channels.EditAdmin({
+        channel: entity,
+        userId: botEntity,
+        adminRights: new Api.ChatAdminRights({
+            changeInfo: true,
+            postMessages: true,
+            editMessages: true,
+            deleteMessages: true,
+            banUsers: true,
+            inviteUsers: true,
+            pinMessages: true,
+            addAdmins: false,
+            anonymous: false,
+            manageCall: true,
+            other: true,
+            // @ts-ignore
+            manageTopics: true
+        }),
+        rank: "Bot Admin"
+    }));
+    console.log(`Promoted ${botUsername} to Admin (rights refreshed).`);
 }

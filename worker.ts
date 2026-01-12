@@ -4,7 +4,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { sql, initDatabase, getFloodWait, setFloodWait } from './lib/db';
-import { createEcosystem, setTopicClosed, getChatEntity, pinForumTopic } from './lib/chat';
+import { createEcosystem, setTopicClosed, getChatEntity, pinTelegramTopic, ensureBotAdminRights } from './lib/chat';
 import { getTelegramClient } from './lib/tg';
 import { Bot, InlineKeyboard } from 'grammy';
 import { Api } from 'telegram';
@@ -78,6 +78,13 @@ async function processUnifiedQueue() {
             // Wait 2s for propagation if just created
             await new Promise(r => setTimeout(r, 2000));
 
+            // Ensure Bot has Admin Rights (Manage Topics)
+            try {
+                await ensureBotAdminRights(chat_id.toString(), 'aportomessage_bot');
+            } catch (e) {
+                console.error("Failed to ensure bot rights:", e);
+            }
+
             const topic = await bot.api.createForumTopic(targetChatId, title);
             const threadId = topic.message_thread_id;
 
@@ -96,7 +103,7 @@ async function processUnifiedQueue() {
                 // Close the Topic (Read Only for users)
                 await bot.api.closeForumTopic(targetChatId, threadId);
                 // Pin the Topic (Top of list)
-                await pinForumTopic(chat_id.toString(), threadId, true);
+                await pinTelegramTopic(chat_id.toString(), threadId, true);
             } catch (e) {
                 console.error("Failed to pin/close promo:", e);
             }
