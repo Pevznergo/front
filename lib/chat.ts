@@ -490,7 +490,8 @@ export async function blockMarketingTopics(chatId: string) {
 
     const targetNames = ["🛠 Услуги", "🎁 Колесо Фортуны"];
 
-    for (const topic of topics) {
+    for (const t of topics) {
+        const topic = t as any;
         if (targetNames.includes(topic.title)) {
             console.log(`Closing topic: ${topic.title} (${topic.id})`);
 
