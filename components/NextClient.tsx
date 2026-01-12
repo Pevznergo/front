@@ -1735,6 +1735,38 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                     </button>
                                                                 </div>
                                                             ))}
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm(`Удалить системные сообщения в чате "${item.title}"?`)) return;
+
+                                                                    try {
+                                                                        const res = await fetch("/api/queue", {
+                                                                            method: "POST",
+                                                                            headers: { "Content-Type": "application/json" },
+                                                                            body: JSON.stringify({
+                                                                                type: 'clean_system_messages',
+                                                                                payload: { chat_id: item.tg_chat_id },
+                                                                                status: 'pending',
+                                                                                scheduled_at: new Date().toISOString()
+                                                                            })
+                                                                        });
+
+                                                                        if (res.ok) {
+                                                                            alert(`Задача на очистку добавлена!`);
+                                                                            fetch("/api/queue/process?force=true").catch(console.error);
+                                                                        } else {
+                                                                            alert("Ошибка при добавлении задачи");
+                                                                        }
+                                                                    } catch (err) {
+                                                                        alert("Ошибка сети");
+                                                                    }
+                                                                }}
+                                                                className="p-1.5 hover:bg-orange-500/20 text-orange-400 rounded-lg transition-colors"
+                                                                title="Очистить системные сообщения"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                                            </button>
                                                         </div>
 
                                                         {editingGroup && editingGroup.tgChatId === item.tg_chat_id ? (

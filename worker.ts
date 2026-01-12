@@ -120,6 +120,11 @@ async function processUnifiedQueue() {
             const { blockMarketingTopics } = require('./lib/chat');
             await blockMarketingTopics(chat_id.toString());
             console.log(`Blocked marketing topics for ${chat_id}`);
+        } else if (task.type === 'clean_system_messages') {
+            const { chat_id } = payload;
+            const { cleanSystemMessages } = require('./lib/chat');
+            await cleanSystemMessages(chat_id.toString());
+            console.log(`Cleaned system messages for ${chat_id}`);
         } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {
             // Re-use legacy logic adapted for unified payload
             const client = await getTelegramClient();

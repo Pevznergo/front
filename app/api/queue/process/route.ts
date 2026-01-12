@@ -144,6 +144,12 @@ export async function GET(req: NextRequest) {
                 await blockMarketingTopics(chat_id.toString());
                 resultData = { success: true };
 
+            } else if (type === 'clean_system_messages') {
+                const { chat_id } = payload;
+                const { cleanSystemMessages } = require("@/lib/chat");
+                await cleanSystemMessages(chat_id.toString());
+                resultData = { success: true };
+
             } else if (['send_message', 'create_poll'].includes(type)) {
                 // Minimal handling for essential task types to support "Run Now" even without worker.js
                 // Note: Ideally worker.js handles this using GramJS for "user" actions. 

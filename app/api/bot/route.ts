@@ -40,8 +40,32 @@ function getBot() {
                     user_name = EXCLUDED.user_name,
                     updated_at = CURRENT_TIMESTAMP
             `;
+            // Delete the "User joined" message
+            try { await ctx.deleteMessage(); } catch (e) { }
         } catch (e) {
             console.error("Invite tracking error:", e);
+        }
+    });
+
+    // Auto-delete other service messages
+    // left_chat_member, pinned_message, forum_topic_created, forum_topic_closed, forum_topic_reopened, forum_topic_edited
+    const serviceEvents = [
+        "message:left_chat_member",
+        "message:pinned_message",
+        "message:forum_topic_created",
+        "message:forum_topic_closed",
+        "message:forum_topic_reopened",
+        "message:video_chat_started",
+        "message:video_chat_ended",
+        "message:video_chat_scheduled"
+    ];
+
+    // @ts-ignore
+    bot.on(serviceEvents, async (ctx) => {
+        try {
+            await ctx.deleteMessage();
+        } catch (e) {
+            // ignore (bot might not be admin or message already deleted)
         }
     });
 
