@@ -11,7 +11,7 @@ import {
     X,
     ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
-    Clipboard as ClipboardIcon, Plus, Gift, Edit
+    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
