@@ -39,6 +39,7 @@ export async function GET(req: Request) {
                         up.id as user_prize_id,
                         up.won_at,
                         up.expiry_at,
+                        up.revealed_at,
                         up.promo_code,
                         p.name,
                         p.description,

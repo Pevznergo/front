@@ -289,33 +289,42 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS status_text VARCHAR(255) DEFAULT 'Действует 24 часа'`;
     } catch (e) { }
 
-    // Seed prizes if empty
-    const existingPrizes = await sqlConnection`SELECT count(*) as count FROM prizes`;
-    if (existingPrizes[0].count == 0) {
-      await sqlConnection`
-        INSERT INTO prizes (name, type, value, probability, description) VALUES
-        ('5 Баллов', 'points', '5', 30.00, 'Утешительный приз'),
-        ('10 Баллов', 'points', '10', 25.00, 'Вернули ставку'),
-        ('20 Баллов', 'points', '20', 20.00, 'В плюсе!'),
-        ('50 Баллов', 'points', '50', 10.00, 'Крупный выигрыш'),
-        ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
-        ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
-        ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
-        ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
-      `;
+    // User Prizes (Won items)
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS user_prizes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        prize_id INTEGER NOT NULL REFERENCES prizes(id),
+        promo_code VARCHAR(255),
+        expiry_at TIMESTAMP,
+        revealed_at TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'active', -- 'active', 'redeemed', 'expired'
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Migration for existing tables
+    try {
+      await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS revealed_at TIMESTAMP`;
+    } catch (e) { }
+    ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
+      ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
+      ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
+      ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
+        `;
     }
 
     // User Prizes table (New)
     await sqlConnection`
-      CREATE TABLE IF NOT EXISTS user_prizes (
-        id SERIAL PRIMARY KEY,
-        telegram_id BIGINT REFERENCES app_users(telegram_id),
-        prize_id INTEGER REFERENCES prizes(id),
-        won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expiry_at TIMESTAMP,
-        promo_code VARCHAR(255),
-        is_used BOOLEAN DEFAULT FALSE
-      )
+      CREATE TABLE IF NOT EXISTS user_prizes(
+          id SERIAL PRIMARY KEY,
+          telegram_id BIGINT REFERENCES app_users(telegram_id),
+          prize_id INTEGER REFERENCES prizes(id),
+          won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          expiry_at TIMESTAMP,
+          promo_code VARCHAR(255),
+          is_used BOOLEAN DEFAULT FALSE
+        )
     `;
 
     // Migration: Add missing columns to user_prizes
@@ -357,9 +366,9 @@ export async function setFloodWait(seconds: number) {
   // Add small buffer (1s) to be safe
   const bufferSeconds = seconds + 1;
   await sql`
-        INSERT INTO flood_control (key, expires_at)
-        VALUES ('telegram_global', NOW() + (${bufferSeconds} || ' seconds')::INTERVAL)
-        ON CONFLICT (key) DO UPDATE SET
-            expires_at = EXCLUDED.expires_at
-    `;
+        INSERT INTO flood_control(key, expires_at)
+    VALUES('telegram_global', NOW() + (${ bufferSeconds } || ' seconds')::INTERVAL)
+        ON CONFLICT(key) DO UPDATE SET
+    expires_at = EXCLUDED.expires_at
+      `;
 }

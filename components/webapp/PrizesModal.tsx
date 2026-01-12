@@ -175,12 +175,43 @@ export default function PrizesModal({ isOpen, onClose, initData }: PrizesModalPr
     );
 }
 
+won_at ?: string;
+expiry_at ?: string;
+revealed_at ?: string;
+promo_code ?: string;
+// Config fields
+button_text ?: string;
+// ... (interface continues, but let's locate the component)
+
 // "You Won" - List Item Style
 function PrizeListItem({ prize }: { prize: PrizeItem }) {
+    const [isRevealed, setIsRevealed] = useState(!!prize.revealed_at || !prize.promo_code);
+    const [loading, setLoading] = useState(false);
+
+    const handleReveal = async () => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            await fetch("/api/webapp/prize/reveal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_prize_id: prize.user_prize_id })
+            });
+            setIsRevealed(true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-            <div className="flex gap-4 items-start">
-                <div className="w-16 h-16 bg-[#333] rounded-xl flex-shrink-0 flex items-center justify-center relative overflow-hidden">
+        <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            {/* Background Glow Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+            <div className="flex gap-4 items-start relative z-10">
+                <div className="w-16 h-16 bg-[#333] rounded-xl flex-shrink-0 flex items-center justify-center relative overflow-hidden shadow-inner">
                     {prize.image_url ? (
                         <img src={prize.image_url} alt={prize.name} className="w-full h-full object-cover" />
                     ) : (
@@ -196,12 +227,36 @@ function PrizeListItem({ prize }: { prize: PrizeItem }) {
                 </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 relative z-10">
                 {prize.promo_code && (
-                    <button className="bg-[#444] text-white px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform">
-                        <Copy className="w-3.5 h-3.5" />
-                        {prize.promo_code}
-                    </button>
+                    <div className="relative overflow-hidden rounded-xl">
+                        <div className={`transition-all duration-500 ${isRevealed ? 'filter-none' : 'blur-md select-none'}`}>
+                            <button
+                                onClick={() => {
+                                    if (isRevealed) {
+                                        navigator.clipboard.writeText(prize.promo_code!);
+                                        alert("Скопировано!");
+                                    }
+                                }}
+                                className="bg-[#444] text-white px-3 py-2.5 w-full h-full text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform"
+                            >
+                                <Copy className="w-3.5 h-3.5" />
+                                {prize.promo_code}
+                            </button>
+                        </div>
+
+                        {!isRevealed && (
+                            <button
+                                onClick={handleReveal}
+                                disabled={loading}
+                                className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px] hover:bg-black/30 transition-all cursor-pointer group/btn"
+                            >
+                                <span className="bg-yellow-400 text-black text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg transform group-hover/btn:scale-105 transition-transform flex items-center gap-1">
+                                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "ПОКАЗАТЬ"}
+                                </span>
+                            </button>
+                        )}
+                    </div>
                 )}
 
                 <button
@@ -210,7 +265,7 @@ function PrizeListItem({ prize }: { prize: PrizeItem }) {
                             window.open(prize.button_url, '_blank')
                         }
                     }}
-                    className="flex-1 bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-300"
+                    className="flex-1 bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-300 shadow-lg shadow-yellow-500/20"
                 >
                     {prize.button_text || 'К товарам'}
                     <ExternalLink className="w-3.5 h-3.5" />

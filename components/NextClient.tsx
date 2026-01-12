@@ -11,7 +11,7 @@ import {
     X,
     ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
-    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart as BarChartIcon
+    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart as BarChartIcon, Megaphone
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -1485,6 +1485,30 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         title="Обновить статистику (участников)"
                     >
                         <RefreshCw className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (!confirm("Запустить кампанию: Переименовать Барахолку -> Скидки и отправить промокод про Енота? (Во ВСЕХ чатах)")) return;
+                            try {
+                                setLoading(true);
+                                const res = await fetch("/api/admin/campaign/promo-rename", { method: "POST" });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert(data.message);
+                                } else {
+                                    alert("Ошибка: " + data.error);
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Ошибка сети");
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="p-3 bg-orange-600/20 hover:bg-orange-600/40 text-orange-500 rounded-xl transition-all shadow-xl shadow-orange-500/10 ml-2"
+                        title="Запустить промо-кампанию (Rename + Message)"
+                    >
+                        <Megaphone className="w-5 h-5" />
                     </button>
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />

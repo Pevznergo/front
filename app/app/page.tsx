@@ -66,16 +66,30 @@ export default function WebAppPage() {
                 .then(data => {
                     if (data.user) {
                         setUser(data.user)
-                        setDailyStreak(data.user.daily_streak || 1)
-                        setLastDailyDate(data.user.last_daily_claim)
+                        // Fix: Don't force 1 if streak is 0. Use 0 for new users.
+                        setDailyStreak(data.user.daily_streak ?? 0)
 
-                        // Check availability
+                        let lastDate = data.user.last_daily_claim;
 
+                        // Rule: If no last claim (new user), check registration date.
+                        // "For 1 day one can receive only on the next day after registration"
+                        if (!lastDate && data.user.created_at) {
+                            const created = new Date(data.user.created_at);
+                            const now = new Date();
+                            if (created.toDateString() === now.toDateString()) {
+                                // Registered today -> Treat as "claimed today" (locked)
+                                lastDate = data.user.created_at;
+                            }
+                        }
+
+                        setLastDailyDate(lastDate)
+
+                        // Check availability based on resolved lastDate
                         let available = false;
-                        if (!data.user.last_daily_claim) {
+                        if (!lastDate) {
                             available = true;
                         } else {
-                            const last = new Date(data.user.last_daily_claim).toDateString()
+                            const last = new Date(lastDate).toDateString()
                             const today = new Date().toDateString()
                             available = (last !== today)
                         }

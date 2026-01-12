@@ -163,7 +163,8 @@ async function processUnifiedQueue() {
             });
             console.log(`Updated permissions for ${chat_id}`);
 
-        } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {
+        } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open'
+            || task.type === 'update_title' || task.type === 'rename_topic') {
             // Re-use legacy logic adapted for unified payload
             const client = await getTelegramClient();
             if (!client) throw new Error("No TG Client");
@@ -214,6 +215,24 @@ async function processUnifiedQueue() {
                     message: "",
                     replyTo: new Api.InputReplyToMessage({ replyToMsgId: topicId })
                 }));
+
+            } else if (task.type === 'rename_topic') {
+                const { newTitle } = payload;
+                if (!newTitle) throw new Error("newTitle is required");
+
+                // If topicId not resolved yet (re-using logic above which resolves 'topicId' variable)
+                // The block above sets 'topicId' variable, so we can use it.
+                // Wait, 'topicId' is resolved at lines 174-183.
+                // So if we are in this 'else if' block (task.type === 'rename_topic'), we can use it.
+                // Wait, the `if (task.type === ...)` chain is inside logic that STARTS at line 166.
+                // Yes, lines 166-183 setup client, entity and topicId.
+
+                await client.invoke(new Api.channels.EditForumTopic({
+                    channel: entity,
+                    topicId: topicId,
+                    title: newTitle
+                }));
+                console.log(`Renamed topic ${topicId} to ${newTitle}`);
             }
             // ... (implement other types as needed)
         }
