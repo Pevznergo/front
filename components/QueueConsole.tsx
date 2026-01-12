@@ -27,7 +27,7 @@ export default function QueueConsole() {
     const fetchQueue = async () => {
         try {
             // Add timestamp to prevent caching
-            const res = await fetch(`/api/topic-queue/list?show_completed=${showCompleted}&t=${Date.now()}`, {
+            const res = await fetch(`/api/queue?t=${Date.now()}`, {
                 cache: 'no-store'
             });
             if (res.ok) {
@@ -35,6 +35,8 @@ export default function QueueConsole() {
                 console.log("Queue Data:", data);
                 if (data.tasks) {
                     setTasks(data.tasks);
+                } else if (data.items) {
+                    setTasks(data.items);
                 } else {
                     console.error("No tasks array in response:", data);
                 }
@@ -59,7 +61,7 @@ export default function QueueConsole() {
         setIsProcessing(true);
         try {
             await fetch("/api/queue/process?force=true");
-            await fetch("/api/topic-queue/process");
+            // await fetch("/api/topic-queue/process"); // Removed legacy
             await fetchQueue();
         } catch (e) {
             console.error(e);

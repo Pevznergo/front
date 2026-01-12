@@ -123,22 +123,23 @@ export async function GET(req: NextRequest) {
 
     try {
         const queue = await sql`
-            SELECT id, payload->>'title' as title, payload->>'district' as district, status, error, scheduled_at, created_at
+            SELECT id, type as action_type, payload->>'title' as title, payload->>'district' as district, status, error, scheduled_at, created_at
             FROM unified_queue 
-            WHERE type = 'create_chat' AND status != 'completed' 
+            WHERE status != 'completed' 
             ORDER BY scheduled_at ASC
         `;
 
         const nextTask = await sql`
             SELECT payload->>'title' as title, scheduled_at 
             FROM unified_queue 
-            WHERE type = 'create_chat' AND status = 'pending' 
+            WHERE status = 'pending' 
             ORDER BY scheduled_at ASC 
             LIMIT 1
         `;
 
         return NextResponse.json({
             items: queue,
+            tasks: queue, // Backward compatibility for QueueConsole if I don't update it immediately, but I will.
             nextTask: nextTask[0] || null
         });
     } catch (e: any) {
