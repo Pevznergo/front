@@ -9,10 +9,38 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { batch } = await req.json();
+    const body = await req.json();
+    const { batch, type, payload, scheduled_at } = body;
 
+    // SCENARIO 1: Single Task Insert (e.g. block_topics)
+    if (type && payload) {
+        try {
+            await sql`
+                INSERT INTO unified_queue (type, payload, scheduled_at, status, created_at)
+                VALUES (
+                    ${type},
+                    ${JSON.stringify(payload)},
+                    ${scheduled_at || new Date().toISOString()}, 
+                    'pending', 
+                    NOW()
+                )
+            `;
+
+            // Trigger processing
+            const protocol = req.headers.get("x-forwarded-proto") || "http";
+            const h = req.headers.get("host");
+            const baseUrl = `${protocol}://${h}`;
+            fetch(`${baseUrl}/api/queue/process?secret=${process.env.APP_SECRET_KEY || ""}`).catch(console.error);
+
+            return NextResponse.json({ success: true, count: 1 });
+        } catch (e: any) {
+            return NextResponse.json({ error: e.message }, { status: 500 });
+        }
+    }
+
+    // SCENARIO 2: Batch Chat Creation
     if (!Array.isArray(batch) || batch.length === 0) {
-        return NextResponse.json({ error: "Batch is empty" }, { status: 400 });
+        return NextResponse.json({ error: "Batch is empty or invalid" }, { status: 400 });
     }
 
     const now = new Date();
