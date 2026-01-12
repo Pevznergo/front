@@ -67,15 +67,14 @@ async function processUnifiedQueue() {
             log(`Created Chat: ${result.chatId}`);
 
         } else if (task.type === 'create_promo') {
-            // Automation: Wheel of Fortune
             const { chat_id, title } = payload;
-            const token = process.env.TELEGRAM_BOT_TOKEN;
-            if (!token) throw new Error("Bot token missing");
+            if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token missing");
 
-            const bot = new Bot(token);
+            const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+            // Ensure targetChatId has -100 prefix
             const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
 
-            // Wait 2s for propagation if just created
+            // Wait for rights propagation
             await new Promise(r => setTimeout(r, 2000));
 
             // Ensure Bot has Admin Rights (Manage Topics)
@@ -86,28 +85,41 @@ async function processUnifiedQueue() {
             }
 
             const topic = await bot.api.createForumTopic(targetChatId, title);
-            const threadId = topic.message_thread_id;
-
             const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
             const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
-            const message = await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
-                message_thread_id: threadId,
+            const message = await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+                message_thread_id: topic.message_thread_id,
                 reply_markup: keyboard,
                 parse_mode: "Markdown",
             });
+
+            // Track creation in topic_actions_queue if needed (optional)
 
             try {
                 // Pin the Message (Button)
                 await bot.api.pinChatMessage(targetChatId, message.message_id);
                 // Close the Topic (Read Only for users)
-                await bot.api.closeForumTopic(targetChatId, threadId);
+                await bot.api.closeForumTopic(targetChatId, topic.message_thread_id);
                 // Pin the Topic (Top of list)
-                await pinTelegramTopic(chat_id.toString(), threadId, true);
+                await pinTelegramTopic(chat_id.toString(), topic.message_thread_id, true);
             } catch (e) {
                 console.error("Failed to pin/close promo:", e);
             }
 
+            // NEW: Block Services topic as well just in case
+            // Actually the user asked for "Ban on messages in Wheel of Fortune and Services ... AFTER creation"
+            // Our generic blockMarketingTopics does exactly that.
+            // But specifically for 'create_promo', we usually just create the promo.
+            // Let's leave it focused.
+
+            console.log(`Created promo topic ${topic.message_thread_id}`);
+
+        } else if (task.type === 'block_topics') {
+            const { chat_id } = payload;
+            const { blockMarketingTopics } = require('./lib/chat');
+            await blockMarketingTopics(chat_id.toString());
+            console.log(`Blocked marketing topics for ${chat_id}`);
         } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {
             // Re-use legacy logic adapted for unified payload
             const client = await getTelegramClient();

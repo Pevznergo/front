@@ -1676,6 +1676,39 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="11" x2="10" y2="11" /><line x1="8" y1="9" x2="8" y2="13" /><rect width="22" height="14" x="1" y="6" rx="2" ry="2" /><path d="M9 1l2 2 3.5-3.5" /><path d="M15 12h.01" /><path d="M18 11h.01" /></svg>
                                                             </button>
                                                             <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm(`Заблокировать (закрыть) топики "Услуги" и "Колесо" в "${item.title}"?`)) return;
+
+                                                                    try {
+                                                                        const res = await fetch("/api/queue", {
+                                                                            method: "POST",
+                                                                            headers: { "Content-Type": "application/json" },
+                                                                            body: JSON.stringify({
+                                                                                type: 'block_topics',
+                                                                                payload: { chat_id: item.tg_chat_id },
+                                                                                status: 'pending',
+                                                                                scheduled_at: new Date().toISOString()
+                                                                            })
+                                                                        });
+
+                                                                        if (res.ok) {
+                                                                            alert(`Задача на блокировку добавлена в очередь!`);
+                                                                            // Trigger process immediately for better UX
+                                                                            fetch("/api/queue/process?force=true").catch(console.error);
+                                                                        } else {
+                                                                            alert("Ошибка при добавлении задачи");
+                                                                        }
+                                                                    } catch (err) {
+                                                                        alert("Ошибка сети");
+                                                                    }
+                                                                }}
+                                                                className="p-1.5 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                                                title="Заблокировать топики (Read-Only)"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                                            </button>
+                                                            <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setEditingGroup(item);

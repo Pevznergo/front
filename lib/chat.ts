@@ -112,7 +112,17 @@ export async function createEcosystem(title: string, district: string | null) {
     const marketplaceTopicId = marketTopicResult?.updates?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id
         || marketTopicResult?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id;
 
-    await client.invoke(new Api.channels.CreateForumTopic({ channel, title: "🛠 Услуги" }));
+    const servicesTopicResult = await client.invoke(new Api.channels.CreateForumTopic({ channel, title: "🛠 Услуги" })) as any;
+    const servicesTopicId = servicesTopicResult?.updates?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id
+        || servicesTopicResult?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id;
+
+    if (servicesTopicId) {
+        await client.invoke(new Api.channels.EditForumTopic({
+            channel: channel,
+            topicId: servicesTopicId,
+            closed: true
+        }));
+    }
 
     const adminTopicResult = await client.invoke(
         new Api.channels.CreateForumTopic({
@@ -458,4 +468,42 @@ export async function ensureBotAdminRights(chatId: string, botUsername: string) 
         rank: "Bot Admin"
     }));
     console.log(`Promoted ${botUsername} to Admin (rights refreshed).`);
+}
+
+export async function blockMarketingTopics(chatId: string) {
+    const client = await getTelegramClient();
+    const entity = await getChatEntity(client, chatId);
+
+    // 1. Get all topics
+    // @ts-ignore
+    const result = await client.invoke(new Api.channels.GetForumTopics({
+        channel: entity,
+        offsetDate: 0,
+        offsetId: 0,
+        offsetTopic: 0,
+        limit: 100
+    }));
+
+    // @ts-ignore
+    const topics = result.topics || [];
+    console.log(`Found ${topics.length} topics in ${chatId}`);
+
+    const targetNames = ["🛠 Услуги", "🎁 Колесо Фортуны"];
+
+    for (const topic of topics) {
+        if (targetNames.includes(topic.title)) {
+            console.log(`Closing topic: ${topic.title} (${topic.id})`);
+
+            // Close the topic
+            await client.invoke(new Api.channels.EditForumTopic({
+                channel: entity,
+                topicId: topic.id,
+                closed: true
+            }));
+
+            // Also ensure it is pinned if it is Wheel of Fortune? 
+            // The user asked to "Block messages", closing does exactly that for non-admins.
+            // "Запрет на сообщения" = Close Topic.
+        }
+    }
 }

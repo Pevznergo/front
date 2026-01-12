@@ -137,6 +137,13 @@ export async function GET(req: NextRequest) {
 
                 resultData = { threadId: topic.message_thread_id, messageId: message.message_id };
 
+            } else if (type === 'block_topics') {
+                const { chat_id } = payload;
+                // Dynamically import to ensure we get the latest version if needed, or just use imported
+                const { blockMarketingTopics } = require("@/lib/chat");
+                await blockMarketingTopics(chat_id.toString());
+                resultData = { success: true };
+
             } else if (['send_message', 'create_poll'].includes(type)) {
                 // Minimal handling for essential task types to support "Run Now" even without worker.js
                 // Note: Ideally worker.js handles this using GramJS for "user" actions. 
