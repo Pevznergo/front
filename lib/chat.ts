@@ -136,7 +136,7 @@ export async function createEcosystem(title: string, district: string | null) {
 
     if (adminTopicId) {
         await client.sendMessage(channel, {
-            message: "Чтобы участвовать в голосовании - отправьте + в этом чате.",
+            message: "Чтобы стать кандидатом в голосовании за выбор Админа Чата, оставьте здесь любое сообщение.",
             replyTo: adminTopicId
         });
     }
@@ -237,24 +237,7 @@ export async function createEcosystem(title: string, district: string | null) {
     // 6. Schedule Post-Creation Tasks (Async)
     if (adminTopicId) {
         try {
-            // Task 1: Welcome Message for Candidates
-            await sql`
-                INSERT INTO unified_queue (type, payload, status, scheduled_at, created_at)
-                VALUES (
-                    'send_message',
-                    ${JSON.stringify({
-                chat_id: channelId.toString(),
-                topicId: adminTopicId,
-                message: "‼️ ВЫБОР АДМИНА - Чтобы стать кандидатом в голосовании за выбор Админа Чата, оставьте здесь любое сообщение.",
-                pin: false
-            })},
-                    'pending',
-                    NOW() + INTERVAL '1 MINUTE',
-                    NOW()
-                )
-            `;
-
-            // Task 2: Admin Election Poll
+            // Task 2: Admin Election Poll (Message removed as we send it immediately now)
             await sql`
                 INSERT INTO unified_queue (type, payload, status, scheduled_at, created_at)
                 VALUES (
@@ -275,6 +258,14 @@ export async function createEcosystem(title: string, district: string | null) {
         } catch (e) {
             console.error("Failed to schedule post-creation tasks:", e);
         }
+    }
+
+    // Fail-Safe: Ensure Services topic is closed
+    // We call this helper to find and close "Services" topics.
+    try {
+        await blockMarketingTopics(channelId.toString());
+    } catch (e) {
+        console.error("Failed to Block Marketing Topics:", e);
     }
 
     // Task 3: Schedule "Wheel of Fortune" Promo (Visible in Queue Console)
