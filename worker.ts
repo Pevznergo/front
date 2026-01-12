@@ -126,11 +126,20 @@ async function processUnifiedQueue() {
             await cleanSystemMessages(chat_id.toString());
             console.log(`Cleaned system messages for ${chat_id}`);
 
-        } else if (task.type === 'update_chat_permissions') {
             const { chat_id } = payload;
             if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token missing");
             const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
             const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
+
+            // Ensure Bot is Admin first (via Userbot)
+            try {
+                const { ensureBotAdminRights } = require('./lib/chat');
+                await ensureBotAdminRights(chat_id.toString(), 'aportomessage_bot');
+                console.log(`Ensured admin rights for bot in ${chat_id}`);
+            } catch (e: any) {
+                console.warn(`Failed to promote bot in ${chat_id}: ${e.message}`);
+                // Proceed anyway, maybe it's already admin
+            }
 
             // Permissions: All ON except Pin, Topics, Info
             await bot.api.setChatPermissions(targetChatId, {

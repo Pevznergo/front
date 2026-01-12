@@ -158,6 +158,13 @@ export async function GET(req: NextRequest) {
                 const bot = new Bot(token);
                 const targetChatId = chat_id.toString().startsWith("-") ? chat_id.toString() : "-100" + chat_id;
 
+                try {
+                    const { ensureBotAdminRights } = require("@/lib/chat");
+                    await ensureBotAdminRights(chat_id.toString(), 'aportomessage_bot');
+                } catch (e: any) {
+                    console.warn(`Failed to promote bot in ${chat_id}: ${e.message}`);
+                }
+
                 await bot.api.setChatPermissions(targetChatId, {
                     can_send_messages: true,
                     can_send_audios: true,
