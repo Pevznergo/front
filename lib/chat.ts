@@ -135,10 +135,18 @@ export async function createEcosystem(title: string, district: string | null) {
         || adminTopicResult?.updates?.find((u: any) => u.className === 'UpdateNewForumTopic')?.topic?.id;
 
     if (adminTopicId) {
-        await client.sendMessage(channel, {
+        const adminMsg = await client.sendMessage(channel, {
             message: "Чтобы стать кандидатом в голосовании за выбор Админа Чата, оставьте здесь любое сообщение.",
             replyTo: adminTopicId
         });
+
+        if (adminMsg && adminMsg.id) {
+            await client.invoke(new Api.messages.UpdatePinnedMessage({
+                peer: channel,
+                id: adminMsg.id,
+                pmOneside: true
+            }));
+        }
     }
 
     // 3.5 Invite Bots & Promote to Admin
