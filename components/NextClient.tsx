@@ -11,7 +11,7 @@ import {
     X,
     ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
-    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart
+    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart as BarChartIcon
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -1415,7 +1415,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                             } `}
                     >
-                        <BarChart className="w-4 h-4" />
+                        <BarChartIcon className="w-4 h-4" />
                         Статистика
                     </button>
                     <button
