@@ -150,6 +150,11 @@ export async function GET(req: NextRequest) {
                 await cleanSystemMessages(chat_id.toString());
                 resultData = { success: true };
 
+            } else if (type === 'sync_stats') {
+                const { updateEcosystemStats } = require("@/lib/chat");
+                const count = await updateEcosystemStats();
+                resultData = { success: true, updated: count };
+
             } else if (['send_message', 'create_poll'].includes(type)) {
                 // Minimal handling for essential task types to support "Run Now" even without worker.js
                 // Note: Ideally worker.js handles this using GramJS for "user" actions. 

@@ -499,3 +499,32 @@ export async function blockMarketingTopics(chatId: string) {
         }
     }
 }
+
+export async function updateEcosystemStats() {
+    console.log("Starting Stats Sync...");
+    const { Bot } = require("grammy");
+    if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token missing");
+    const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+
+    const chats = await sql`SELECT tg_chat_id FROM ecosystems`;
+    console.log(`Syncing stats for ${chats.length} chats...`);
+
+    let updated = 0;
+    for (const chat of chats) {
+        try {
+            const count = await bot.api.getChatMemberCount(chat.tg_chat_id);
+            await sql`
+                UPDATE ecosystems 
+                SET member_count = ${count}, last_updated = CURRENT_TIMESTAMP 
+                WHERE tg_chat_id = ${chat.tg_chat_id}
+            `;
+            updated++;
+            // Rate limit to be safe
+            await new Promise(r => setTimeout(r, 100));
+        } catch (e: any) {
+            console.error(`Failed to sync stats for ${chat.tg_chat_id}:`, e.message);
+        }
+    }
+    console.log(`Stats synced. Updated ${updated} chats.`);
+    return updated;
+}

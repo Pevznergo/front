@@ -123,9 +123,40 @@ function StatisticsTab() {
 
             {/* Charts */}
             <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-                <div className="mb-6">
-                    <h3 className="text-lg font-bold text-white">Динамика создания чатов</h3>
-                    <p className="text-slate-500 text-xs">Количество новых экосистем по дням</p>
+                <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-bold text-white">Динамика создания чатов</h3>
+                        <p className="text-slate-500 text-xs">Количество новых экосистем по дням</p>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            if (!confirm("Обновить статистику участников? Это может занять время.")) return;
+                            try {
+                                setLoading(true); // temporary lock
+                                await fetch("/api/queue", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        type: 'sync_stats',
+                                        payload: {},
+                                        status: 'pending',
+                                        scheduled_at: new Date().toISOString()
+                                    })
+                                });
+                                // Trigger immediately
+                                await fetch("/api/queue/process?force=true");
+                                alert("Статистика обновлена! Перезагрузите страницу через пару секунд.");
+                                window.location.reload();
+                            } catch (e) {
+                                alert("Ошибка обновления");
+                                setLoading(false);
+                            }
+                        }}
+                        className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                    >
+                        <RefreshCcw className="w-3.5 h-3.5" />
+                        Обновить данные
+                    </button>
                 </div>
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
