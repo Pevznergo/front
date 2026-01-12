@@ -290,18 +290,19 @@ export async function initDatabase() {
     } catch (e) { }
 
     // User Prizes (Won items)
-      CREATE TABLE IF NOT EXISTS user_prizes(
-      id SERIAL PRIMARY KEY,
-      telegram_id BIGINT NOT NULL REFERENCES app_users(telegram_id),
-      prize_id INTEGER NOT NULL REFERENCES prizes(id),
-      promo_code VARCHAR(255),
-      expiry_at TIMESTAMP,
-      revealed_at TIMESTAMP,
-      status VARCHAR(50) DEFAULT 'active',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      is_used BOOLEAN DEFAULT FALSE
-    )
+    await sqlConnection`
+      CREATE TABLE IF NOT EXISTS user_prizes (
+        id SERIAL PRIMARY KEY,
+        telegram_id BIGINT NOT NULL REFERENCES app_users(telegram_id),
+        prize_id INTEGER NOT NULL REFERENCES prizes(id),
+        promo_code VARCHAR(255),
+        expiry_at TIMESTAMP,
+        revealed_at TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_used BOOLEAN DEFAULT FALSE
+      )
     `;
 
     // Migration for existing tables
@@ -350,7 +351,7 @@ export async function setFloodWait(seconds: number) {
   const bufferSeconds = seconds + 1;
   await sql`
         INSERT INTO flood_control(key, expires_at)
-    VALUES('telegram_global', NOW() + (${ bufferSeconds } || ' seconds')::INTERVAL)
+    VALUES('telegram_global', NOW() + (${bufferSeconds} || ' seconds')::INTERVAL)
         ON CONFLICT(key) DO UPDATE SET
     expires_at = EXCLUDED.expires_at
       `;
