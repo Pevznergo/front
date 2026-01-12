@@ -23,6 +23,10 @@ interface PrizeItem {
     won_at?: string;
     expiry_at?: string;
     promo_code?: string;
+    // Config fields
+    button_text?: string;
+    button_url?: string;
+    status_text?: string;
 }
 
 export default function PrizesModal({ isOpen, onClose, initData }: PrizesModalProps) {
@@ -65,87 +69,107 @@ export default function PrizesModal({ isOpen, onClose, initData }: PrizesModalPr
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex flex-col bg-[#2e2e2e] text-white"
-                // #2e2e2e matches the screenshot dark gray roughly
-                >
-                    {/* Header */}
-                    <div className="flex items-center justify-between p-4 pb-2">
-                        <h2 className="text-2xl font-bold">Призы</h2>
-                        <button onClick={onClose} className="p-2 bg-white/10 rounded-full">
-                            <X className="w-5 h-5 text-zinc-400" />
-                        </button>
-                    </div>
+                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                    {/* Backdrop */}
+                    <motion.div
+                        key="backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={onClose}
+                    />
 
-                    {/* Tabs */}
-                    <div className="flex px-4 py-2 gap-4">
-                        <button
-                            onClick={() => setActiveTab('won')}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl text-sm font-semibold transition-colors relative",
-                                activeTab === 'won' ? "bg-[#333] text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                            )}
-                        >
-                            Вы выиграли
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('all')}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl text-sm font-semibold transition-colors relative",
-                                activeTab === 'all' ? "bg-[#333] text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                            )}
-                        >
-                            Можно выиграть
-                        </button>
-                    </div>
+                    {/* Modal Panel */}
+                    <motion.div
+                        key="panel"
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        className="w-full max-w-md bg-[#2e2e2e] text-white rounded-t-3xl sm:rounded-3xl relative z-10 flex flex-col max-h-[85vh]"
+                    >
+                        {/* Handle Bar */}
+                        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-2 absolute top-3 left-1/2 -translate-x-1/2 z-20" />
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                        {loading ? (
-                            <div className="flex justify-center py-10"><div className="animate-spin text-yellow-400">Loading...</div></div>
-                        ) : activeTab === 'won' ? (
-                            // List View for "You Won"
-                            <div className="space-y-4">
-                                {userPrizes.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
-                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
-                                            <Gift className="w-8 h-8 opacity-50" />
-                                        </div>
-                                        <p>Вы пока ничего не выиграли</p>
-                                    </div>
-                                ) : (
-                                    userPrizes.map((prize) => (
-                                        <PrizeListItem key={prize.user_prize_id} prize={prize} />
-                                    ))
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 pb-2 pt-8">
+                            <h2 className="text-2xl font-bold">Призы</h2>
+                            <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+                                <X className="w-5 h-5 text-zinc-400" />
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex px-6 py-2 gap-3 shrink-0">
+                            <button
+                                onClick={() => setActiveTab('won')}
+                                className={cn(
+                                    "flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors relative",
+                                    activeTab === 'won' ? "bg-[#333] text-white shadow-lg border border-white/5" : "bg-transparent text-zinc-500 hover:text-zinc-300 border border-transparent"
                                 )}
-                            </div>
-                        ) : (
-                            // Grid View for "Can Win"
-                            <div className="grid grid-cols-2 gap-4 pb-8">
-                                {allPrizes.length === 0 ? (
-                                    <div className="col-span-2 flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
-                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
-                                            <Gift className="w-8 h-8 opacity-50" />
-                                        </div>
-                                        <p>Призы пока не добавлены</p>
-                                    </div>
-                                ) : (
-                                    allPrizes.map((prize) => (
-                                        <PrizeGridItem key={prize.id} prize={prize} />
-                                    ))
+                            >
+                                Вы выиграли
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('all')}
+                                className={cn(
+                                    "flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors relative",
+                                    activeTab === 'all' ? "bg-[#333] text-white shadow-lg border border-white/5" : "bg-transparent text-zinc-500 hover:text-zinc-300 border border-transparent"
                                 )}
-                            </div>
-                        )}
-                    </div>
+                            >
+                                Все призы
+                            </button>
+                        </div>
 
-                    {/* Footer / Disclaimer */}
-                    <div className="p-4 text-center mt-auto border-t border-white/5">
-                        <a href="#" className="text-zinc-500 text-xs underline decoration-zinc-600">Условия акции</a>
-                    </div>
-                </motion.div>
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                            {loading ? (
+                                <div className="flex justify-center py-10"><div className="animate-spin text-yellow-400">Loading...</div></div>
+                            ) : activeTab === 'won' ? (
+                                // List View for "You Won"
+                                <div className="space-y-3">
+                                    {userPrizes.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
+                                            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
+                                                <Gift className="w-8 h-8 opacity-50" />
+                                            </div>
+                                            <div className="text-center space-y-1">
+                                                <p className="font-bold">Пусто</p>
+                                                <p className="text-xs">Вы пока ничего не выиграли</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        userPrizes.map((prize) => (
+                                            <PrizeListItem key={prize.user_prize_id} prize={prize} />
+                                        ))
+                                    )}
+                                </div>
+                            ) : (
+                                // Grid View for "Can Win"
+                                <div className="grid grid-cols-2 gap-3 pb-8">
+                                    {allPrizes.length === 0 ? (
+                                        <div className="col-span-2 flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
+                                            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
+                                                <Gift className="w-8 h-8 opacity-50" />
+                                            </div>
+                                            <p>Призы пока не добавлены</p>
+                                        </div>
+                                    ) : (
+                                        allPrizes.map((prize) => (
+                                            <PrizeGridItem key={prize.id} prize={prize} />
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer / Disclaimer */}
+                        <div className="p-4 text-center mt-auto border-t border-white/5 bg-[#2e2e2e] pb-8 sm:pb-4 rounded-b-3xl">
+                            <a href="#" className="text-zinc-500 text-xs underline decoration-zinc-600">Условия акции</a>
+                        </div>
+                    </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );
@@ -168,7 +192,7 @@ function PrizeListItem({ prize }: { prize: PrizeItem }) {
 
                 <div className="flex-1 space-y-1">
                     <h3 className="font-bold text-sm leading-tight text-white line-clamp-2">{prize.name}</h3>
-                    <p className="text-xs text-zinc-500">Действует 24 часа</p>
+                    <p className="text-xs text-zinc-500">{prize.status_text || 'Действует 24 часа'}</p>
                 </div>
             </div>
 
@@ -180,8 +204,15 @@ function PrizeListItem({ prize }: { prize: PrizeItem }) {
                     </button>
                 )}
 
-                <button className="flex-1 bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-300">
-                    К товарам
+                <button
+                    onClick={() => {
+                        if (prize.button_url) {
+                            window.open(prize.button_url, '_blank')
+                        }
+                    }}
+                    className="flex-1 bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-yellow-300"
+                >
+                    {prize.button_text || 'К товарам'}
                     <ExternalLink className="w-3.5 h-3.5" />
                 </button>
             </div>

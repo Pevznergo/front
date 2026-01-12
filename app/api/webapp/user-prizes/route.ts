@@ -44,7 +44,11 @@ export async function GET(req: Request) {
                         p.description,
                         p.image_url,
                         p.type,
-                        p.value
+                        p.value,
+                        p.button_text,
+                        p.button_url,
+                        p.status_text,
+                        p.expiration_hours
                     FROM user_prizes up
                     JOIN prizes p ON up.prize_id = p.id
                     WHERE up.telegram_id = ${telegramId}

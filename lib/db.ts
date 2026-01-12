@@ -271,6 +271,10 @@ export async function initDatabase() {
         probability DECIMAL(5,2) DEFAULT 0, -- percentage 0-100
         image_url TEXT,
         quantity INTEGER, -- NULL = Unlimited
+        expiration_hours INTEGER DEFAULT 24, -- NULL = Infinite
+        button_text VARCHAR(255) DEFAULT 'К товарам',
+        button_url TEXT,
+        status_text VARCHAR(255) DEFAULT 'Действует 24 часа',
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -279,6 +283,10 @@ export async function initDatabase() {
     // Migration: Add quantity column if not exists
     try {
       await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS quantity INTEGER`;
+      await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS expiration_hours INTEGER DEFAULT 24`;
+      await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS button_text VARCHAR(255) DEFAULT 'К товарам'`;
+      await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS button_url TEXT`;
+      await sqlConnection`ALTER TABLE prizes ADD COLUMN IF NOT EXISTS status_text VARCHAR(255) DEFAULT 'Действует 24 часа'`;
     } catch (e) { }
 
     // Seed prizes if empty

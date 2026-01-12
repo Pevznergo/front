@@ -77,13 +77,15 @@ export async function POST(req: Request) {
             }
         } else {
             // Record physical/coupon prize
+            const hours = selectedPrize.expiration_hours ?? 24
+
             await sql`
                 INSERT INTO user_prizes (telegram_id, prize_id, expiry_at, promo_code)
                 VALUES (
                     ${telegramId}, 
                     ${selectedPrize.id}, 
-                    NOW() + INTERVAL '24 hours',
-                    ${selectedPrize.type === 'coupon' ? 'PR3AF7T2' : null} -- Example static code, ideally dynamic
+                    NOW() + (${hours} || ' hours')::INTERVAL,
+                    ${selectedPrize.type === 'coupon' ? 'PR3AF7T2' : null} -- Example static code
                 )
             `
         }
