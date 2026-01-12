@@ -290,42 +290,25 @@ export async function initDatabase() {
     } catch (e) { }
 
     // User Prizes (Won items)
-    await sqlConnection`
-      CREATE TABLE IF NOT EXISTS user_prizes (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        prize_id INTEGER NOT NULL REFERENCES prizes(id),
-        promo_code VARCHAR(255),
-        expiry_at TIMESTAMP,
-        revealed_at TIMESTAMP,
-        status VARCHAR(50) DEFAULT 'active', -- 'active', 'redeemed', 'expired'
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      CREATE TABLE IF NOT EXISTS user_prizes(
+      id SERIAL PRIMARY KEY,
+      telegram_id BIGINT NOT NULL REFERENCES app_users(telegram_id),
+      prize_id INTEGER NOT NULL REFERENCES prizes(id),
+      promo_code VARCHAR(255),
+      expiry_at TIMESTAMP,
+      revealed_at TIMESTAMP,
+      status VARCHAR(50) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      is_used BOOLEAN DEFAULT FALSE
+    )
     `;
 
     // Migration for existing tables
     try {
       await sqlConnection`ALTER TABLE user_prizes ADD COLUMN IF NOT EXISTS revealed_at TIMESTAMP`;
     } catch (e) { }
-    ('Сертификат OZON', 'coupon', 'ozon_500', 5.00, '500₽ на Ozon'),
-      ('Сертификат WB', 'coupon', 'wb_1000', 3.00, '1000₽ на Wildberries'),
-      ('VIP Статус', 'status', 'vip', 6.00, 'VIP на неделю'),
-      ('iPhone 15', 'physical', 'iphone', 1.00, 'Главный приз!')
-        `;
-    }
 
-    // User Prizes table (New)
-    await sqlConnection`
-      CREATE TABLE IF NOT EXISTS user_prizes(
-          id SERIAL PRIMARY KEY,
-          telegram_id BIGINT REFERENCES app_users(telegram_id),
-          prize_id INTEGER REFERENCES prizes(id),
-          won_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          expiry_at TIMESTAMP,
-          promo_code VARCHAR(255),
-          is_used BOOLEAN DEFAULT FALSE
-        )
-    `;
 
     // Migration: Add missing columns to user_prizes
     try {

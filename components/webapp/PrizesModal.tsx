@@ -22,6 +22,7 @@ interface PrizeItem {
     user_prize_id?: number;
     won_at?: string;
     expiry_at?: string;
+    revealed_at?: string;
     promo_code?: string;
     // Config fields
     button_text?: string;
@@ -175,13 +176,7 @@ export default function PrizesModal({ isOpen, onClose, initData }: PrizesModalPr
     );
 }
 
-won_at ?: string;
-expiry_at ?: string;
-revealed_at ?: string;
-promo_code ?: string;
-// Config fields
-button_text ?: string;
-// ... (interface continues, but let's locate the component)
+
 
 // "You Won" - List Item Style
 function PrizeListItem({ prize }: { prize: PrizeItem }) {
