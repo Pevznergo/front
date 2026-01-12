@@ -7,6 +7,7 @@ import { Loader2, Gift, Target, Coins } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import WinModal from '@/components/webapp/WinModal'
 import PrizesModal from '@/components/webapp/PrizesModal'
+import TasksModal from '@/components/webapp/TasksModal'
 
 // Define types locally for now
 interface Prize {
@@ -33,6 +34,7 @@ export default function WebAppPage() {
     const [winIndex, setWinIndex] = useState<number | null>(null)
     const [winResult, setWinResult] = useState<Prize | null>(null)
     const [isPrizesOpen, setIsPrizesOpen] = useState(false)
+    const [isTasksOpen, setIsTasksOpen] = useState(false)
 
     // Daily Bonus State
     const [isDailyOpen, setIsDailyOpen] = useState(false);
@@ -266,7 +268,10 @@ export default function WebAppPage() {
                     </button>
 
                     {/* Tasks */}
-                    <button className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+                    <button
+                        onClick={() => setIsTasksOpen(true)}
+                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
+                    >
                         <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <Target className="w-6 h-6 text-white drop-shadow-md" />
@@ -368,6 +373,12 @@ export default function WebAppPage() {
                 streak={dailyStreak}
                 onClaim={handleDailyClaim}
                 lastClaimDate={lastDailyDate}
+            />
+
+            {/* Tasks Modal */}
+            <TasksModal
+                isOpen={isTasksOpen}
+                onClose={() => setIsTasksOpen(false)}
             />
 
             {/* Win Modal */}
