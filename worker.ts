@@ -84,11 +84,17 @@ async function processUnifiedQueue() {
             const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
             const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
 
-            await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
+            const message = await bot.api.sendMessage(targetChatId, "🎰 **КРУТИ КОЛЕСО ФОРТУНЫ КАЖДЫЙ ДЕНЬ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB, Dyson и другие).", {
                 message_thread_id: threadId,
                 reply_markup: keyboard,
                 parse_mode: "Markdown",
             });
+
+            try {
+                await bot.api.pinChatMessage(targetChatId, message.message_id);
+            } catch (e) {
+                console.error("Failed to pin message:", e);
+            }
 
         } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {
             // Re-use legacy logic adapted for unified payload

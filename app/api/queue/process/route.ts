@@ -111,12 +111,19 @@ export async function GET(req: NextRequest) {
                 const topic = await bot.api.createForumTopic(targetChatId, title);
                 const appLink = "https://t.me/aportomessage_bot/app?startapp=promo";
                 const keyboard = new InlineKeyboard().url("🎡 КРУТИТЬ КОЛЕСО", appLink);
-                await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
+                const message = await bot.api.sendMessage(targetChatId, "🎰 **КОЛЕСО ФОРТУНЫ**\n\nНажми на кнопку ниже, чтобы испытать удачу и выиграть призы (iPhone, Ozon, WB).", {
                     message_thread_id: topic.message_thread_id,
                     reply_markup: keyboard,
                     parse_mode: "Markdown",
                 });
-                resultData = { threadId: topic.message_thread_id };
+
+                try {
+                    await bot.api.pinChatMessage(targetChatId, message.message_id);
+                } catch (e) {
+                    console.error("Failed to pin message:", e);
+                }
+
+                resultData = { threadId: topic.message_thread_id, messageId: message.message_id };
 
             } else if (['send_message', 'create_poll'].includes(type)) {
                 // Minimal handling for essential task types to support "Run Now" even without worker.js
