@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, ExternalLink, Clock, Gift } from "lucide-react";
+import { X, Copy, ExternalLink, Clock, Gift, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
