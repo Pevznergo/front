@@ -4,7 +4,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { sql, initDatabase, getFloodWait, setFloodWait } from './lib/db';
-import { createEcosystem, setTopicClosed, getChatEntity } from './lib/chat';
+import { createEcosystem, setTopicClosed, getChatEntity, pinForumTopic } from './lib/chat';
 import { getTelegramClient } from './lib/tg';
 import { Bot, InlineKeyboard } from 'grammy';
 import { Api } from 'telegram';
@@ -91,9 +91,14 @@ async function processUnifiedQueue() {
             });
 
             try {
+                // Pin the Message (Button)
                 await bot.api.pinChatMessage(targetChatId, message.message_id);
+                // Close the Topic (Read Only for users)
+                await bot.api.closeForumTopic(targetChatId, threadId);
+                // Pin the Topic (Top of list)
+                await pinForumTopic(chat_id.toString(), threadId, true);
             } catch (e) {
-                console.error("Failed to pin message:", e);
+                console.error("Failed to pin/close promo:", e);
             }
 
         } else if (task.type === 'send_message' || task.type === 'create_poll' || task.type === 'close' || task.type === 'open' || task.type === 'update_title') {

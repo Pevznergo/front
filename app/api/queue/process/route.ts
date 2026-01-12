@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql, initDatabase, getFloodWait, setFloodWait } from "@/lib/db";
-import { createEcosystem } from "@/lib/chat";
+import { createEcosystem, pinForumTopic } from "@/lib/chat";
 import { Bot, InlineKeyboard } from "grammy";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -118,9 +118,14 @@ export async function GET(req: NextRequest) {
                 });
 
                 try {
+                    // Pin the Message (Button)
                     await bot.api.pinChatMessage(targetChatId, message.message_id);
+                    // Close the Topic (Read Only)
+                    await bot.api.closeForumTopic(targetChatId, topic.message_thread_id);
+                    // Pin the Topic (Top of list)
+                    await pinForumTopic(chat_id.toString(), topic.message_thread_id, true);
                 } catch (e) {
-                    console.error("Failed to pin message:", e);
+                    console.error("Failed to pin/close promo:", e);
                 }
 
                 resultData = { threadId: topic.message_thread_id, messageId: message.message_id };
