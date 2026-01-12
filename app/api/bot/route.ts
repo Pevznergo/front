@@ -42,15 +42,25 @@ function getBot() {
             `;
             // Delete the "User joined" message
             try { await ctx.deleteMessage(); } catch (e) { }
+
+            // Update Ecosystem Member Count (+N)
+            try {
+                // Ensure count doesn't go below 0 (though adding shouldn't cause that)
+                await sql`
+                    UPDATE ecosystems 
+                    SET member_count = COALESCE(member_count, 0) + ${newMembers.length}, 
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE tg_chat_id = ${chatId}
+                `;
+            } catch (e) { console.error("Failed to update join count:", e); }
+
         } catch (e) {
             console.error("Invite tracking error:", e);
         }
     });
 
     // Auto-delete other service messages
-    // left_chat_member, pinned_message, forum_topic_created, forum_topic_closed, forum_topic_reopened, forum_topic_edited
     const serviceEvents = [
-        "message:left_chat_member",
         "message:pinned_message",
         "message:forum_topic_created",
         "message:forum_topic_closed",
@@ -59,6 +69,23 @@ function getBot() {
         "message:video_chat_ended",
         "message:video_chat_scheduled"
     ];
+
+    // Handle Left Members (Decrement count + Delete message)
+    bot.on("message:left_chat_member", async (ctx) => {
+        const chatId = ctx.chat.id.toString();
+        try {
+            await initDatabase();
+            await sql`
+                UPDATE ecosystems 
+                SET member_count = GREATEST(COALESCE(member_count, 0) - 1, 0),
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE tg_chat_id = ${chatId}
+            `;
+            await ctx.deleteMessage();
+        } catch (e) {
+            console.error("Left member error:", e);
+        }
+    });
 
     // @ts-ignore
     bot.on(serviceEvents, async (ctx) => {

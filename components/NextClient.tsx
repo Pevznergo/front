@@ -11,7 +11,7 @@ import {
     X,
     ChevronLeft, ChevronRight,
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
-    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw
+    Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
@@ -1454,6 +1454,37 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         title="Проверить права во всех чатах"
                     >
                         <CheckSquare className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (!confirm("Обновить количество участников во всех чатах?")) return;
+                            try {
+                                setLoading(true);
+                                const res = await fetch("/api/queue", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        type: 'sync_stats',
+                                        payload: {} // Empty payload needed
+                                    })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert("Задача добавлена в очередь!");
+                                } else {
+                                    alert("Ошибка: " + data.error);
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Ошибка сети");
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="p-3 bg-blue-600/20 hover:bg-blue-600/40 text-blue-500 rounded-xl transition-all shadow-xl shadow-blue-500/10 ml-2"
+                        title="Обновить статистику (участников)"
+                    >
+                        <RefreshCw className="w-5 h-5" />
                     </button>
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
