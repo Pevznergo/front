@@ -10,7 +10,7 @@ interface QueueTask {
     action_type: string;
     status: 'pending' | 'processing' | 'completed' | 'failed';
     error?: string;
-    scheduled_for?: string;
+    scheduled_at?: string;
     created_at: string;
     payload?: any;
     source?: 'topic' | 'create';
@@ -79,30 +79,46 @@ export default function QueueConsole() {
                 body: JSON.stringify({ id, scheduledAt: new Date().toISOString() })
             });
             // Trigger process immediately
-            await fetch("/api/queue/process?force=true");
+            setTimeout(() => fetch("/api/queue/process?force=true"), 500);
             fetchQueue();
         } catch (e) { console.error(e); }
     };
 
-    const handleDelete = async (id: number, source: string) => {
+    const handleRetry = async (id: number) => {
+        if (!confirm("Повторить задачу?")) return;
+        try {
+            // Reset status to pending and schedule for NOW
+            await fetch("/api/queue", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id,
+                    status: 'pending',
+                    scheduledAt: new Date().toISOString()
+                })
+            });
+            // Trigger process
+            setTimeout(() => fetch("/api/queue/process?force=true"), 500);
+            fetchQueue();
+        } catch (e) { console.error(e); }
+    };
+
+    const handleDelete = async (id: number) => {
         if (!confirm(`Удалить задачу #${id}?`)) return;
         try {
             console.log(`Deleting task ${id}`);
             // Optimistically remove immediately to prevent flicker
             setTasks(prev => prev.filter(t => t.id !== id));
 
-            const res = await fetch("/api/queue/delete-task", {
-                method: "POST",
+            const res = await fetch("/api/queue", { // Changed to main route DELETE
+                method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, source }) // source mainly for legacy compat
+                body: JSON.stringify({ id })
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                if (data.count === 0) {
-                    console.warn("Delete count 0 (maybe already deleted)");
-                }
                 // Delay next fetch slightly to allow DB commit propagation
                 setTimeout(fetchQueue, 500);
             } else {
@@ -197,9 +213,9 @@ export default function QueueConsole() {
                             </div>
                         ) : (
                             tasks.map(task => {
-                                const timeLeft = task.scheduled_for ? getTimeRemaining(task.scheduled_for) : null;
+                                const timeLeft = task.scheduled_at ? getTimeRemaining(task.scheduled_at) : null;
                                 return (
-                                    <div key={task.unique_id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2 group relative">
+                                    <div key={task.unique_id || task.id} className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs flex flex-col gap-2 group relative">
                                         <div className="flex items-center justify-between">
                                             <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${task.status === 'processing' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
                                                 task.status === 'failed' ? 'bg-red-500/20 text-red-400' :
@@ -211,7 +227,7 @@ export default function QueueConsole() {
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[9px] text-slate-500 font-mono">#{task.id}</span>
                                                 <button
-                                                    onClick={() => handleDelete(task.id, task.source || 'topic')}
+                                                    onClick={() => handleDelete(task.id)}
                                                     className="opacity-100 p-1 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded transition-all"
                                                     title="Удалить задачу"
                                                 >
@@ -225,8 +241,15 @@ export default function QueueConsole() {
                                         </div>
 
                                         {task.error && (
-                                            <div className="text-red-400 break-words bg-red-950/30 p-1 rounded border border-red-500/20 text-[9px]">
-                                                {task.error}
+                                            <div className="text-red-400 break-words bg-red-950/30 p-1 rounded border border-red-500/20 text-[9px] flex items-center justify-between gap-2">
+                                                <span>{task.error}</span>
+                                                <button
+                                                    onClick={() => handleRetry(task.id)}
+                                                    className="p-1 bg-white/10 hover:bg-white/20 rounded shrink-0"
+                                                    title="Повторить"
+                                                >
+                                                    <Loader2 className="w-3 h-3 hover:animate-spin" />
+                                                </button>
                                             </div>
                                         )}
 

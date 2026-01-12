@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, title, district, scheduledAt } = await req.json();
+    const { id, title, district, scheduledAt, status } = await req.json();
 
     if (!id) {
         return NextResponse.json({ error: "ID is required" }, { status: 400 });
@@ -162,21 +162,11 @@ export async function PATCH(req: NextRequest) {
     await initDatabase();
 
     try {
-        // We need to fetch existing payload to update it partially if needed, 
-        // but SQL jsonb_set is better. simplified: update payload merging new data.
-        // For simplicity, let's read-modify-write or just assume we have all data?
-        // Let's use jsonb_set or just re-construct if we want robust. 
-        // But simpler: just update scheduled_at as that's the main thing.
-        // Editing title/district in queue is rare?
-        // Let's update scheduled_at directly, and payload if title/district provided.
-
         if (title || district) {
             const current = await sql`SELECT payload FROM unified_queue WHERE id = ${id}`;
             if (current.length > 0) {
                 const newPayload = { ...current[0].payload, ...({ title, district }) };
-                // Remove undefined keys
-                if (!title) delete (newPayload as any).title; // wait, if not provided keep old. spread does that? no.
-                // { ...old, ...(title ? {title} : {}) }
+                // Remove undefined
                 const updates: any = {};
                 if (title) updates.title = title;
                 if (district) updates.district = district;
@@ -189,6 +179,10 @@ export async function PATCH(req: NextRequest) {
 
         if (scheduledAt) {
             await sql`UPDATE unified_queue SET scheduled_at = ${scheduledAt} WHERE id = ${id}`;
+        }
+
+        if (status) {
+            await sql`UPDATE unified_queue SET status = ${status}, error = NULL WHERE id = ${id}`;
         }
 
         return NextResponse.json({ success: true });
