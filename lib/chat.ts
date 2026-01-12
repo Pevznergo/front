@@ -536,3 +536,28 @@ export async function updateEcosystemStats() {
     console.log(`Stats synced. Updated ${updated} chats.`);
     return updated;
 }
+
+export async function cleanSystemMessages(chatId: string) {
+    try {
+        const client = await getTelegramClient();
+        const entity = await getChatEntity(client, chatId);
+
+        // Fetch recent messages to find service messages
+        const messages = await client.getMessages(entity, { limit: 30 });
+
+        // Filter service messages (those with 'action' property or class 'MessageService')
+        const toDelete = messages.filter((m: any) =>
+            m.action ||
+            m.className === 'MessageService' ||
+            (m.action && m.action.className !== 'MessageActionEmpty')
+        );
+
+        if (toDelete.length > 0) {
+            console.log(`[Cleaner] Deleting ${toDelete.length} system messages in ${chatId}`);
+            const ids = toDelete.map((m: any) => m.id);
+            await client.deleteMessages(entity, ids, { revoke: true });
+        }
+    } catch (e: any) {
+        console.warn(`[Cleaner] Failed to clean messages in ${chatId}: ${e.message}`);
+    }
+}
