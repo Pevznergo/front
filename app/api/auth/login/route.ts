@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       {
         error: 'Internal server error',
         details: error.message,
-        hint: 'Check if DATABASE_URL is set in .env.local'
+        hint: 'Check if POSTGRES_URL is set in .env.local'
       },
       { status: 500 }
     )

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { sql, initDatabase } from "@/lib/db";
 
 function generateCode(length = 6) {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -18,9 +18,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await initDatabase();
+
     try {
         const body = await req.json();
-        const { count, targetUrl, title } = body;
+        const { count, targetUrl, title, features, prizes } = body;
 
         if (!count || count <= 0) {
             return NextResponse.json({ error: "Invalid count" }, { status: 400 });
@@ -47,9 +49,9 @@ export async function POST(req: NextRequest) {
             if (!isUnique) throw new Error("Failed to generate unique code");
 
             const result = await sql`
-                INSERT INTO short_links (code, target_url, reviewer_name, status)
-                VALUES (${code}, ${targetUrl || null}, ${title || 'Batch Generated'}, 'не распечатан')
-                RETURNING id, code, target_url, reviewer_name, status, created_at, clicks_count, member_count, is_stuck
+                INSERT INTO short_links (code, target_url, reviewer_name, status, sticker_title, sticker_features, sticker_prizes)
+                VALUES (${code}, ${targetUrl || null}, ${title || 'Batch Generated'}, 'не распечатан', ${title || ''}, ${features || ''}, ${prizes || ''})
+                RETURNING id, code, target_url, reviewer_name, status, created_at, clicks_count, member_count, is_stuck, sticker_title, sticker_features, sticker_prizes
             `;
             createdLinks.push(result[0]);
         }

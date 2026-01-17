@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
     try {
-        const dbUrl = process.env.DATABASE_URL || 'NOT_SET'
+        const dbUrl = process.env.POSTGRES_URL || 'NOT_SET'
         const url = new URL(dbUrl)
 
         return NextResponse.json({
@@ -15,8 +15,8 @@ export async function GET() {
         })
     } catch (error) {
         return NextResponse.json({
-            error: 'Invalid DATABASE_URL',
-            dbUrl: process.env.DATABASE_URL
+            error: 'Invalid POSTGRES_URL',
+            dbUrl: process.env.POSTGRES_URL
         }, { status: 500 })
     }
 }

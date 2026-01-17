@@ -2,10 +2,10 @@ import { neon } from '@neondatabase/serverless'
 
 // Helper to get safe SQL connection
 const getSql = () => {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined')
+  if (!process.env.POSTGRES_URL) {
+    throw new Error('POSTGRES_URL is not defined')
   }
-  return neon(process.env.DATABASE_URL)
+  return neon(process.env.POSTGRES_URL)
 }
 
 // Export a wrapper that initializes on first use
@@ -17,8 +17,8 @@ export const sql = (strings: TemplateStringsArray, ...values: any[]) => {
 // Инициализация таблицы пользователей и партнеров
 export async function initDatabase() {
   try {
-    if (!process.env.DATABASE_URL) {
-      console.warn('DATABASE_URL is not defined, skipping database initialization')
+    if (!process.env.POSTGRES_URL) {
+      console.warn('POSTGRES_URL is not defined, skipping database initialization')
       return
     }
 
@@ -124,6 +124,9 @@ export async function initDatabase() {
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS smartlead_lead_id VARCHAR(100)`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'не распечатан'`;
       await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS is_stuck BOOLEAN DEFAULT FALSE`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_title VARCHAR(255)`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_features TEXT`;
+      await sqlConnection`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_prizes TEXT`;
     } catch (e) {
       console.warn("Schema update warning (short_links cols):", e);
     }

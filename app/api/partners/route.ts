@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
     try {
         // Check for DB config before attempting anything
-        if (!process.env.DATABASE_URL) {
-            console.error('DATABASE_URL is not defined')
+        if (!process.env.POSTGRES_URL) {
+            console.error('POSTGRES_URL is not defined')
             return NextResponse.json(
                 { error: 'Database configuration missing' },
                 { status: 500 }

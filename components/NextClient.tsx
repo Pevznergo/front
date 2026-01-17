@@ -37,6 +37,9 @@ interface ShortLink {
     district?: string;
     status?: string;
     is_stuck?: boolean;
+    sticker_title?: string;
+    sticker_features?: string;
+    sticker_prizes?: string;
 }
 
 interface Ecosystem {
@@ -215,7 +218,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [links, setLinks] = useState<ShortLink[]>(initialLinks);
     const [ecosystems, setEcosystems] = useState<Ecosystem[]>(initialEcosystems);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('ecosystem');
+    const [printCopies, setPrintCopies] = useState(1);
+    const [printModalState, setPrintModalState] = useState<{ isOpen: boolean, link: ShortLink | null }>({ isOpen: false, link: null });
+    const [modalPrintCopies, setModalPrintCopies] = useState(1);
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('qr_batch');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -283,17 +289,27 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         return text.toLowerCase().split('').map(char => trans[char] || char).join('').replace(/[^a-z0-9_]/g, '');
     };
 
-    const handlePrintSelectedForBatch = async (batchLinks: ShortLink[]) => {
+    // Generic Print Function
+    const printLinks = async (linksToPrint: ShortLink[], quantity: number = 1) => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
             alert("Не удалось открыть окно печати. Разрешите всплывающие окна.");
             return;
         }
 
+        // Expand for printing
+        const expandedLinks: ShortLink[] = [];
+        linksToPrint.forEach(link => {
+            for (let i = 0; i < quantity; i++) {
+                expandedLinks.push(link);
+            }
+        });
+
+        // Chunk into pages of 24 (3 cols * 8 rows)
         const PAGESIZE = 24;
         const pages = [];
-        for (let i = 0; i < batchLinks.length; i += PAGESIZE) {
-            pages.push(batchLinks.slice(i, i + PAGESIZE));
+        for (let i = 0; i < expandedLinks.length; i += PAGESIZE) {
+            pages.push(expandedLinks.slice(i, i + PAGESIZE));
         }
 
         let fullHtml = '';
@@ -319,13 +335,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
                                         </svg>
-                                        ${stickerSettings.mainTitle}
+                                        ${link.sticker_title || stickerSettings.mainTitle}
                                     </h1>
                                     <div class="features">
-                                    ${stickerSettings.featuresTitle}
+                                    ${link.sticker_features || stickerSettings.featuresTitle}
                                     </div>
                                     <div class="prizes">
-                                        ${stickerSettings.prizesList}
+                                        ${link.sticker_prizes || stickerSettings.prizesList}
                                     </div>
                                 </div>
                             </div>
@@ -339,8 +355,12 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
 
         // Update statuses
-        for (const link of batchLinks) {
-            handleUpdateStatus(link.code, link.id, 'распечатан');
+        for (const link of linksToPrint) {
+            // We only update status if it's not already printed? Or always. 
+            // Only update DB status if it's currently 'не распечатан'
+            if (link.status === 'не распечатан') {
+                handleUpdateStatus(link.code, link.id, 'распечатан');
+            }
         }
 
         printWindow.document.write(`
@@ -392,9 +412,11 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    count: stickerSettings.batchSize,
+                    count: 1, // Create 1 link
                     targetUrl: finalUrl,
-                    title: stickerSettings.mainTitle
+                    title: stickerSettings.mainTitle,
+                    features: stickerSettings.featuresTitle,
+                    prizes: stickerSettings.prizesList
                 })
             });
 
@@ -404,12 +426,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             const newLinks = data.links;
             setLinks(prev => [...newLinks, ...prev]);
 
-            const newIds = new Set<number>(newLinks.map(l => l.id));
-            setSelectedIds(newIds);
             setBatchResult({ count: newLinks.length });
-
-            // Auto-print
-            handlePrintSelectedForBatch(newLinks);
+            alert("QR-код создан! Найдите его в таблице ниже и нажмите печать.");
 
         } catch (e: any) {
             alert(e.message);
@@ -901,11 +919,19 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             return;
         }
 
+        // Duplicate links based on printCopies
+        const expandedLinks: ShortLink[] = [];
+        selectedLinksToPrint.forEach(link => {
+            for (let i = 0; i < printCopies; i++) {
+                expandedLinks.push(link);
+            }
+        });
+
         // Chunk into pages of 24 (3 cols * 8 rows)
         const PAGESIZE = 24;
         const pages = [];
-        for (let i = 0; i < selectedLinksToPrint.length; i += PAGESIZE) {
-            pages.push(selectedLinksToPrint.slice(i, i + PAGESIZE));
+        for (let i = 0; i < expandedLinks.length; i += PAGESIZE) {
+            pages.push(expandedLinks.slice(i, i + PAGESIZE));
         }
 
         let fullHtml = '';
@@ -931,13 +957,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
                                         </svg>
-                                        ${stickerSettings.mainTitle}
+                                        ${link.sticker_title || stickerSettings.mainTitle}
                                     </h1>
                                     <div class="features">
-                                    ${stickerSettings.featuresTitle}
+                                    ${link.sticker_features || stickerSettings.featuresTitle}
                                     </div>
                                     <div class="prizes">
-                                        ${stickerSettings.prizesList}
+                                        ${link.sticker_prizes || stickerSettings.prizesList}
                                     </div>
                                 </div>
                             </div>
@@ -1506,16 +1532,6 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             {/* Tabs & Search */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4" >
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
-                    <button
-                        onClick={() => setActiveTab('ecosystem')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'ecosystem'
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            }`}
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                        Экосистемы
-                    </button>
                     <button
                         onClick={() => setActiveTab('qr_batch')}
                         className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'qr_batch'
@@ -2390,26 +2406,14 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </div>
 
                                 <div className="space-y-4">
-                                    {/* Batch Settings */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase text-slate-500 pl-1">Тираж (шт)</label>
-                                            <input
-                                                type="number"
-                                                value={stickerSettings.batchSize}
-                                                onChange={(e) => setStickerSettings({ ...stickerSettings, batchSize: parseInt(e.target.value) || 24 })}
-                                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase text-slate-500 pl-1">Target Link (для метрики)</label>
-                                            <input
-                                                value={stickerSettings.targetUrl}
-                                                onChange={(e) => setStickerSettings({ ...stickerSettings, targetUrl: e.target.value })}
-                                                placeholder="https://t.me/MyBot"
-                                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            />
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500 pl-1">Target Link (для метрики)</label>
+                                        <input
+                                            value={stickerSettings.targetUrl}
+                                            onChange={(e) => setStickerSettings({ ...stickerSettings, targetUrl: e.target.value })}
+                                            placeholder="https://t.me/MyBot"
+                                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        />
                                     </div>
 
                                     {/* UTM Toggle */}
@@ -2425,9 +2429,11 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                             Автоматически добавлять UTM метки (source, medium, campaign)
                                         </label>
                                     </div>
+                                </div>
 
-                                    <div className="h-px bg-white/10 my-4" />
+                                <div className="h-px bg-white/10 my-4" />
 
+                                <div className="space-y-4">
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Заголовок</label>
                                         <input
@@ -2495,16 +2501,35 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <button
-                                        onClick={handlePrintSelected}
-                                        disabled={selectedIds.size === 0}
-                                        className="px-8 py-4 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold inline-flex items-center gap-3 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
-                                    >
-                                        <Printer className="w-5 h-5" />
-                                        Распечатать выбранные ({selectedIds.size})
-                                    </button>
-                                    {selectedIds.size === 0 && (
-                                        <p className="text-xs text-red-400 mt-2">Выберите QR-коды в таблцие "Экосистема" для печати</p>
+                                    {selectedIds.size > 0 ? (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <label className="text-xs font-bold uppercase text-slate-500">Копий каждого:</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={printCopies}
+                                                    onChange={(e) => setPrintCopies(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    className="w-16 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-center text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={handlePrintSelected}
+                                                className="px-8 py-4 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold inline-flex items-center gap-3 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                                            >
+                                                <Printer className="w-5 h-5" />
+                                                Распечатать выбранные ({selectedIds.size * printCopies} шт)
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={handleTargetedBatchGenerate}
+                                            disabled={batchLoading}
+                                            className="px-8 py-4 bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold inline-flex items-center gap-3 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Создать QR-код
+                                        </button>
                                     )}
                                 </div>
                             </div>
@@ -2755,6 +2780,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                 <td className="p-4 text-right">
                                                     <div className="flex justify-end gap-2 text-slate-500">
                                                         <button
+                                                            onClick={() => setPrintModalState({ isOpen: true, link })}
+                                                            className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
+                                                            title="Печать"
+                                                        >
+                                                            <Printer className="w-4 h-4" />
+                                                        </button>
+                                                        <button
                                                             onClick={() => downloadQR(shortUrl, `QR_${link.code}`)}
                                                             className="p-2.5 hover:bg-white/10 rounded-xl transition-all"
                                                             title="Скачать QR"
@@ -2805,7 +2837,8 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     </div>
 
                 </div>
-            )}
+            )
+            }
 
             {/* Topic Action Modal - Moved to global scope */}
             {
@@ -3035,6 +3068,48 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                     {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
                                 </button>
                             </form>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                printModalState.isOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                            <h3 className="text-xl font-bold text-white mb-2">Печать наклеек</h3>
+                            <p className="text-slate-400 text-sm mb-6">Сколько копий этого QR-кода напечатать?</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество копий</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={modalPrintCopies}
+                                        onChange={(e) => setModalPrintCopies(parseInt(e.target.value) || 1)}
+                                        className="w-full mt-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white text-lg font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setPrintModalState({ isOpen: false, link: null })}
+                                        className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors"
+                                    >
+                                        Отмена
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (printModalState.link) {
+                                                printLinks([printModalState.link], modalPrintCopies);
+                                                setPrintModalState({ isOpen: false, link: null });
+                                            }
+                                        }}
+                                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-indigo-500/25"
+                                    >
+                                        Печать
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )

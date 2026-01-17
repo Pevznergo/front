@@ -1,14 +1,14 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config({ path: '.env.local' });
 
-if (!process.env.DATABASE_URL) {
-    console.error('Error: DATABASE_URL is not defined in .env');
+if (!process.env.POSTGRES_URL) {
+    console.error('Error: POSTGRES_URL is not defined in .env');
     process.exit(1);
 }
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(process.env.POSTGRES_URL);
 
-console.log('Connected to DB Host:', new URL(process.env.DATABASE_URL).hostname);
+console.log('Connected to DB Host:', new URL(process.env.POSTGRES_URL).hostname);
 
 async function inspect() {
     try {

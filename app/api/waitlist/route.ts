@@ -8,9 +8,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 })
     }
 
-    const connectionString = process.env.DATABASE_URL
+    const connectionString = process.env.POSTGRES_URL
     if (!connectionString) {
-      return NextResponse.json({ error: 'DATABASE_URL is not configured' }, { status: 500 })
+      return NextResponse.json({ error: 'POSTGRES_URL is not configured' }, { status: 500 })
     }
 
     const sql = neon(connectionString)

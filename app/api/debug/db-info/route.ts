@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
     try {
         // Get DB connection info safely
-        const dbUrl = process.env.DATABASE_URL || ''
+        const dbUrl = process.env.POSTGRES_URL || ''
         let host = 'unknown'
         let database = 'unknown'
 
