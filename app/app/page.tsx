@@ -188,7 +188,7 @@ export default function WebAppPage() {
                     setPendingPrize(data.prize);
                 }
             } else {
-                alert('Error spinning (Mock)')
+                alert(data.error || 'Error spinning')
                 setSpinning(false)
             }
         } catch (e) {

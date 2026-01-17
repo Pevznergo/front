@@ -81,13 +81,13 @@ export async function POST(req: Request) {
          `
                 finalPoints = award[0].points
             }
-        } else if (selectedPrize.type === 'balance' || selectedPrize.type === 'tokens') {
+        } else if (selectedPrize.type === 'balance' || selectedPrize.type === 'tokens' || selectedPrize.type === 'Aporto') {
             // Award LLM tokens (Aporto)
             const tokensWon = parseInt(selectedPrize.value)
             if (!isNaN(tokensWon)) {
                 const award = await sql`
             UPDATE "User" 
-            SET balance = balance + ${tokensWon} 
+            SET balance = COALESCE(balance, 0) + ${tokensWon} 
             WHERE "telegramId" = ${telegramId}
             RETURNING balance
          `
