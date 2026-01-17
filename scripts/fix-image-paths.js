@@ -22,19 +22,29 @@ const sql = async (strings, ...values) => {
     }
 }
 
-console.log('Connected to DB Host:', new URL(process.env.POSTGRES_URL).hostname);
-
-async function inspect() {
+async function fixImagePaths() {
     try {
-        console.log('--- PRIZES ---');
-        const prizes = await sql`SELECT id, name, type, value, image_url, probability, is_active FROM prizes ORDER BY id`;
+        console.log('Fixing image paths in prizes table...');
+
+        // Update all image_url paths from /api/uploads/ to /uploads/
+        const result = await sql`
+            UPDATE prizes 
+            SET image_url = REPLACE(image_url, '/api/uploads/', '/uploads/')
+            WHERE image_url LIKE '/api/uploads/%'
+        `;
+
+        console.log(`Updated ${result.length || 0} records`);
+
+        // Show current prizes
+        console.log('\n--- PRIZES AFTER FIX ---');
+        const prizes = await sql`SELECT id, name, type, image_url FROM prizes ORDER BY id`;
         console.table(prizes);
 
         await pool.end();
     } catch (error) {
-        console.error('Database Error:', error);
+        console.error('Error:', error);
         await pool.end();
     }
 }
 
-inspect();
+fixImagePaths();
