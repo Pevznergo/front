@@ -68,32 +68,27 @@ export default async function ShortLinkPage({ params }: { params: { code: string
     console.log(`[ShortLink] Code: ${params.code}, Found: ${rows.length}, Target: ${link?.target_url}`);
 
     if (link) {
-        // Increment click count (best effort)
-        try {
-            await sql`
-                UPDATE short_links 
-                SET clicks_count = COALESCE(clicks_count, 0) + 1 
-                WHERE code = ${params.code}
-`;
-        } catch (e) {
-            console.error("Failed to increment clicks:", e);
-        }
+        // Increment click count (fire-and-forget, non-blocking)
+        sql`
+            UPDATE short_links 
+            SET clicks_count = COALESCE(clicks_count, 0) + 1 
+            WHERE code = ${params.code}
+        `.catch(e => console.error("Failed to increment clicks:", e));
 
         // --- TRACKING START ---
-        // 1. Google Analytics
+        // 1. Google Analytics (fire-and-forget)
         sendGAEvent({
             event: 'scan_qr',
-            clientId: ip + userAgent, // Simple hash/concat for anonymous ID
+            clientId: ip + userAgent,
             userAgent,
             eventParams: {
-                campaign: link.district || 'unknown', // Use district or title as campaign label
+                campaign: link.district || 'unknown',
                 content: link.sticker_title || 'default_sticker',
                 term: link.sticker_features || 'default_features',
                 medium: 'qr',
                 source: 'offline',
                 code: params.code,
                 target: link.target_url,
-                // Extra params for deeper analysis
                 sticker_prizes: link.sticker_prizes
             }
         });
