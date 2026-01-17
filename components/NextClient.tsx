@@ -233,18 +233,17 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [refreshingId, setRefreshingId] = useState<number | null>(null);
     const [stuckFilter, setStuckFilter] = useState<'all' | 'stuck' | 'not_stuck'>('all');
     const [queue, setQueue] = useState<QueueItem[]>([]);
+    const [batchInput, setBatchInput] = useState("");
+    const [batchInterval, setBatchInterval] = useState(15);
     const [scoutedAddresses, setScoutedAddresses] = useState<any[]>([]);
     const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
+    const [nextTask, setNextTask] = useState<{ title: string, scheduled_at: string } | null>(null);
+    const [countdown, setCountdown] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<'all' | 'активен' | 'распечатан' | 'приклеен' | 'не распечатан' | 'не подключен' | 'подключен' | 'архив'>('all');
     const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [topicActionProgress, setTopicActionProgress] = useState<{ current: number, total: number } | null>(null);
-
-    // Sticker Editor State
-    const [stickerTitle, setStickerTitle] = useState("ЧАТ СОСЕДЕЙ🏠");
-    const [stickerSubtitle, setStickerSubtitle] = useState("КОЛЕСО ПРИЗОВ:");
-    const [stickerPrizes, setStickerPrizes] = useState("WB/OZON/iPhone");
 
     // Prizes State
     const [prizes, setPrizes] = useState<any[]>([]);
@@ -262,7 +261,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         file: null as File | null
     });
 
-    const ITEMS_PER_PAGE = 24;
+    const ITEMS_PER_PAGE = 20;
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -458,7 +457,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 const data = await res.json();
                 if (data.items) {
                     setQueue(data.items);
-
+                    setNextTask(data.nextTask);
                 } else {
                     setQueue(data); // Fallback for old API if any
                 }
@@ -469,7 +468,32 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     };
 
     // Countdown logic
+    useEffect(() => {
+        if (!nextTask) {
+            setCountdown(null);
+            return;
+        }
 
+        const timer = setInterval(() => {
+            const now = new Date();
+            const scheduled = new Date(nextTask.scheduled_at);
+            const diffMs = scheduled.getTime() - now.getTime();
+
+            if (diffMs <= 0) {
+                setCountdown("в обработке...");
+                // Fetch queue to see if it moved
+                fetchQueue();
+                clearInterval(timer);
+            } else {
+                const totalSeconds = Math.floor(diffMs / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                setCountdown(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [nextTask]);
 
     // We no longer use localStorage history since we have DB-backed initialLinks
     useEffect(() => {
@@ -747,13 +771,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
                                         </svg>
-                                        ${stickerTitle}
+                                        ЧАТ СОСЕДЕЙ🏠
                                     </h1>
                                     <div class="features">
-                                    ${stickerSubtitle}
+                                    КОЛЕСО ПРИЗОВ:
                                     </div>
                                     <div class="prizes">
-                                        ${stickerPrizes}
+                                        WB/OZON/iPhone
                                     </div>
                                 </div>
                             </div>
@@ -900,6 +924,35 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     };
 
 
+    const handleAddToQueue = async () => {
+        const lines = batchInput.split("\n").filter(l => l.trim());
+        if (lines.length === 0) return;
+
+        const batch = lines.map(line => {
+            const [title, district] = line.split("|").map(s => s.trim());
+            return { title: title || line.trim(), district: district || "" };
+        });
+
+        setBatchLoading(true);
+        try {
+            const res = await fetch("/api/queue", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ batch, intervalMinutes: batchInterval })
+            });
+
+            if (!res.ok) throw new Error("Failed to add to queue");
+
+            alert(`Добавлено в очередь: ${batch.length} чатов`);
+            setBatchInput("");
+            fetchQueue();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
     const handlePushScoutedToQueue = async () => {
         if (scoutedAddresses.length === 0) return;
         setBatchLoading(true);
@@ -1043,7 +1096,25 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
+    const handleProcessQueue = async () => {
+        setBatchLoading(true);
+        try {
+            const res = await fetch("/api/queue/process?force=true");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to process");
 
+            if (data.success) {
+                alert(`Процесс запущен: создан чат ${data.chatId || ""}`);
+            } else {
+                alert(data.message || "Очередь пуста или нет задач к выполнению");
+            }
+            fetchQueue();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
 
     const handleUpdateQueueItem = async (item: QueueItem) => {
         try {
@@ -1542,7 +1613,23 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                 </div>
                                 <div className="flex-1 text-left space-y-4">
                                     <div>
-
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-semibold text-slate-400">Очередь создания ({queue.length})</h3>
+                                            <button
+                                                onClick={handleProcessQueue}
+                                                disabled={batchLoading}
+                                                className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs rounded-lg transition-all flex items-center gap-2"
+                                            >
+                                                {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                                Обработать сейчас
+                                            </button>
+                                        </div>
+                                        {countdown && (
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-4 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                                Следующий чат ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                            </div>
+                                        )}
                                         <p className="text-slate-400">Чат "{result.title}" успешно создан.</p>
                                     </div>
 
@@ -2165,155 +2252,150 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 </div>
             ) : (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
+                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                            <QrCode className="w-10 h-10 text-indigo-400" />
+                        </div>
 
+                        <div className="max-w-md mx-auto space-y-2">
+                            <h2 className="text-2xl font-bold">Очередь создания чатов</h2>
+                            <p className="text-slate-400 text-sm">Введите список чатов (Название | Район) по одному на строку.</p>
+                        </div>
 
+                        <div className="max-w-2xl mx-auto space-y-4">
+                            <textarea
+                                value={batchInput}
+                                onChange={(e) => setBatchInput(e.target.value)}
+                                placeholder="ЖК Риверсайд | Приморский&#10;ЖК Квартал | Центральный"
+                                className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white"
+                            />
 
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
+                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-2">Интервал:</span>
+                                    {[10, 15, 20, 30].map(m => (
+                                        <button
+                                            key={m}
+                                            onClick={() => setBatchInterval(m)}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${batchInterval === m ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                        >
+                                            {m} мин
+                                        </button>
+                                    ))}
+                                </div>
 
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center">
-                                <QrCode className="w-6 h-6 text-indigo-400" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold">Массовая генерация</h2>
-                                <p className="text-slate-400 text-sm">Настройте внешний вид наклейки и сгенерируйте коды</p>
+                                <button
+                                    onClick={handleAddToQueue}
+                                    disabled={batchLoading || !batchInput.trim()}
+                                    className="h-12 px-8 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl"
+                                >
+                                    {batchLoading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Добавить в очередь ({batchInput.split('\n').filter(l => l.trim()).length})
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                            {/* Editor */}
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500">Заголовок</label>
-                                    <input
-                                        value={stickerTitle}
-                                        onChange={(e) => setStickerTitle(e.target.value)}
-                                        className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500">Подзаголовок</label>
-                                    <input
-                                        value={stickerSubtitle}
-                                        onChange={(e) => setStickerSubtitle(e.target.value)}
-                                        className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500">Список призов</label>
-                                    <input
-                                        value={stickerPrizes}
-                                        onChange={(e) => setStickerPrizes(e.target.value)}
-                                        className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Preview */}
-                            <div className="space-y-4">
-                                <label className="text-xs font-bold uppercase text-slate-500 block text-center">Предпросмотр (как при печати)</label>
-                                <div className="flex justify-center items-center py-8 bg-white/5 rounded-2xl overflow-hidden">
-                                    <div id="sticker-preview" className="relative bg-white text-black cursor-default select-none shadow-2xl scale-125 origin-center">
-                                        <style dangerouslySetInnerHTML={{
-                                            __html: `
-                                            #sticker-preview {
-                                                width: 70mm;
-                                                height: 37mm;
-                                                padding: 4mm 2mm;
-                                                box-sizing: border-box;
-                                            }
-                                            #sticker-preview .sticker-inner {
-                                                display: flex;
-                                                gap: 2mm;
-                                                height: 100%;
-                                                align-items: center;
-                                            }
-                                            #sticker-preview .qr-box {
-                                                width: 25mm;
-                                                height: 25mm;
-                                                flex-shrink: 0;
-                                                background: #f0f0f0;
-                                                display: flex;
-                                                align-items: center;
-                                                justify-content: center;
-                                            }
-                                            #sticker-preview .content-box {
-                                                flex: 1;
-                                                display: flex;
-                                                flex-direction: column;
-                                                justify-content: center;
-                                                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                                                text-align: left;
-                                                overflow: hidden;
-                                            }
-                                            #sticker-preview .main-title {
-                                                margin: 0;
-                                                padding: 0;
-                                                font-size: 15px; 
-                                                font-weight: 900;
-                                                line-height: 1;
-                                                text-transform: uppercase;
-                                                margin-bottom: 1mm;
-                                                white-space: nowrap;
-                                                display: flex;
-                                                align-items: center;
-                                                gap: 1mm;
-                                                padding-left: 1mm;
-                                            }
-                                            #sticker-preview .tg-icon {
-                                                width: 4.5mm;
-                                                height: 4.5mm;
-                                                flex-shrink: 0;
-                                            }
-                                            #sticker-preview .features {
-                                                font-size: 11px;
-                                                font-weight: 700;
-                                                color: #000;
-                                                background: #eee;
-                                                padding: 0.5mm 1.5mm;
-                                                border-radius: 2mm;
-                                                width: fit-content;
-                                                margin-bottom: 0.5mm;
-                                                margin-left: 1mm;
-                                                text-transform: uppercase;
-                                            }
-                                            #sticker-preview .prizes {
-                                                font-family: 'Arial Black', Gadget, sans-serif;
-                                                font-size: 13px;
-                                                font-weight: 900;
-                                                color: black;
-                                                text-transform: uppercase;
-                                                margin-top: 1mm;
-                                                margin-left: 1mm;
-                                                line-height: 1;
-                                            }
-                                        `}} />
-
-                                        <div className="sticker-inner">
-                                            <div className="qr-box">
-                                                <QrCode className="w-full h-full p-2 text-slate-400" />
-                                            </div>
-                                            <div className="content-box">
-                                                <h1 className="main-title">
-                                                    <svg className="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" />
-                                                    </svg>
-                                                    {stickerTitle}
-                                                </h1>
-                                                <div className="features">
-                                                    {stickerSubtitle}
-                                                </div>
-                                                <div className="prizes">
-                                                    {stickerPrizes}
-                                                </div>
-                                            </div>
+                        {/* Current Queue Display */}
+                        {queue.length > 0 && (
+                            <div className="max-w-4xl mx-auto mt-12 space-y-4 text-left">
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 text-slate-400">
+                                            <Clock className="w-4 h-4" />
+                                            <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
                                         </div>
+                                        {countdown && (
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
+                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                                Следующий ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
+                                            </div>
+                                        )}
                                     </div>
+                                    <button
+                                        onClick={handleProcessQueue}
+                                        disabled={batchLoading}
+                                        className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold rounded-xl transition-all flex items-center gap-2"
+                                    >
+                                        {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                                        Обработать сейчас
+                                    </button>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    {queue.slice(0, 10).map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group">
+                                            {editingQueueItem?.id === item.id ? (
+                                                <div className="flex-1 flex gap-2">
+                                                    <input
+                                                        className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                        value={editingQueueItem.title}
+                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, title: e.target.value })}
+                                                    />
+                                                    <input
+                                                        className="w-32 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
+                                                        value={editingQueueItem.district}
+                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, district: e.target.value })}
+                                                    />
+                                                    <button onClick={() => handleUpdateQueueItem(editingQueueItem)} className="text-green-500 hover:text-green-400 p-1"><CheckSquare className="w-4 h-4" /></button>
+                                                    <button onClick={() => setEditingQueueItem(null)} className="text-slate-500 hover:text-slate-400 p-1"><X className="w-4 h-4" /></button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-white">{item.title}</span>
+                                                        <span className="text-[10px] text-slate-500">{item.district}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex flex-col text-right">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
+                                                            <span className="text-xs font-mono text-indigo-400">
+                                                                {new Date(item.scheduled_at).toLocaleTimeString()}
+                                                            </span>
+                                                        </div>
+                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
+                                                            item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                                'bg-slate-500/20 text-slate-500'
+                                                            }`}>
+                                                            {item.status}
+                                                        </span>
+                                                        {item.status === 'pending' && (
+                                                            <div className="hidden group-hover:flex items-center gap-1">
+                                                                <button onClick={() => setEditingQueueItem(item)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
+                                                                <button onClick={() => handleDeleteQueueItem(item.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {queue.length > 10 && (
+                                        <div className="text-center text-[10px] text-slate-600 uppercase tracking-widest pt-2">
+                                            И еще {queue.length - 10} чатов впереди...
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        )}
+                    </div>
+
+
+
+                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
+                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                            <QrCode className="w-10 h-10 text-indigo-400" />
                         </div>
 
-                        <div className="h-px bg-white/10 my-8" />
+                        <div className="max-w-md mx-auto space-y-2">
+                            <h2 className="text-2xl font-bold">Массовая генерация QR</h2>
+                            <p className="text-slate-400 text-sm">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
+                        </div>
 
                         <div className="flex items-center justify-between gap-4">
                             <button
@@ -2655,7 +2737,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             </div>
                         )}
                     </div>
-                </div >
+                </div>
             )
             }
             {/* Topic Action Modal - Moved to global scope */}
@@ -2751,145 +2833,143 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 )
             }
             {/* Admin Prize Modal */}
-            {
-                isPrizeModalOpen && (
-                    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                        <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-white">{editingPrize ? 'Редактировать приз' : 'Создать новый приз'}</h2>
-                                <button onClick={() => setIsPrizeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+            {isPrizeModalOpen && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-white">{editingPrize ? 'Редактировать приз' : 'Создать новый приз'}</h2>
+                            <button onClick={() => setIsPrizeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                        </div>
+
+                        <form onSubmit={handleSavePrize} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Название</label>
+                                <input
+                                    required
+                                    value={prizeForm.name}
+                                    onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                    placeholder="Например: Скидка 50%"
+                                />
                             </div>
 
-                            <form onSubmit={handleSavePrize} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Название</label>
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Тип</label>
+                                    <select
+                                        value={prizeForm.type}
+                                        onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
+                                    >
+                                        <option value="points">Баллы</option>
+                                        <option value="item">Предмет (iPhone)</option>
+                                        <option value="coupon">Купон/Промо</option>
+                                        <option value="status">Статус</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Значение</label>
                                     <input
                                         required
-                                        value={prizeForm.name}
-                                        onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
+                                        value={prizeForm.value}
+                                        onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
                                         className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                        placeholder="Например: Скидка 50%"
+                                        placeholder="500, PROMO123"
                                     />
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Тип</label>
-                                        <select
-                                            value={prizeForm.type}
-                                            onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
-                                        >
-                                            <option value="points">Баллы</option>
-                                            <option value="item">Предмет (iPhone)</option>
-                                            <option value="coupon">Купон/Промо</option>
-                                            <option value="status">Статус</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Значение</label>
-                                        <input
-                                            required
-                                            value={prizeForm.value}
-                                            onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                            placeholder="500, PROMO123"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Вероятность (%)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            required
-                                            value={prizeForm.probability}
-                                            onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                            placeholder="0.1"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            value={prizeForm.quantity}
-                                            onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                            placeholder="-1 для бесконечности"
-                                        />
-                                        <div className="text-[10px] text-slate-500 text-right pr-1">-1 = Бесконечно</div>
-                                    </div>
-                                </div>
-
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Изображение</label>
-                                    <div className="flex flex-col gap-2">
-                                        {(prizeForm.image_url || prizeForm.file) && (
-                                            <div className="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden border border-white/10">
-                                                <img
-                                                    src={prizeForm.file ? URL.createObjectURL(prizeForm.file) : prizeForm.image_url}
-                                                    alt="Preview"
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            </div>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={e => {
-                                                const file = e.target.files?.[0];
-                                                if (file) setPrizeForm({ ...prizeForm, file });
-                                            }}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
-                                        />
-                                        {/* Fallback to URL if needed */}
-                                        <input
-                                            value={prizeForm.image_url || ''}
-                                            onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
-                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none text-slate-500 placeholder:text-slate-700"
-                                            placeholder="Или прямая ссылка..."
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Описание</label>
-                                    <textarea
-                                        value={prizeForm.description || ''}
-                                        onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 min-h-[80px]"
-                                        placeholder="Описание приза..."
-                                    />
-                                </div>
-
-                                <div className="flex items-center gap-3 py-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Вероятность (%)</label>
                                     <input
-                                        type="checkbox"
-                                        id="is_active"
-                                        checked={prizeForm.is_active}
-                                        onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
-                                        className="w-5 h-5 rounded border-white/10 bg-slate-950 checked:bg-indigo-600"
+                                        type="number"
+                                        step="0.01"
+                                        required
+                                        value={prizeForm.probability}
+                                        onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="0.1"
                                     />
-                                    <label htmlFor="is_active" className="text-sm font-semibold text-white cursor-pointer select-none">
-                                        Активен (участвует в розыгрыше)
-                                    </label>
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={prizeForm.quantity}
+                                        onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="-1 для бесконечности"
+                                    />
+                                    <div className="text-[10px] text-slate-500 text-right pr-1">-1 = Бесконечно</div>
+                                </div>
+                            </div>
 
-                                <button
-                                    type="submit"
-                                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20 mt-4"
-                                >
-                                    {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
-                                </button>
-                            </form>
-                        </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Изображение</label>
+                                <div className="flex flex-col gap-2">
+                                    {(prizeForm.image_url || prizeForm.file) && (
+                                        <div className="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden border border-white/10">
+                                            <img
+                                                src={prizeForm.file ? URL.createObjectURL(prizeForm.file) : prizeForm.image_url}
+                                                alt="Preview"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0];
+                                            if (file) setPrizeForm({ ...prizeForm, file });
+                                        }}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                                    />
+                                    {/* Fallback to URL if needed */}
+                                    <input
+                                        value={prizeForm.image_url || ''}
+                                        onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none text-slate-500 placeholder:text-slate-700"
+                                        placeholder="Или прямая ссылка..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Описание</label>
+                                <textarea
+                                    value={prizeForm.description || ''}
+                                    onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
+                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 min-h-[80px]"
+                                    placeholder="Описание приза..."
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 py-2">
+                                <input
+                                    type="checkbox"
+                                    id="is_active"
+                                    checked={prizeForm.is_active}
+                                    onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
+                                    className="w-5 h-5 rounded border-white/10 bg-slate-950 checked:bg-indigo-600"
+                                />
+                                <label htmlFor="is_active" className="text-sm font-semibold text-white cursor-pointer select-none">
+                                    Активен (участвует в розыгрыше)
+                                </label>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20 mt-4"
+                            >
+                                {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
+                            </button>
+                        </form>
                     </div>
-                )
-            }
+                </div>
+            )}
         </div >
     );
 }
