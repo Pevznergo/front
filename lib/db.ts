@@ -401,6 +401,14 @@ export async function initDatabase() {
       console.warn('Migration warning for user_prizes:', e)
     }
 
+    // Migration: Drop old foreign key constraint that references app_users (now using User table)
+    try {
+      await sql`ALTER TABLE user_prizes DROP CONSTRAINT IF EXISTS user_prizes_telegram_id_fkey`;
+      console.log('Dropped old user_prizes_telegram_id_fkey constraint');
+    } catch (e) {
+      console.warn('Could not drop old FK constraint:', e);
+    }
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
