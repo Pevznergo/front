@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       SET points = points - 10,
           spins_count = spins_count + 1,
           last_visit = CURRENT_TIMESTAMP
-      WHERE telegram_id = ${telegramId} AND points >= 10
+      WHERE "telegramId" = ${telegramId} AND points >= 10
       RETURNING points
     `
 
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
                 const award = await sql`
             UPDATE "User" 
             SET points = points + ${pointsWon} 
-            WHERE telegram_id = ${telegramId}
+            WHERE "telegramId" = ${telegramId}
             RETURNING points
          `
                 finalPoints = award[0].points

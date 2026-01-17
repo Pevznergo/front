@@ -53,9 +53,9 @@ export async function GET(req: NextRequest) {
         `;
 
         // Telegram users stats
-        const telegramUsers = await sql`SELECT COUNT(*) as count FROM "User" WHERE telegram_id IS NOT NULL`;
-        const avgPoints = await sql`SELECT AVG(points) as avg FROM "User" WHERE telegram_id IS NOT NULL`;
-        const totalSpins = await sql`SELECT SUM(spins_count) as total FROM "User" WHERE telegram_id IS NOT NULL`;
+        const telegramUsers = await sql`SELECT COUNT(*) as count FROM "User" WHERE "telegramId" IS NOT NULL`;
+        const avgPoints = await sql`SELECT AVG(points) as avg FROM "User" WHERE "telegramId" IS NOT NULL`;
+        const totalSpins = await sql`SELECT SUM(spins_count) as total FROM "User" WHERE "telegramId" IS NOT NULL`;
 
         // UTM breakdown for Telegram users
         const telegramByUtmSource = await sql`
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
                 AVG(points) as avg_points,
                 SUM(spins_count) as total_spins
             FROM "User"
-            WHERE telegram_id IS NOT NULL AND utm_source IS NOT NULL
+            WHERE "telegramId" IS NOT NULL AND utm_source IS NOT NULL
             GROUP BY utm_source
             ORDER BY total DESC
         `;
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
                 AVG(points) as avg_points,
                 SUM(spins_count) as total_spins
             FROM "User"
-            WHERE telegram_id IS NOT NULL AND utm_campaign IS NOT NULL
+            WHERE "telegramId" IS NOT NULL AND utm_campaign IS NOT NULL
             GROUP BY utm_campaign, utm_source
             ORDER BY total DESC
         `;

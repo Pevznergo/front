@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         const startParam = urlParams.get('start_param') || null
 
         // Check if user exists
-        const existingUser = await sql`SELECT * FROM "User" WHERE telegram_id = ${telegramId} `
+        const existingUser = await sql`SELECT * FROM "User" WHERE "telegramId" = ${telegramId} `
 
         if (existingUser.length === 0) {
             // Fetch UTM data from QR code if start_param is provided
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
             // Create new user with 20 points and UTM data
             await sql`
                 INSERT INTO "User"(
-                    telegram_id, name, points,
+                    "telegramId", name, points,
                     utm_source, utm_medium, utm_campaign, utm_content, start_param,
                     created_at
                 )
@@ -69,7 +69,8 @@ export async function POST(req: Request) {
                     ${utmMedium},
                     ${utmCampaign},
                     ${utmContent},
-                    ${startParam}
+                    ${startParam},
+                    CURRENT_TIMESTAMP
                 )
             `
             return NextResponse.json({
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
         UPDATE "User" 
         SET last_visit = CURRENT_TIMESTAMP,
             name = ${user.first_name || 'Telegram User'}
-        WHERE telegram_id = ${telegramId}
+        WHERE "telegramId" = ${telegramId}
 `
             return NextResponse.json({
                 user: existingUser[0],

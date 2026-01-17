@@ -107,8 +107,9 @@ export async function initDatabase() {
       // Make email nullable for Telegram users
       await sql`ALTER TABLE "User" ALTER COLUMN email DROP NOT NULL`;
 
-      // Telegram-specific fields
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS telegram_id BIGINT UNIQUE`;
+      // Note: telegramId already exists as VARCHAR, we use it as-is
+
+      // Telegram-specific fields  
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS spins_count INTEGER DEFAULT 0`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0`;
@@ -120,12 +121,15 @@ export async function initDatabase() {
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(255)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(255)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_content VARCHAR(255)`;
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
+      await sql`ALTER TABLE " User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
 
       // Other fields
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`;
+
+      // Cleanup: drop duplicate telegram_id column if it was created before
+      await sql`ALTER TABLE "User" DROP COLUMN IF EXISTS telegram_id`;
     } catch (e) {
       console.warn("User table extension warning:", e);
     }
@@ -363,7 +367,7 @@ export async function initDatabase() {
     await sql`
       CREATE TABLE IF NOT EXISTS user_prizes (
         id SERIAL PRIMARY KEY,
-        telegram_id BIGINT NOT NULL REFERENCES "User"(telegram_id),
+        telegram_id BIGINT NOT NULL,
         prize_id INTEGER NOT NULL REFERENCES prizes(id),
         promo_code VARCHAR(255),
         expiry_at TIMESTAMP,
