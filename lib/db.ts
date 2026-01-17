@@ -110,6 +110,7 @@ export async function initDatabase() {
       // Note: telegramId already exists as VARCHAR, we use it as-is
 
       // Telegram-specific fields  
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS balance INTEGER DEFAULT 0`; // Token balance for chat requests
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS spins_count INTEGER DEFAULT 0`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0`;
@@ -121,7 +122,7 @@ export async function initDatabase() {
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(255)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(255)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_content VARCHAR(255)`;
-      await sql`ALTER TABLE " User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
 
       // Other fields
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE`;

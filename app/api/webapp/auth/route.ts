@@ -54,7 +54,7 @@ export async function POST(req: Request) {
                 }
             }
 
-            // Create new user with 20 points and UTM data
+            // Create new user with 20 points (for spinning) and UTM data
             await sql`
                 INSERT INTO "User"(
                     "telegramId", name, points,
@@ -77,6 +77,7 @@ export async function POST(req: Request) {
                 user: {
                     ...user,
                     points: 20,
+                    balance: 0,
                     daily_streak: 0,
                     last_daily_claim: null,
                     created_at: new Date().toISOString(),
@@ -84,12 +85,12 @@ export async function POST(req: Request) {
                     utm_campaign: utmCampaign
                 },
                 isNew: true,
-                message: 'User created + 20 points'
+                message: 'User created + 20 points for spinning'
             })
         } else {
             // Update last visit
             await sql`
-        UPDATE "User" 
+        UPDATE "User"
         SET last_visit = CURRENT_TIMESTAMP,
             name = ${user.first_name || 'Telegram User'}
         WHERE "telegramId" = ${telegramId}

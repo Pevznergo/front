@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         // Telegram users stats
         const telegramUsers = await sql`SELECT COUNT(*) as count FROM "User" WHERE "telegramId" IS NOT NULL`;
         const avgPoints = await sql`SELECT AVG(points) as avg FROM "User" WHERE "telegramId" IS NOT NULL`;
+        const avgBalance = await sql`SELECT AVG(balance) as avg FROM "User" WHERE "telegramId" IS NOT NULL`;
         const totalSpins = await sql`SELECT SUM(spins_count) as total FROM "User" WHERE "telegramId" IS NOT NULL`;
 
         // UTM breakdown for Telegram users
@@ -92,6 +93,7 @@ export async function GET(req: NextRequest) {
             telegram: {
                 total_users: parseInt(telegramUsers[0]?.count || '0'),
                 avg_points: parseFloat(avgPoints[0]?.avg || '0'),
+                avg_balance: parseFloat(avgBalance[0]?.avg || '0'),
                 total_spins: parseInt(totalSpins[0]?.total || '0'),
                 by_utm_source: telegramByUtmSource,
                 by_utm_campaign: telegramByUtmCampaign
