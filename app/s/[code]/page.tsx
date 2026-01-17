@@ -21,8 +21,46 @@ const getCachedLink = async (code: string) => {
     )();
 };
 
+// Helper to send GA Event
+const sendGAEvent = async (params: {
+    event: string;
+    clientId: string; // Anonymous Client ID
+    ipv4?: string;
+    userAgent?: string;
+    eventParams?: Record<string, any>;
+}) => {
+    const MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
+    const API_SECRET = process.env.GA_API_SECRET;
+
+    if (!MEASUREMENT_ID || !API_SECRET) return;
+
+    try {
+        await fetch(`https://www.google-analytics.com/mp/collect?measurement_id=${MEASUREMENT_ID}&api_secret=${API_SECRET}`, {
+            method: "POST",
+            body: JSON.stringify({
+                client_id: params.clientId,
+                events: [{
+                    name: params.event,
+                    params: {
+                        ...params.eventParams,
+                        // Add standard params if needed
+                        ip: params.ipv4,
+                        user_agent: params.userAgent
+                    }
+                }]
+            })
+        });
+    } catch (e) {
+        console.error("GA Event Error:", e);
+    }
+};
+
 export default async function ShortLinkPage({ params }: { params: { code: string } }) {
     const link = await getCachedLink(params.code);
+    const { headers } = await import("next/headers");
+    const headersList = headers();
+    const userAgent = headersList.get("user-agent") || "unknown";
+    const ip = headersList.get("x-forwarded-for") || "unknown"; // Basic IP check
 
     // Legacy support: if uncached result was array, this handles single item logic
     const rows = link ? [link] : [];
@@ -40,6 +78,20 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         } catch (e) {
             console.error("Failed to increment clicks:", e);
         }
+
+        // --- TRACKING START ---
+        // 1. Google Analytics
+        sendGAEvent({
+            event: 'scan_qr',
+            clientId: ip + userAgent, // Simple hash/concat for anonymous ID
+            userAgent,
+            eventParams: {
+                campaign: link.district || 'unknown', // Use district or title as campaign label
+                code: params.code,
+                target: link.target_url
+            }
+        });
+        // --- TRACKING END ---
 
         // If target_url is missing, it's potentially an unlinked QR or a sync error
         if (!link.target_url) {
@@ -106,7 +158,24 @@ export default async function ShortLinkPage({ params }: { params: { code: string
             );
         }
 
-        redirect(link.target_url);
+        // --- DEEP LINKING START ---
+        // Check if it's a Telegram Bot URL and append 'start' parameter
+        let finalUrl = link.target_url;
+        if ((finalUrl.includes('t.me') || finalUrl.includes('telegram.me')) && !finalUrl.includes('joinchat') && !finalUrl.includes('+')) {
+            // Exclude join links, only target bots/users
+            // Basic logic: if it ends with 'bot', it's likely a bot.
+            // Or if user said "target is bot".
+            // Let's universally append `start` parameter if it's a t.me link and not a join link.
+            const separator = finalUrl.includes('?') ? '&' : '?';
+
+            // Check if start param already exists
+            if (!finalUrl.includes('start=')) {
+                finalUrl += `${separator}start=${params.code}`;
+            }
+        }
+        // --- DEEP LINKING END ---
+
+        redirect(finalUrl);
     } else {
         // Link not found in DB
         // Check if admin is scanning a new QR code

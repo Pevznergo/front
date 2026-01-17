@@ -23,7 +23,7 @@ const MapScout = dynamic(() => import("./MapScout"), {
     loading: () => <div className="h-[600px] w-full bg-white/5 animate-pulse rounded-3xl flex items-center justify-center font-bold text-slate-500 uppercase tracking-tighter">Загрузка карты...</div>
 });
 
-const QueueConsole = dynamic(() => import("./QueueConsole"), { ssr: false });
+
 
 interface ShortLink {
     id: number;
@@ -261,7 +261,167 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         file: null as File | null
     });
 
+    // Sticker Settings State
+    const [stickerSettings, setStickerSettings] = useState({
+        mainTitle: 'ЧАТ СОСЕДЕЙ🏠',
+        featuresTitle: 'КОЛЕСО ПРИЗОВ:',
+        prizesList: 'WB/OZON/iPhone',
+        batchSize: 24,
+        targetUrl: 'https://t.me/aporto_bot',
+        useUtm: true
+    });
+
+
+    const slugify = (text: string) => {
+        const trans: { [key: string]: string } = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
+            'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+            'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts',
+            'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
+            'я': 'ya', ' ': '_'
+        };
+        return text.toLowerCase().split('').map(char => trans[char] || char).join('').replace(/[^a-z0-9_]/g, '');
+    };
+
+    const handlePrintSelectedForBatch = async (batchLinks: ShortLink[]) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Не удалось открыть окно печати. Разрешите всплывающие окна.");
+            return;
+        }
+
+        const PAGESIZE = 24;
+        const pages = [];
+        for (let i = 0; i < batchLinks.length; i += PAGESIZE) {
+            pages.push(batchLinks.slice(i, i + PAGESIZE));
+        }
+
+        let fullHtml = '';
+        for (const pageItems of pages) {
+            let stickersHtml = '';
+            for (const link of pageItems) {
+                const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
+                try {
+                    const qrData = await QRCodeLib.toDataURL(shortUrl, {
+                        width: 200,
+                        margin: 2,
+                        color: { dark: '#000000', light: '#ffffff' }
+                    });
+
+                    stickersHtml += `
+                        <div class="sticker">
+                            <div class="sticker-inner">
+                                <div class="qr-box">
+                                    <img src="${qrData}" alt="QR" />
+                                </div>
+                                <div class="content-box">
+                                    <h1 class="main-title">
+                                        <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                                        </svg>
+                                        ${stickerSettings.mainTitle}
+                                    </h1>
+                                    <div class="features">
+                                    ${stickerSettings.featuresTitle}
+                                    </div>
+                                    <div class="prizes">
+                                        ${stickerSettings.prizesList}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (err) {
+                    console.error(`Failed to generate QR for ${link.code}`, err);
+                }
+            }
+            fullHtml += `<div class="page">${stickersHtml}</div>`;
+        }
+
+        // Update statuses
+        for (const link of batchLinks) {
+            handleUpdateStatus(link.code, link.id, 'распечатан');
+        }
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Печать наклеек A4 (70x37mm)</title>
+                <style>
+                    @page { size: A4; margin: 0; }
+                    body { margin: 0; padding: 0; background: white; color: black; -webkit-print-color-adjust: exact; }
+                    .page { width: 210mm; height: 297mm; display: grid; grid-template-columns: repeat(3, 70mm); grid-template-rows: repeat(8, 37.125mm); position: relative; overflow: hidden; page-break-after: always; }
+                    .sticker { box-sizing: border-box; width: 70mm; height: 37mm; padding: 4mm 2mm; overflow: hidden; }
+                    .sticker-inner { display: flex; gap: 2mm; height: 100%; align-items: center; }
+                    .qr-box { width: 25mm; flex-shrink: 0; }
+                    .qr-box img { width: 100%; height: auto; display: block; }
+                    .content-box { flex: 1; display: flex; flex-direction: column; justify-content: center; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: left; }
+                    .main-title { margin: 0; padding: 0; font-size: 15px; font-weight: 900; line-height: 1; text-transform: uppercase; margin-bottom: 1mm; white-space: nowrap; display: flex; align-items: center; gap: 1mm; padding-left: 1mm; }
+                    .tg-icon { width: 4.5mm; height: 4.5mm; flex-shrink: 0; }
+                    .features { font-size: 11px; font-weight: 700; color: #000; background: #eee; padding: 0.5mm 1.5mm; border-radius: 2mm; width: fit-content; margin-bottom: 0.5mm; margin-left: 1mm; text-transform: uppercase; }
+                    .prizes { font-family: 'Arial Black', Gadget, sans-serif; font-size: 13px; font-weight: 900; color: black; text-transform: uppercase; margin-top: 1mm; margin-left: 1mm; line-height: 1; }
+                    @media print { .no-print { display: none; } .sticker { border: none; page-break-inside: avoid; } .features { -webkit-print-color-adjust: exact; background: #eee; } }
+                </style>
+            </head>
+            <body>
+                ${fullHtml}
+                <script>
+                    window.onload = function() { setTimeout(() => { window.print(); }, 500); };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    const handleTargetedBatchGenerate = async () => {
+        if (!stickerSettings.targetUrl && !confirm("URL для привязки не указан. Создать пустые ссылки?")) {
+            return;
+        }
+
+        setBatchLoading(true);
+        try {
+            let finalUrl = stickerSettings.targetUrl;
+            if (stickerSettings.useUtm && finalUrl) {
+                const separator = finalUrl.includes('?') ? '&' : '?';
+                const campaign = slugify(stickerSettings.mainTitle) || 'campaign';
+                finalUrl += `${separator}utm_source=sticker&utm_medium=offline&utm_campaign=${campaign}`;
+            }
+
+            const res = await fetch("/api/links/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    count: stickerSettings.batchSize,
+                    targetUrl: finalUrl,
+                    title: stickerSettings.mainTitle
+                })
+            });
+
+            const data = await res.json() as { success: boolean, links: ShortLink[] };
+            if (!res.ok) throw new Error((data as any).error || "Failed to generate batch");
+
+            const newLinks = data.links;
+            setLinks(prev => [...newLinks, ...prev]);
+
+            const newIds = new Set<number>(newLinks.map(l => l.id));
+            setSelectedIds(newIds);
+            setBatchResult({ count: newLinks.length });
+
+            // Auto-print
+            handlePrintSelectedForBatch(newLinks);
+
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
     const ITEMS_PER_PAGE = 20;
+
+
+
 
     // Filter logic
     const filterLinks = (list: ShortLink[]) => {
@@ -771,13 +931,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                         <svg class="tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
                                         </svg>
-                                        ЧАТ СОСЕДЕЙ🏠
+                                        ${stickerSettings.mainTitle}
                                     </h1>
                                     <div class="features">
-                                    КОЛЕСО ПРИЗОВ:
+                                    ${stickerSettings.featuresTitle}
                                     </div>
                                     <div class="prizes">
-                                        WB/OZON/iPhone
+                                        ${stickerSettings.prizesList}
                                     </div>
                                 </div>
                             </div>
@@ -1007,39 +1167,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
-    const handleBatchGenerate = async () => {
-        if (!confirm("Сгенерировать 200 новых QR-кодов (коротких ссылок)?")) return;
-        setBatchLoading(true);
-        setBatchResult(null);
-        try {
-            const res = await fetch("/api/batch-qr", { method: "POST" });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to generate");
-            setBatchResult({ count: data.count });
 
-            // Refresh links from server or manually update
-            const refreshRes = await fetch("/api/shorten/list"); // I'll need to create this or do it manually
-            // Actually, I can just pretend we generated them and tell user to refresh, 
-            // or I can fetch them. Let's assume there is a list endpoint or 
-            // we just reload the page for now (simplest given we have initialLinks).
-            // Actually, let's just push manually generated codes to the top of state if API returns them.
-            if (data.codes) {
-                const newLinks: ShortLink[] = data.codes.map((code: string) => ({
-                    id: Math.random(), // Temporary ID for UI
-                    code,
-                    target_url: "",
-                    created_at: new Date().toISOString()
-                }));
-                setLinks([...newLinks, ...links]);
-            }
-
-            alert(`Успешно создано ${data.count} кодов!`);
-        } catch (err: any) {
-            alert(err.message);
-        } finally {
-            setBatchLoading(false);
-        }
-    };
 
     const handleUpdateTarget = async (code: string, id: number) => {
         if (!editingTarget) return;
@@ -1374,7 +1502,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
 
     return (
         <div className="w-full max-w-6xl space-y-12" >
-            <QueueConsole />
+
             {/* Tabs & Search */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4" >
                 <div className="flex gap-4 p-1.5 bg-slate-900/50 border border-white/10 rounded-2xl w-fit">
@@ -2251,205 +2379,143 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     )}
                 </div>
             ) : (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
-                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
-                            <QrCode className="w-10 h-10 text-indigo-400" />
-                        </div>
-
-                        <div className="max-w-md mx-auto space-y-2">
-                            <h2 className="text-2xl font-bold">Очередь создания чатов</h2>
-                            <p className="text-slate-400 text-sm">Введите список чатов (Название | Район) по одному на строку.</p>
-                        </div>
-
-                        <div className="max-w-2xl mx-auto space-y-4">
-                            <textarea
-                                value={batchInput}
-                                onChange={(e) => setBatchInput(e.target.value)}
-                                placeholder="ЖК Риверсайд | Приморский&#10;ЖК Квартал | Центральный"
-                                className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white"
-                            />
-
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
-                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-2">Интервал:</span>
-                                    {[10, 15, 20, 30].map(m => (
-                                        <button
-                                            key={m}
-                                            onClick={() => setBatchInterval(m)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${batchInterval === m ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                                        >
-                                            {m} мин
-                                        </button>
-                                    ))}
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                        <div className="flex flex-col lg:flex-row gap-12">
+                            {/* Editor Section */}
+                            <div className="flex-1 space-y-6">
+                                <div className="space-y-2">
+                                    <h2 className="text-2xl font-bold text-white">Редактор Наклейки</h2>
+                                    <p className="text-slate-400 text-sm">Настройте текст, который будет печататься на наклейках.</p>
                                 </div>
 
-                                <button
-                                    onClick={handleAddToQueue}
-                                    disabled={batchLoading || !batchInput.trim()}
-                                    className="h-12 px-8 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl"
-                                >
-                                    {batchLoading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Send className="w-4 h-4" />
-                                            Добавить в очередь ({batchInput.split('\n').filter(l => l.trim()).length})
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Current Queue Display */}
-                        {queue.length > 0 && (
-                            <div className="max-w-4xl mx-auto mt-12 space-y-4 text-left">
-                                <div className="flex items-center justify-between px-2">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2 text-slate-400">
-                                            <Clock className="w-4 h-4" />
-                                            <h3 className="text-xs font-medium uppercase tracking-wider">Текущая очередь ({queue.filter(q => q.status === 'pending').length} ожидают)</h3>
+                                <div className="space-y-4">
+                                    {/* Batch Settings */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase text-slate-500 pl-1">Тираж (шт)</label>
+                                            <input
+                                                type="number"
+                                                value={stickerSettings.batchSize}
+                                                onChange={(e) => setStickerSettings({ ...stickerSettings, batchSize: parseInt(e.target.value) || 24 })}
+                                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            />
                                         </div>
-                                        {countdown && (
-                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-900/50 rounded-lg px-2 py-1 w-fit">
-                                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-                                                Следующий ({nextTask?.title?.split(',')[0]}...): <span className="text-indigo-400 font-mono">{countdown}</span>
-                                            </div>
-                                        )}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase text-slate-500 pl-1">Target Link (для метрики)</label>
+                                            <input
+                                                value={stickerSettings.targetUrl}
+                                                onChange={(e) => setStickerSettings({ ...stickerSettings, targetUrl: e.target.value })}
+                                                placeholder="https://t.me/MyBot"
+                                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            />
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={handleProcessQueue}
-                                        disabled={batchLoading}
-                                        className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold rounded-xl transition-all flex items-center gap-2"
-                                    >
-                                        {batchLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                                        Обработать сейчас
-                                    </button>
+
+                                    {/* UTM Toggle */}
+                                    <div className="flex items-center gap-2 pl-1">
+                                        <input
+                                            type="checkbox"
+                                            id="useUtm"
+                                            checked={stickerSettings.useUtm}
+                                            onChange={(e) => setStickerSettings({ ...stickerSettings, useUtm: e.target.checked })}
+                                            className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <label htmlFor="useUtm" className="text-sm text-slate-400 select-none cursor-pointer">
+                                            Автоматически добавлять UTM метки (source, medium, campaign)
+                                        </label>
+                                    </div>
+
+                                    <div className="h-px bg-white/10 my-4" />
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Заголовок</label>
+                                        <input
+                                            value={stickerSettings.mainTitle}
+                                            onChange={(e) => setStickerSettings({ ...stickerSettings, mainTitle: e.target.value })}
+                                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            placeholder="ЧАТ СОСЕДЕЙ🏠"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Подзаголовок (Фичи)</label>
+                                        <input
+                                            value={stickerSettings.featuresTitle}
+                                            onChange={(e) => setStickerSettings({ ...stickerSettings, featuresTitle: e.target.value })}
+                                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            placeholder="КОЛЕСО ПРИЗОВ:"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Список призов</label>
+                                        <textarea
+                                            value={stickerSettings.prizesList}
+                                            onChange={(e) => setStickerSettings({ ...stickerSettings, prizesList: e.target.value })}
+                                            className="w-full h-24 bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+                                            placeholder="WB/OZON/iPhone"
+                                        />
+                                        <p className="text-[10px] text-slate-500">Используйте / для разделения или переноса строк</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Preview Section */}
+                            <div className="flex-1 space-y-6">
+                                <div className="space-y-2">
+                                    <h2 className="text-xl font-bold text-white">Предпросмотр</h2>
+                                    <p className="text-slate-400 text-sm">Так будет выглядеть наклейка при печати.</p>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    {queue.slice(0, 10).map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 group">
-                                            {editingQueueItem?.id === item.id ? (
-                                                <div className="flex-1 flex gap-2">
-                                                    <input
-                                                        className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
-                                                        value={editingQueueItem.title}
-                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, title: e.target.value })}
-                                                    />
-                                                    <input
-                                                        className="w-32 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-sm outline-none text-white"
-                                                        value={editingQueueItem.district}
-                                                        onChange={(e) => setEditingQueueItem({ ...editingQueueItem, district: e.target.value })}
-                                                    />
-                                                    <button onClick={() => handleUpdateQueueItem(editingQueueItem)} className="text-green-500 hover:text-green-400 p-1"><CheckSquare className="w-4 h-4" /></button>
-                                                    <button onClick={() => setEditingQueueItem(null)} className="text-slate-500 hover:text-slate-400 p-1"><X className="w-4 h-4" /></button>
+                                <div className="p-8 bg-slate-900/50 rounded-3xl border border-white/5 flex items-center justify-center min-h-[300px]">
+                                    {/* Component Preview Container */}
+                                    <div className="sticker-preview-container transform scale-100 origin-center transition-transform hover:scale-105">
+                                        <div className="sticker shadow-xl">
+                                            <div className="sticker-inner">
+                                                <div className="qr-box bg-slate-100">
+                                                    <QrCode className="w-16 h-16 text-slate-800 opacity-20" />
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-white">{item.title}</span>
-                                                        <span className="text-[10px] text-slate-500">{item.district}</span>
+                                                <div className="content-box">
+                                                    <h1 className="main-title text-slate-900">
+                                                        <svg className="tg-icon text-[#0088cc]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" />
+                                                        </svg>
+                                                        {stickerSettings.mainTitle}
+                                                    </h1>
+                                                    <div className="features text-slate-800">
+                                                        {stickerSettings.featuresTitle}
                                                     </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex flex-col text-right">
-                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">План</span>
-                                                            <span className="text-xs font-mono text-indigo-400">
-                                                                {new Date(item.scheduled_at).toLocaleTimeString()}
-                                                            </span>
-                                                        </div>
-                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${item.status === 'processing' ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' :
-                                                            item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                                'bg-slate-500/20 text-slate-500'
-                                                            }`}>
-                                                            {item.status}
-                                                        </span>
-                                                        {item.status === 'pending' && (
-                                                            <div className="hidden group-hover:flex items-center gap-1">
-                                                                <button onClick={() => setEditingQueueItem(item)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                                                                <button onClick={() => handleDeleteQueueItem(item.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500/50 hover:text-red-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                                                            </div>
-                                                        )}
+                                                    <div className="prizes text-slate-600">
+                                                        {stickerSettings.prizesList}
                                                     </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {queue.length > 10 && (
-                                        <div className="text-center text-[10px] text-slate-600 uppercase tracking-widest pt-2">
-                                            И еще {queue.length - 10} чатов впереди...
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-
-
-                    <div className="p-12 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl text-center space-y-8">
-                        <div className="w-20 h-20 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
-                            <QrCode className="w-10 h-10 text-indigo-400" />
-                        </div>
-
-                        <div className="max-w-md mx-auto space-y-2">
-                            <h2 className="text-2xl font-bold">Массовая генерация QR</h2>
-                            <p className="text-slate-400 text-sm">Создайте 200 уникальных QR-кодов одним кликом. Позже вы сможете назначить им ссылки ниже.</p>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-4">
-                            <button
-                                onClick={handleBatchGenerate}
-                                disabled={batchLoading}
-                                className="flex-1 h-16 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl text-lg"
-                            >
-                                {batchLoading ? (
-                                    <Loader2 className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Send className="w-5 h-5" />
-                                        Сгенерировать 200 кодов
-                                    </>
-                                )}
-                            </button>
-
-                            {selectedIds.size > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <div className="relative group">
-                                        <select
-                                            onChange={(e) => handleBulkUpdateStatus(e.target.value)}
-                                            value=""
-                                            className="h-16 px-6 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-sm border-none outline-none appearance-none cursor-pointer"
-                                        >
-                                            <option value="" disabled>Сменить статус ({selectedIds.size})</option>
-                                            <option value="не распечатан">не распечатан</option>
-                                            <option value="распечатан">распечатан</option>
-                                            <option value="не подключен">не подключен</option>
-                                            <option value="подключен">подключен</option>
-                                            <option value="архив">архив</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
-                                            <Edit3 className="w-4 h-4" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-
+                                </div>
+                                <div className="text-center">
                                     <button
                                         onClick={handlePrintSelected}
-                                        className="h-16 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center gap-3 transition-all shadow-xl text-lg"
+                                        disabled={selectedIds.size === 0}
+                                        className="px-8 py-4 bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold inline-flex items-center gap-3 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                                     >
-                                        <Printer className="w-6 h-6" />
-                                        Печать
+                                        <Printer className="w-5 h-5" />
+                                        Распечатать выбранные ({selectedIds.size})
                                     </button>
+                                    {selectedIds.size === 0 && (
+                                        <p className="text-xs text-red-400 mt-2">Выберите QR-коды в таблцие "Экосистема" для печати</p>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {batchResult && (
-                            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
-                                Готово! Создано {batchResult.count} ссылок.
-                            </div>
-                        )}
+
                     </div>
+
+
+
+
 
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-2">
@@ -2737,9 +2803,10 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                             </div>
                         )}
                     </div>
+
                 </div>
-            )
-            }
+            )}
+
             {/* Topic Action Modal - Moved to global scope */}
             {
                 showTopicModal && (
@@ -2833,143 +2900,145 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 )
             }
             {/* Admin Prize Modal */}
-            {isPrizeModalOpen && (
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                    <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-white">{editingPrize ? 'Редактировать приз' : 'Создать новый приз'}</h2>
-                            <button onClick={() => setIsPrizeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+            {
+                isPrizeModalOpen && (
+                    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-xl p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-white">{editingPrize ? 'Редактировать приз' : 'Создать новый приз'}</h2>
+                                <button onClick={() => setIsPrizeModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+                            </div>
+
+                            <form onSubmit={handleSavePrize} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Название</label>
+                                    <input
+                                        required
+                                        value={prizeForm.name}
+                                        onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                        placeholder="Например: Скидка 50%"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Тип</label>
+                                        <select
+                                            value={prizeForm.type}
+                                            onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
+                                        >
+                                            <option value="points">Баллы</option>
+                                            <option value="item">Предмет (iPhone)</option>
+                                            <option value="coupon">Купон/Промо</option>
+                                            <option value="status">Статус</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Значение</label>
+                                        <input
+                                            required
+                                            value={prizeForm.value}
+                                            onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                            placeholder="500, PROMO123"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Вероятность (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={prizeForm.probability}
+                                            onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                            placeholder="0.1"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            value={prizeForm.quantity}
+                                            onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
+                                            placeholder="-1 для бесконечности"
+                                        />
+                                        <div className="text-[10px] text-slate-500 text-right pr-1">-1 = Бесконечно</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Изображение</label>
+                                    <div className="flex flex-col gap-2">
+                                        {(prizeForm.image_url || prizeForm.file) && (
+                                            <div className="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden border border-white/10">
+                                                <img
+                                                    src={prizeForm.file ? URL.createObjectURL(prizeForm.file) : prizeForm.image_url}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={e => {
+                                                const file = e.target.files?.[0];
+                                                if (file) setPrizeForm({ ...prizeForm, file });
+                                            }}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+                                        />
+                                        {/* Fallback to URL if needed */}
+                                        <input
+                                            value={prizeForm.image_url || ''}
+                                            onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none text-slate-500 placeholder:text-slate-700"
+                                            placeholder="Или прямая ссылка..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Описание</label>
+                                    <textarea
+                                        value={prizeForm.description || ''}
+                                        onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
+                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 min-h-[80px]"
+                                        placeholder="Описание приза..."
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 py-2">
+                                    <input
+                                        type="checkbox"
+                                        id="is_active"
+                                        checked={prizeForm.is_active}
+                                        onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
+                                        className="w-5 h-5 rounded border-white/10 bg-slate-950 checked:bg-indigo-600"
+                                    />
+                                    <label htmlFor="is_active" className="text-sm font-semibold text-white cursor-pointer select-none">
+                                        Активен (участвует в розыгрыше)
+                                    </label>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20 mt-4"
+                                >
+                                    {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
+                                </button>
+                            </form>
                         </div>
-
-                        <form onSubmit={handleSavePrize} className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Название</label>
-                                <input
-                                    required
-                                    value={prizeForm.name}
-                                    onChange={e => setPrizeForm({ ...prizeForm, name: e.target.value })}
-                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                    placeholder="Например: Скидка 50%"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Тип</label>
-                                    <select
-                                        value={prizeForm.type}
-                                        onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
-                                    >
-                                        <option value="points">Баллы</option>
-                                        <option value="item">Предмет (iPhone)</option>
-                                        <option value="coupon">Купон/Промо</option>
-                                        <option value="status">Статус</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Значение</label>
-                                    <input
-                                        required
-                                        value={prizeForm.value}
-                                        onChange={e => setPrizeForm({ ...prizeForm, value: e.target.value })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                        placeholder="500, PROMO123"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Вероятность (%)</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        value={prizeForm.probability}
-                                        onChange={e => setPrizeForm({ ...prizeForm, probability: parseFloat(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                        placeholder="0.1"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase text-slate-500 ml-1">Количество</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={prizeForm.quantity}
-                                        onChange={e => setPrizeForm({ ...prizeForm, quantity: parseInt(e.target.value) })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600"
-                                        placeholder="-1 для бесконечности"
-                                    />
-                                    <div className="text-[10px] text-slate-500 text-right pr-1">-1 = Бесконечно</div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Изображение</label>
-                                <div className="flex flex-col gap-2">
-                                    {(prizeForm.image_url || prizeForm.file) && (
-                                        <div className="relative w-full h-32 bg-slate-950 rounded-xl overflow-hidden border border-white/10">
-                                            <img
-                                                src={prizeForm.file ? URL.createObjectURL(prizeForm.file) : prizeForm.image_url}
-                                                alt="Preview"
-                                                className="w-full h-full object-contain"
-                                            />
-                                        </div>
-                                    )}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={e => {
-                                            const file = e.target.files?.[0];
-                                            if (file) setPrizeForm({ ...prizeForm, file });
-                                        }}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
-                                    />
-                                    {/* Fallback to URL if needed */}
-                                    <input
-                                        value={prizeForm.image_url || ''}
-                                        onChange={e => setPrizeForm({ ...prizeForm, image_url: e.target.value })}
-                                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none text-slate-500 placeholder:text-slate-700"
-                                        placeholder="Или прямая ссылка..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase text-slate-500 ml-1">Описание</label>
-                                <textarea
-                                    value={prizeForm.description || ''}
-                                    onChange={e => setPrizeForm({ ...prizeForm, description: e.target.value })}
-                                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 min-h-[80px]"
-                                    placeholder="Описание приза..."
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 py-2">
-                                <input
-                                    type="checkbox"
-                                    id="is_active"
-                                    checked={prizeForm.is_active}
-                                    onChange={e => setPrizeForm({ ...prizeForm, is_active: e.target.checked })}
-                                    className="w-5 h-5 rounded border-white/10 bg-slate-950 checked:bg-indigo-600"
-                                />
-                                <label htmlFor="is_active" className="text-sm font-semibold text-white cursor-pointer select-none">
-                                    Активен (участвует в розыгрыше)
-                                </label>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/20 mt-4"
-                            >
-                                {editingPrize ? 'Сохранить изменения' : 'Создать приз'}
-                            </button>
-                        </form>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }

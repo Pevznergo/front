@@ -51,3 +51,128 @@
     @apply px-4 py-3 flex items-center justify-between active:bg-slate-50 transition-colors cursor-pointer;
   }
 }
+
+@layer components {
+
+  /* Sticker Base Styles */
+  /* Sticker Base Styles - Matching Print Output (70mm x 37mm approx 265px x 140px) */
+  .sticker-preview-container {
+    @apply w-full overflow-hidden bg-white rounded-lg shadow-sm border border-slate-200 p-8 flex justify-center;
+    background: #f0f0f0;
+  }
+
+  /* 
+     Print Dimensions: 70mm x 37mm 
+     1mm ~ 3.78px
+     Width: ~265px
+     Height: ~140px
+  */
+  .sticker {
+    width: 265px;
+    height: 140px;
+    padding: 15px 7px;
+    /* 4mm 2mm approx */
+    border: 1px dashed #ccc;
+    box-sizing: border-box;
+    background: white;
+    color: black;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .sticker-inner {
+    display: flex;
+    gap: 7px;
+    /* 2mm */
+    height: 100%;
+    align-items: center;
+  }
+
+  .qr-box {
+    width: 95px;
+    /* 25mm */
+    flex-shrink: 0;
+  }
+
+  .qr-box img,
+  .qr-box svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .content-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-align: left;
+  }
+
+  .main-title {
+    margin: 0;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    /* 1mm */
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    /* 1mm */
+    padding-left: 4px;
+    /* 1mm */
+  }
+
+  .tg-icon {
+    width: 17px;
+    /* 4.5mm */
+    height: 17px;
+    /* 4.5mm */
+    flex-shrink: 0;
+  }
+
+  .features {
+    font-size: 11px;
+    font-weight: 700;
+    color: #000;
+    background: #eee;
+    padding: 2px 6px;
+    /* 0.5mm 1.5mm */
+    border-radius: 8px;
+    /* 2mm */
+    width: fit-content;
+    margin-bottom: 2px;
+    /* 0.5mm */
+    margin-left: 4px;
+    /* 1mm */
+    text-transform: uppercase;
+  }
+
+  .prizes {
+    font-family: 'Arial Black', Gadget, sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: black;
+    text-transform: uppercase;
+    margin-top: 4px;
+    /* 1mm */
+    margin-left: 4px;
+    /* 1mm */
+    line-height: 1;
+  }
+}
+
+@media print {
+  .sticker {
+    border: none !important;
+    page-break-inside: avoid;
+  }
+}
