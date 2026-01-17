@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "lsof -t -i:3001 | xargs kill -9 || true && next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "lsof -t -i:3001 | xargs kill -9 || true && next start -p 3001",
     "lint": "next lint",
     "worker": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' worker.ts"
   },

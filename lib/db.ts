@@ -26,7 +26,7 @@ export async function initDatabase() {
 
     // Users table
     await sqlConnection`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS "User" (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
@@ -77,7 +77,7 @@ export async function initDatabase() {
     // Let's add user_id column and try to alter password.
 
     try {
-      await sqlConnection`ALTER TABLE users ALTER COLUMN password DROP NOT NULL`
+      await sqlConnection`ALTER TABLE "User" ALTER COLUMN password DROP NOT NULL`
     } catch (e) {
       // Ignore if already nullable or other error (e.g. column doesn't exist yet on fresh init, which is handled by CREATE above if I change it there)
     }

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     // Инициализация таблицы если её нет
     await sql`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS "User" (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Проверка существующего пользователя
     const existingUser = await sql`
-      SELECT * FROM users WHERE email = ${email}
+      SELECT * FROM "User" WHERE email = ${email}
     `
 
     if (existingUser.length > 0) {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Создание пользователя
     const result = await sql`
-      INSERT INTO users (email, name, password)
+      INSERT INTO "User" (email, name, password)
       VALUES (${email}, ${name}, ${hashedPassword})
       RETURNING id, email, name, created_at
     `
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Registration error:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error.message,
         hint: 'Check if DATABASE_URL is set in .env.local'

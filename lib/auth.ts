@@ -20,7 +20,7 @@ export const authOptions = {
                 if (!credentials?.email || !credentials?.password) return null;
 
                 try {
-                    const users = await sql`SELECT * FROM users WHERE email = ${credentials.email}`;
+                    const users = await sql`SELECT * FROM "User" WHERE email = ${credentials.email}`;
                     const user = users[0];
 
                     if (user && user.password) {
@@ -51,12 +51,12 @@ export const authOptions = {
                     await initDatabase();
 
                     // Check if user exists
-                    const existingUser = await sql`SELECT * FROM users WHERE email = ${email}`;
+                    const existingUser = await sql`SELECT * FROM "User" WHERE email = ${email}`;
 
                     if (existingUser.length === 0) {
                         console.log("Creating new Google user:", email);
                         await sql`
-                            INSERT INTO users (email, name, password)
+                            INSERT INTO "User" (email, name, password)
                             VALUES (${email}, ${name}, NULL)
                         `;
                     }
