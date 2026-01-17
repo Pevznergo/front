@@ -1,5 +1,4 @@
 import { sql, initDatabase } from '@/lib/db';
-import { redirect } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
 export const dynamic = "force-dynamic";
 
@@ -21,46 +20,12 @@ const getCachedLink = async (code: string) => {
     )();
 };
 
-// Helper to send GA Event
-const sendGAEvent = async (params: {
-    event: string;
-    clientId: string; // Anonymous Client ID
-    ipv4?: string;
-    userAgent?: string;
-    eventParams?: Record<string, any>;
-}) => {
-    const MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
-    const API_SECRET = process.env.GA_API_SECRET;
-
-    if (!MEASUREMENT_ID || !API_SECRET) return;
-
-    try {
-        await fetch(`https://www.google-analytics.com/mp/collect?measurement_id=${MEASUREMENT_ID}&api_secret=${API_SECRET}`, {
-            method: "POST",
-            body: JSON.stringify({
-                client_id: params.clientId,
-                events: [{
-                    name: params.event,
-                    params: {
-                        ...params.eventParams,
-                        // Add standard params if needed
-                        ip: params.ipv4,
-                        user_agent: params.userAgent
-                    }
-                }]
-            })
-        });
-    } catch (e) {
-        console.error("GA Event Error:", e);
-    }
-};
-
 export default async function ShortLinkPage({ params }: { params: { code: string } }) {
     const link = await getCachedLink(params.code);
     const { headers } = await import("next/headers");
     const headersList = headers();
     const userAgent = headersList.get("user-agent") || "unknown";
-    const ip = headersList.get("x-forwarded-for") || "unknown"; // Basic IP check
+    const ip = headersList.get("x-forwarded-for") || "unknown";
 
     // Legacy support: if uncached result was array, this handles single item logic
     const rows = link ? [link] : [];
@@ -68,31 +33,13 @@ export default async function ShortLinkPage({ params }: { params: { code: string
     console.log(`[ShortLink] Code: ${params.code}, Found: ${rows.length}, Target: ${link?.target_url}`);
 
     if (link) {
-        // Increment click count (fire-and-forget, non-blocking)
+        // --- ASYNC TRACKING (Non-blocking) ---
+        // Fire-and-forget: increment click count
         sql`
             UPDATE short_links 
             SET clicks_count = COALESCE(clicks_count, 0) + 1 
             WHERE code = ${params.code}
         `.catch(e => console.error("Failed to increment clicks:", e));
-
-        // --- TRACKING START ---
-        // 1. Google Analytics (fire-and-forget)
-        sendGAEvent({
-            event: 'scan_qr',
-            clientId: ip + userAgent,
-            userAgent,
-            eventParams: {
-                campaign: link.district || 'unknown',
-                content: link.sticker_title || 'default_sticker',
-                term: link.sticker_features || 'default_features',
-                medium: 'qr',
-                source: 'offline',
-                code: params.code,
-                target: link.target_url,
-                sticker_prizes: link.sticker_prizes
-            }
-        });
-        // --- TRACKING END ---
 
         // If target_url is missing, it's potentially an unlinked QR or a sync error
         if (!link.target_url) {
@@ -103,7 +50,39 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                     const inviteLink = eco[0].invite_link;
                     // Repair the short_link record
                     await sql`UPDATE short_links SET target_url = ${inviteLink} WHERE id = ${link.id} `;
-                    redirect(inviteLink);
+
+                    // Return client-side redirect with GTM tracking
+                    return (
+                        <html>
+                            <head>
+                                <meta httpEquiv="refresh" content={`0;url=${inviteLink}`} />
+                                <script dangerouslySetInnerHTML={{
+                                    __html: `
+                                        window.dataLayer = window.dataLayer || [];
+                                        window.dataLayer.push({
+                                            'event': 'scan_qr',
+                                            'utm_source': '${link.district || 'unknown'}',
+                                            'utm_campaign': '${link.sticker_title || 'default'}',
+                                            'utm_medium': 'qr',
+                                            'code': '${params.code}'
+                                        });
+                                        // Async tracking call
+                                        fetch('/api/track-click', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                code: '${params.code}',
+                                                user_agent: '${userAgent}',
+                                                ip: '${ip}'
+                                            })
+                                        });
+                                        window.location.href = '${inviteLink}';
+                                    `
+                                }} />
+                            </head>
+                            <body>Redirecting...</body>
+                        </html>
+                    );
                 } else if (eco.length > 0) {
                     // Ecosystem exists but has no link. Try to generate one via Telegram API.
                     try {
@@ -111,16 +90,9 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                         const { Api } = await import("telegram");
 
                         const client = await getTelegramClient();
-                        // We need to resolve the peer. InputPeer? 
-                        // To be safe, try to get entity or just use the ID if specific format.
-                        // Usually for channels/supergroups we need a bit more, but let's try direct invocation if plausible.
-                        // Better: attempt to fetch full channel or export invite.
-
-                        // Note: exportChatInvite requires the bot to be admin with rights.
                         const result = await client.invoke(new Api.messages.ExportChatInvite({
                             peer: link.tg_chat_id,
                             legacyRevokePermanent: false,
-                            // request_needed: false, // optional
                         })) as any;
 
                         if (result && result.link) {
@@ -128,7 +100,38 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                             // Save to DB
                             await sql`UPDATE ecosystems SET invite_link = ${newLink}, status = 'подключен' WHERE tg_chat_id = ${link.tg_chat_id} `;
                             await sql`UPDATE short_links SET target_url = ${newLink} WHERE id = ${link.id} `;
-                            redirect(newLink);
+
+                            // Return client-side redirect
+                            return (
+                                <html>
+                                    <head>
+                                        <meta httpEquiv="refresh" content={`0;url=${newLink}`} />
+                                        <script dangerouslySetInnerHTML={{
+                                            __html: `
+                                                window.dataLayer = window.dataLayer || [];
+                                                window.dataLayer.push({
+                                                    'event': 'scan_qr',
+                                                    'utm_source': '${link.district || 'unknown'}',
+                                                    'utm_campaign': '${link.sticker_title || 'default'}',
+                                                    'utm_medium': 'qr',
+                                                    'code': '${params.code}'
+                                                });
+                                                fetch('/api/track-click', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        code: '${params.code}',
+                                                        user_agent: '${userAgent}',
+                                                        ip: '${ip}'
+                                                    })
+                                                });
+                                                window.location.href = '${newLink}';
+                                            `
+                                        }} />
+                                    </head>
+                                    <body>Redirecting...</body>
+                                </html>
+                            );
                         }
                     } catch (tgErr) {
                         console.error("Failed to generate generic invite link:", tgErr);
@@ -137,13 +140,20 @@ export default async function ShortLinkPage({ params }: { params: { code: string
             }
 
             // Check for admin session to allow setup
-            // Note: getServerSession is available in server components
             const { getServerSession } = await import("next-auth");
             const { authOptions } = await import("@/lib/auth");
             const session = await getServerSession(authOptions);
 
             if (session?.user?.email === "pevznergo@gmail.com") {
-                redirect(`/setup/${params.code}`);
+                // Return client-side redirect to setup
+                return (
+                    <html>
+                        <head>
+                            <meta httpEquiv="refresh" content={`0;url=/setup/${params.code}`} />
+                        </head>
+                        <body>Redirecting to setup...</body>
+                    </html>
+                );
             }
 
             return (
@@ -160,32 +170,57 @@ export default async function ShortLinkPage({ params }: { params: { code: string
         }
 
         // --- DEEP LINKING START ---
-        // Check if it's a Telegram Bot URL and append 'start' parameter
         let finalUrl = link.target_url;
         if ((finalUrl.includes('t.me') || finalUrl.includes('telegram.me')) && !finalUrl.includes('joinchat') && !finalUrl.includes('+')) {
-            // Exclude join links, only target bots/users
-            // Basic logic: if it ends with 'bot', it's likely a bot.
-            // Or if user said "target is bot".
-            // Let's universally append `start` parameter if it's a t.me link and not a join link.
             const separator = finalUrl.includes('?') ? '&' : '?';
-
-            // Check if start param already exists
             if (!finalUrl.includes('start=')) {
                 finalUrl += `${separator}start=${params.code}`;
             }
         }
         // --- DEEP LINKING END ---
 
-        redirect(finalUrl);
+        // Return instant client-side redirect with GTM tracking
+        return (
+            <html>
+                <head>
+                    <meta httpEquiv="refresh" content={`0;url=${finalUrl}`} />
+                    <script dangerouslySetInnerHTML={{
+                        __html: `
+                            window.dataLayer = window.dataLayer || [];
+                            window.dataLayer.push({
+                                'event': 'scan_qr',
+                                'utm_source': '${link.district || 'unknown'}',
+                                'utm_campaign': '${link.sticker_title || 'default'}',
+                                'utm_medium': 'qr',
+                                'code': '${params.code}',
+                                'target': '${finalUrl}'
+                            });
+                            // Async tracking call (fire-and-forget)
+                            fetch('/api/track-click', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    code: '${params.code}',
+                                    user_agent: navigator.userAgent,
+                                    ip: '${ip}'
+                                }),
+                                keepalive: true
+                            }).catch(() => {});
+                            // Immediate redirect
+                            window.location.href = '${finalUrl}';
+                        `
+                    }} />
+                </head>
+                <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0f172a' }}>
+                        <p style={{ color: '#94a3b8' }}>Переход...</p>
+                    </div>
+                </body>
+            </html>
+        );
     } else {
         // Link not found in DB
-        // Check if admin is scanning a new QR code
         const { getServerSession } = await import("next-auth");
-        // Try to import authOptions dynamically to avoid build issues if it's strict
-        // But for now, we'll trust the existing pattern or use no-args if it works, 
-        // OR better: import it properly if possible. 
-        // Given previous code used no-args, we'll try that first, but standard is with authOptions.
-        // Let's rely on the session wrapper if it exists or just generic getServerSession.
         const { authOptions } = await import("@/lib/auth");
         const session = await getServerSession(authOptions);
 
@@ -197,7 +232,14 @@ export default async function ShortLinkPage({ params }: { params: { code: string
                     VALUES (${params.code}, 'не распечатан') 
                     ON CONFLICT (code) DO NOTHING
     `;
-                redirect(`/setup/${params.code}`);
+                return (
+                    <html>
+                        <head>
+                            <meta httpEquiv="refresh" content={`0;url=/setup/${params.code}`} />
+                        </head>
+                        <body>Redirecting to setup...</body>
+                    </html>
+                );
             } catch (e) {
                 console.error("Auto-create failed", e);
             }

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         // 1. Deduct points
         // We use RETURNING to check if update was successful (i.e. user had enough points)
         const deduction = await sql`
-      UPDATE app_users 
+      UPDATE "User" 
       SET points = points - 10,
           spins_count = spins_count + 1,
           last_visit = CURRENT_TIMESTAMP
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
             const pointsWon = parseInt(selectedPrize.value)
             if (!isNaN(pointsWon)) {
                 const award = await sql`
-            UPDATE app_users 
+            UPDATE "User" 
             SET points = points + ${pointsWon} 
             WHERE telegram_id = ${telegramId}
             RETURNING points

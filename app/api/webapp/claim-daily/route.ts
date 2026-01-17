@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         const telegramId = user.id
 
         // Get current user state
-        const users = await sql`SELECT * FROM app_users WHERE telegram_id = ${telegramId}`
+        const users = await sql`SELECT * FROM "User" WHERE telegram_id = ${telegramId}`
         if (users.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
         const appUser = users[0]
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 
         // Transaction
         await sql`
-            UPDATE app_users 
+            UPDATE "User" 
             SET points = points + ${rewardPoints},
                 daily_streak = ${newStreak},
                 last_daily_claim = CURRENT_TIMESTAMP

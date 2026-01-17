@@ -102,6 +102,34 @@ export async function initDatabase() {
       // Ignore if already nullable or other error (e.g. column doesn't exist yet on fresh init, which is handled by CREATE above if I change it there)
     }
 
+    // User table extensions for Telegram integration and UTM tracking
+    try {
+      // Make email nullable for Telegram users
+      await sql`ALTER TABLE "User" ALTER COLUMN email DROP NOT NULL`;
+
+      // Telegram-specific fields
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS telegram_id BIGINT UNIQUE`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS spins_count INTEGER DEFAULT 0`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS last_daily_claim TIMESTAMP`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS last_visit TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
+
+      // UTM tracking fields
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_source VARCHAR(255)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(255)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(255)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS utm_content VARCHAR(255)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
+
+      // Other fields
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`;
+    } catch (e) {
+      console.warn("User table extension warning:", e);
+    }
+
     // Since CREATE TABLE IF NOT EXISTS doesn't update existing tables, we run ALTERs
     try {
       await sql`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)`
@@ -261,27 +289,46 @@ export async function initDatabase() {
       )
     `;
 
-    // Telegram Web App Users
-    await sql`
-      CREATE TABLE IF NOT EXISTS app_users (
-        telegram_id BIGINT PRIMARY KEY,
-        first_name VARCHAR(255),
-        last_name VARCHAR(255),
-        username VARCHAR(255),
-        points INTEGER DEFAULT 0,
-        spins_count INTEGER DEFAULT 0,
-        daily_streak INTEGER DEFAULT 0,
-        last_daily_claim TIMESTAMP,
-        last_visit TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    // Migration for existing users
+    // Telegram Web App Users - DEPRECATED: Now using \"User\" table
+    // Migration: Copy data from app_users to User if needed
     try {
-      await sql`ALTER TABLE app_users ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0`;
-      await sql`ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_daily_claim TIMESTAMP`;
-    } catch (e) { }
+      const hasAppUsers = await sql`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'app_users')`;
+      if (hasAppUsers[0].exists) {
+        console.log('Migrating data from app_users to User...');
+        await sql`
+          INSERT INTO "User" (
+            telegram_id, name, points, spins_count, daily_streak, 
+            last_daily_claim, last_visit, created_at,
+            utm_source, utm_medium, utm_campaign, utm_content, start_param
+          )
+          SELECT 
+            telegram_id, 
+            COALESCE(first_name || ' ' || NULLIF(last_name, ''), first_name, 'Telegram User'),
+            COALESCE(points, 0), 
+            COALESCE(spins_count, 0), 
+            COALESCE(daily_streak, 0),
+            last_daily_claim, 
+            last_visit, 
+            created_at,
+            utm_source, 
+            utm_medium, 
+            utm_campaign, 
+            utm_content, 
+            start_param
+          FROM app_users
+          ON CONFLICT (telegram_id) DO UPDATE SET
+            points = EXCLUDED.points,
+            spins_count = EXCLUDED.spins_count,
+            daily_streak = EXCLUDED.daily_streak,
+            last_daily_claim = EXCLUDED.last_daily_claim,
+            last_visit = EXCLUDED.last_visit
+        `;
+        console.log('Migration completed!');
+      }
+    } catch (e) {
+      console.warn('App users migration warning:', e);
+    }
+
 
     // Prizes table
     await sql`
@@ -316,7 +363,7 @@ export async function initDatabase() {
     await sql`
       CREATE TABLE IF NOT EXISTS user_prizes (
         id SERIAL PRIMARY KEY,
-        telegram_id BIGINT NOT NULL REFERENCES app_users(telegram_id),
+        telegram_id BIGINT NOT NULL REFERENCES "User"(telegram_id),
         prize_id INTEGER NOT NULL REFERENCES prizes(id),
         promo_code VARCHAR(255),
         expiry_at TIMESTAMP,
