@@ -9,7 +9,7 @@ const getCachedLink = async (code: string) => {
     return unstable_cache(
         async () => {
             const result = await sql`
-                SELECT id, target_url, tg_chat_id FROM short_links WHERE code = ${code}
+                SELECT id, target_url, tg_chat_id, district, sticker_title, sticker_features, sticker_prizes FROM short_links WHERE code = ${code}
 `;
             return result.length > 0 ? result[0] : null;
         },
@@ -87,8 +87,14 @@ export default async function ShortLinkPage({ params }: { params: { code: string
             userAgent,
             eventParams: {
                 campaign: link.district || 'unknown', // Use district or title as campaign label
+                content: link.sticker_title || 'default_sticker',
+                term: link.sticker_features || 'default_features',
+                medium: 'qr',
+                source: 'offline',
                 code: params.code,
-                target: link.target_url
+                target: link.target_url,
+                // Extra params for deeper analysis
+                sticker_prizes: link.sticker_prizes
             }
         });
         // --- TRACKING END ---

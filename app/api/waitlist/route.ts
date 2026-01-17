@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { neon } from '@neondatabase/serverless'
+import { sql } from '@/lib/db'
 
 export async function POST(req: Request) {
   try {
@@ -8,15 +8,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 })
     }
 
-    const connectionString = process.env.POSTGRES_URL
-    if (!connectionString) {
-      return NextResponse.json({ error: 'POSTGRES_URL is not configured' }, { status: 500 })
-    }
-
-    const sql = neon(connectionString)
-
-    // Create table if not exists
-    await sql/* sql */`
+    // Create table if not exists (This should ideally be in initDatabase, but kept here for robustness)
+    await sql`
       create table if not exists waitlist (
         id bigserial primary key,
         email text unique not null,
@@ -24,13 +17,14 @@ export async function POST(req: Request) {
       )
     `
 
-    await sql/* sql */`
+    await sql`
       insert into waitlist (email) values (${email})
       on conflict (email) do nothing
     `
 
     return NextResponse.json({ ok: true })
   } catch (err) {
+    console.error('Waitlist Error:', err)
     return NextResponse.json({ error: 'Failed to save email' }, { status: 500 })
   }
 }

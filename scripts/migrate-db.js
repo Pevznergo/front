@@ -1,4 +1,4 @@
-const { neon } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 require('dotenv').config({ path: '.env.local' });
 
 if (!process.env.POSTGRES_URL) {
@@ -6,7 +6,21 @@ if (!process.env.POSTGRES_URL) {
     process.exit(1);
 }
 
-const sql = neon(process.env.POSTGRES_URL);
+const pool = new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: { rejectUnauthorized: false } // Relaxed SSL for scripts often helps with some providers
+});
+
+const sql = async (strings, ...values) => {
+    const text = strings.reduce((acc, str, i) => acc + str + (i < values.length ? `$${i + 1}` : ''), '');
+    const client = await pool.connect();
+    try {
+        const res = await client.query(text, values);
+        return res.rows;
+    } finally {
+        client.release();
+    }
+}
 
 async function migrate() {
     try {

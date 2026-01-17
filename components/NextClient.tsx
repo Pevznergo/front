@@ -404,8 +404,13 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
             let finalUrl = stickerSettings.targetUrl;
             if (stickerSettings.useUtm && finalUrl) {
                 const separator = finalUrl.includes('?') ? '&' : '?';
-                const campaign = slugify(stickerSettings.mainTitle) || 'campaign';
-                finalUrl += `${separator}utm_source=sticker&utm_medium=offline&utm_campaign=${campaign}`;
+                // Map all sticker fields to UTM parameters
+                const source = slugify(stickerSettings.mainTitle) || 'qr';
+                const campaign = slugify(stickerSettings.featuresTitle) || 'features';
+                const content = slugify(stickerSettings.prizesList) || 'prizes';
+
+                // Using sticker title as source, 'qr' as medium (standard), features as campaign, prizes as content
+                finalUrl += `${separator}utm_source=${source}&utm_medium=qr&utm_campaign=${campaign}&utm_content=${content}`;
             }
 
             const res = await fetch("/api/links/batch", {
@@ -1575,85 +1580,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <button
-                        onClick={async () => {
-                            if (!confirm("Запустить проверку прав для ВСЕХ чатов? Это добавит задачи в очередь.")) return;
-                            try {
-                                setLoading(true);
-                                const res = await fetch("/api/admin/check-permissions-all", { method: "POST" });
-                                const data = await res.json();
-                                if (res.ok) {
-                                    alert(data.message);
-                                } else {
-                                    alert("Ошибка: " + data.error);
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert("Ошибка сети");
-                            } finally {
-                                setLoading(false);
-                            }
-                        }}
-                        className="p-3 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500 rounded-xl transition-all shadow-xl shadow-yellow-500/10"
-                        title="Проверить права во всех чатах"
-                    >
-                        <CheckSquare className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (!confirm("Обновить количество участников во всех чатах?")) return;
-                            try {
-                                setLoading(true);
-                                const res = await fetch("/api/queue", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({
-                                        type: 'sync_stats',
-                                        payload: {} // Empty payload needed
-                                    })
-                                });
-                                const data = await res.json();
-                                if (res.ok) {
-                                    alert("Задача добавлена в очередь!");
-                                } else {
-                                    alert("Ошибка: " + data.error);
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert("Ошибка сети");
-                            } finally {
-                                setLoading(false);
-                            }
-                        }}
-                        className="p-3 bg-blue-600/20 hover:bg-blue-600/40 text-blue-500 rounded-xl transition-all shadow-xl shadow-blue-500/10 ml-2"
-                        title="Обновить статистику (участников)"
-                    >
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (!confirm("Запустить кампанию: Переименовать Барахолку -> Скидки и отправить промокод про Енота? (Во ВСЕХ чатах)")) return;
-                            try {
-                                setLoading(true);
-                                const res = await fetch("/api/admin/campaign/promo-rename", { method: "POST" });
-                                const data = await res.json();
-                                if (res.ok) {
-                                    alert(data.message);
-                                } else {
-                                    alert("Ошибка: " + data.error);
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert("Ошибка сети");
-                            } finally {
-                                setLoading(false);
-                            }
-                        }}
-                        className="p-3 bg-orange-600/20 hover:bg-orange-600/40 text-orange-500 rounded-xl transition-all shadow-xl shadow-orange-500/10 ml-2"
-                        title="Запустить промо-кампанию (Rename + Message)"
-                    >
-                        <Megaphone className="w-5 h-5" />
-                    </button>
+
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input
