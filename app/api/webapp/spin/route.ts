@@ -100,7 +100,7 @@ export async function POST(req: Request) {
                     VALUES (
                         ${telegramId}, 
                         ${selectedPrize.id}, 
-                        NOW() + (${hours} || ' hours')::INTERVAL,
+                        NOW() + (${hours} * INTERVAL '1 hour'),
                         NOW()
                     )
                 `
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
                 VALUES (
                     ${telegramId}, 
                     ${selectedPrize.id}, 
-                    NOW() + (${hours} || ' hours')::INTERVAL,
+                    NOW() + (${hours} * INTERVAL '1 hour'),
                     ${selectedPrize.type === 'coupon' ? 'PR3AF7T2' : null}
                 )
             `
@@ -129,6 +129,6 @@ export async function POST(req: Request) {
 
     } catch (error: any) {
         console.error('Spin error:', error)
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+        return NextResponse.json({ error: error.message || 'Internal Error' }, { status: 500 })
     }
 }
