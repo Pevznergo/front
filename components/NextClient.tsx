@@ -316,7 +316,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         for (const pageItems of pages) {
             let stickersHtml = '';
             for (const link of pageItems) {
-                const shortUrl = `${window.location.protocol}//${window.location.host}/s/${link.code}`;
+                const shortUrl = `https://aporto.tech/s/${link.code}`;
                 try {
                     const qrData = await QRCodeLib.toDataURL(shortUrl, {
                         width: 200,
@@ -378,7 +378,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                     .content-box { flex: 1; display: flex; flex-direction: column; justify-content: center; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: left; }
                     .main-title { margin: 0; padding: 0; font-size: 15px; font-weight: 900; line-height: 1; text-transform: uppercase; margin-bottom: 1mm; white-space: nowrap; display: flex; align-items: center; gap: 1mm; padding-left: 1mm; }
                     .tg-icon { width: 4.5mm; height: 4.5mm; flex-shrink: 0; }
-                    .features { font-size: 11px; font-weight: 700; color: #000; background: #eee; padding: 0.5mm 1.5mm; border-radius: 2mm; width: fit-content; margin-bottom: 0.5mm; margin-left: 1mm; text-transform: uppercase; }
+                    .features { font-size: 11px; font-weight: 700; color: #000; background: #eee; padding: 0.5mm 1.5mm; border-radius: 2mm; width: fit-content; margin-bottom: 0.5mm; margin-left: 1mm; text-transform: uppercase; text-align: center; }
                     .prizes { font-family: 'Arial Black', Gadget, sans-serif; font-size: 13px; font-weight: 900; color: black; text-transform: uppercase; margin-top: 1mm; margin-left: 1mm; line-height: 1; }
                     @media print { .no-print { display: none; } .sticker { border: none; page-break-inside: avoid; } .features { -webkit-print-color-adjust: exact; background: #eee; } }
                 </style>
@@ -1901,7 +1901,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                                             {item.codes.map((code: string) => (
                                                                 <div key={code} className="flex items-center gap-1">
                                                                     <button
-                                                                        onClick={() => copyToClipboard(`https://pevzner.ru/s/${code}`, `e-${code}`)}
+                                                                        onClick={() => copyToClipboard(`https://aporto.tech/s/${code}`, `e-${code}`)}
                                                                         className="px-2 py-1 bg-slate-800 rounded-lg text-xs font-mono font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-600"
                                                                     >
                                                                         {code}
