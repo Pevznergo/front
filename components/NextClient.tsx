@@ -2254,7 +2254,16 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                             </td>
                                             <td className="p-5">
                                                 <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                                    {prize.type === 'points' ? 'Баллы' : prize.type === 'item' ? 'Предмет' : prize.type}
+                                                    {(() => {
+                                                        switch (prize.type) {
+                                                            case 'points': return '🪙 Монетки';
+                                                            case 'tokens':
+                                                            case 'balance': return '🎫 Токены Aporto';
+                                                            case 'item': return '📦 Предмет';
+                                                            case 'coupon': return '🎟️ Купон';
+                                                            default: return prize.type;
+                                                        }
+                                                    })()}
                                                 </span>
                                             </td>
                                             <td className="p-5 text-white">{prize.value}</td>
@@ -2889,10 +2898,11 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                                             onChange={e => setPrizeForm({ ...prizeForm, type: e.target.value })}
                                             className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-white appearance-none cursor-pointer"
                                         >
-                                            <option value="points">Баллы</option>
+                                            <option value="points">Монетки (для вращения)</option>
+                                            <option value="tokens">Токены Aporto (LLM)</option>
+                                            <option value="balance">Токены Aporto (LLM)</option>
                                             <option value="item">Предмет (iPhone)</option>
                                             <option value="coupon">Купон/Промо</option>
-                                            <option value="status">Статус</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
