@@ -393,6 +393,7 @@ export default function WebAppPage() {
             <TasksModal
                 isOpen={isTasksOpen}
                 onClose={() => setIsTasksOpen(false)}
+                initData={initData}
             />
 
             {/* Win Modal */}

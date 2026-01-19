@@ -38,8 +38,10 @@ export async function POST(req: Request) {
             let utmMedium = null
             let utmCampaign = null
             let utmContent = null
+            let referrerId = null
 
             if (startParam) {
+                // 1. Check if it's a QR Code (Short Link)
                 const linkData = await sql`
                     SELECT district, sticker_title, sticker_features, sticker_prizes 
                     FROM short_links 
@@ -51,14 +53,35 @@ export async function POST(req: Request) {
                     utmMedium = 'qr'
                     utmCampaign = linkData[0].sticker_title || null
                     utmContent = linkData[0].sticker_features || linkData[0].sticker_prizes || null
+                } else {
+                    // 2. Check if it's a Referral Code
+                    const referrer = await sql`SELECT "telegramId", name FROM "User" WHERE referral_code = ${startParam}`
+
+                    if (referrer.length > 0) {
+                        referrerId = referrer[0].telegramId
+                        utmSource = 'referral'
+                        utmMedium = 'user_invite'
+                        utmCampaign = referrerId // storage of who invited in campaign for analytics
+
+                        // Award 30 points to Referrer
+                        await sql`
+                            UPDATE "User" 
+                            SET points = COALESCE(points, 0) + 30 
+                            WHERE "telegramId" = ${referrerId}
+                        `
+                    }
                 }
             }
+
+            // Generate unique referral code for new user
+            const newReferralCode = 'ref_' + Math.random().toString(36).substring(2, 10);
 
             // Create new user with 20 points (for spinning) and UTM data
             await sql`
                 INSERT INTO "User"(
                     "telegramId", name, points,
                     utm_source, utm_medium, utm_campaign, utm_content, start_param,
+                    referral_code,
                     created_at
                 )
                 VALUES(
@@ -70,9 +93,24 @@ export async function POST(req: Request) {
                     ${utmCampaign},
                     ${utmContent},
                     ${startParam},
+                    ${newReferralCode},
                     CURRENT_TIMESTAMP
                 )
             `
+
+            // If invited by someone, record in referrals table
+            if (referrerId) {
+                try {
+                    await sql`
+                        INSERT INTO referrals (referrer_id, referred_id, status, reward_amount)
+                        VALUES (${referrerId}, ${telegramId}, 'registered', 30)
+                    `
+                    // Optional: Notification logic could go here
+                } catch (e) {
+                    console.error("Failed to insert referral record:", e);
+                }
+            }
+
             return NextResponse.json({
                 user: {
                     ...user,
@@ -82,16 +120,25 @@ export async function POST(req: Request) {
                     last_daily_claim: null,
                     created_at: new Date().toISOString(),
                     utm_source: utmSource,
-                    utm_campaign: utmCampaign
+                    utm_campaign: utmCampaign,
+                    referral_code: newReferralCode
                 },
                 isNew: true,
-                message: 'User created + 20 points for spinning'
+                message: referrerId ? 'User created + 20 points. Referral bonus awarded.' : 'User created + 20 points'
             })
         } else {
             const currentUser = existingUser[0];
             let points = parseInt(currentUser.points || '0', 10);
             // Check spins_count (raw DB column) to see if user has ever played
             const spins = parseInt(currentUser.spins_count || '0', 10);
+
+            let referralCode = currentUser.referral_code;
+
+            // Generate referral code if missing for existing user
+            if (!referralCode) {
+                referralCode = 'ref_' + Math.random().toString(36).substring(2, 10);
+                await sql`UPDATE "User" SET referral_code = ${referralCode} WHERE "telegramId" = ${telegramId}`;
+            }
 
             // Grant welcome bonus ONLY if user has 0 points AND 0 spins (truly new to WebApp/Game)
             let bonusGranted = false;
@@ -110,7 +157,7 @@ export async function POST(req: Request) {
             `
 
             return NextResponse.json({
-                user: { ...currentUser, points },
+                user: { ...currentUser, points, referral_code: referralCode },
                 isNew: false,
                 message: bonusGranted ? 'Welcome bonus: +20 points' : 'Auth successful'
             })

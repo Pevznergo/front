@@ -109,6 +109,19 @@ export async function initDatabase() {
 
       // Note: telegramId already exists as VARCHAR, we use it as-is
 
+      // Ensure telegramId exists and is unique (Fix for ON CONFLICT error)
+      try {
+        await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "telegramId" VARCHAR(255)`;
+        // Try validation via distinct index or constraint
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS user_telegram_id_idx ON "User" ("telegramId")`;
+        // Or constraint
+        // await sql`ALTER TABLE "User" ADD CONSTRAINT user_telegram_id_unique UNIQUE ("telegramId")`; 
+        // Index is safer for "IF NOT EXISTS" logic in Postgres < 9.5 but standard now. 
+        // However, ON CONFLICT requires a unique constraint or index.
+      } catch (e) {
+        console.warn("Telegram ID column/constraint warning:", e);
+      }
+
       // Telegram-specific fields  
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS balance INTEGER DEFAULT 0`; // Token balance for chat requests
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`;
@@ -408,6 +421,39 @@ export async function initDatabase() {
     } catch (e) {
       console.warn('Could not drop old FK constraint:', e);
     }
+
+    // --- Referral System Tables ---
+
+    // Update User table with referral code
+    try {
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS referral_code VARCHAR(255) UNIQUE`;
+    } catch (e) {
+      console.warn('Referral code column warning:', e);
+    }
+
+    // Referrals Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS referrals (
+        id SERIAL PRIMARY KEY,
+        referrer_id VARCHAR(255) NOT NULL, -- Who invited (Telegram ID)
+        referred_id VARCHAR(255) UNIQUE NOT NULL, -- Who was invited (Telegram ID)
+        status VARCHAR(50) DEFAULT 'registered', -- 'registered', 'pro_upgraded'
+        reward_amount INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // Withdrawals Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS withdrawals (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL, -- Who requests withdrawal (Telegram ID)
+        amount INTEGER NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'completed', 'rejected'
+        contact_info TEXT, -- Email or username
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
 
     console.log('Database initialized successfully')
   } catch (error) {
