@@ -315,11 +315,11 @@ export async function initDatabase() {
             last_daily_claim, 
             last_visit, 
             created_at,
-            utm_source, 
-            utm_medium, 
-            utm_campaign, 
-            utm_content, 
-            start_param
+            NULL as utm_source, 
+            NULL as utm_medium, 
+            NULL as utm_campaign, 
+            NULL as utm_content, 
+            NULL as start_param
           FROM app_users
           ON CONFLICT ("telegramId") DO UPDATE SET
             points = EXCLUDED.points,
