@@ -44,43 +44,66 @@ export async function GET(req: Request) {
 
         // Get Stats
         const referrals = await sql`
-            SELECT COUNT(*) as count, SUM(reward_amount) as total_earned 
+            SELECT status, SUM(reward_amount) as amount 
             FROM referrals 
             WHERE referrer_id = ${telegramId}
+            GROUP BY status
         `
 
-        const inviteCount = parseInt(referrals[0].count || '0', 10);
-        // Note: reward_amount in referrals is only points/tokens earned from that specific referral logic?
-        // Actually, we track 'reward_amount' in referrals table. 
-        // 30 points -> stored in reward_amount? Or is it points?
-        // The plan said "reward_amount (INTEGER)".
-        // In auth route we used: VALUES (..., 30). So yes.
-        // But points are added to User.points. 
-        // What about the 1000 tokens? They are added to User.balance.
-        // We probably want to sum up earnings for display.
+        // Calculate split earnings
+        let earnedPoints = 0;
+        let earnedTokens = 0;
+        let inviteCount = 0;
 
-        // Let's assume reward_amount stores points initially. 
-        // We might want to sum up separate "earned tokens" if we track them there.
-        // For now, let's just return what we have.
+        // Get total count separately to be accurate
+        const countResult = await sql`SELECT COUNT(*) as count FROM referrals WHERE referrer_id = ${telegramId}`
+        inviteCount = parseInt(countResult[0].count || '0', 10);
 
-        // Get total tokens earned from referrals
-        // Since we don't have a separate "referral_earnings" column in User, 
-        // we can query the withdrawals or just sum up from referrals table (if we update it on PRO payment).
+        referrals.forEach(r => {
+            const amt = parseInt(r.amount || '0', 10);
+            if (r.status === 'registered') {
+                earnedPoints += amt;
+            } else if (r.status === 'pro_upgrade') {
+                earnedTokens += amt; // Tokens for PRO
+            } else if (r.status === 'completed') {
+                // If we have other statuses
+            }
+        });
 
-        // For MVP:
-        // Referral Code
-        // Invite Link
-        // Stats: Invites
+        // Define Bot Usernames
+        const botUsername = process.env.BOT_USERNAME || 'Aporto_bot';
+        const appName = 'app'; // Or 'webapp' depending on setup, usually 'app' for direct startapp
 
-        const botUsername = process.env.BOT_USERNAME || 'Aporto_bot'; // Replace with env var or constant
-        const referralLink = `https://t.me/${botUsername}/app?startapp=${referralCode}`;
+        // Construct Target URL (Telegram Deep Link)
+        const targetUrl = `https://t.me/${botUsername}/${appName}?startapp=${referralCode}`;
+
+        // Construct Short Link (aporto.tech/r/CODE)
+        // We assume the host is aporto.tech or current host. 
+        // For local dev it might be localhost:3000/r/...
+        // But user specifically asked for "aporto.tech". Use relative or env var for base.
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://aporto.tech';
+        const referralLink = `${baseUrl}/r/${referralCode}`;
+
+        // Sync to short_links table to enable redirect
+        // We do this asynchronously or blocking? Blocking to ensure it works immediately.
+        try {
+            await sql`
+                INSERT INTO short_links (code, target_url, district, sticker_title)
+                VALUES (${referralCode}, ${targetUrl}, 'referral_system', 'user_referral')
+                ON CONFLICT (code) DO UPDATE SET
+                target_url = EXCLUDED.target_url -- Ensure target matches
+            `
+        } catch (e) {
+            console.error("Failed to sync referral short link:", e);
+        }
 
         return NextResponse.json({
             referralCode,
-            referralLink,
+            referralLink, // Now returns https://aporto.tech/r/ref_XXXXX
             inviteCount,
-            totalEarned: parseInt(referrals[0].total_earned || '0', 10), // This is sum of points (30) + potentially tokens if we track them here
-            balance: parseInt(userData[0].balance || '0', 10) // Current wallet balance (tokens)
+            earnedPoints,
+            earnedTokens,
+            balance: parseInt(userData[0].balance || '0', 10) // Token balance
         })
 
     } catch (error: any) {

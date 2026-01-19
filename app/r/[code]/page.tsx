@@ -1,45 +1,63 @@
-import { sql, initDatabase } from "@/lib/db";
-import { redirect, notFound } from "next/navigation";
-
+import { sql } from '@/lib/db';
 export const dynamic = "force-dynamic";
 
-interface RedirectPageProps {
-    params: {
-        code: string;
-    };
-}
+export default async function ReferralRedirectPage({ params }: { params: { code: string } }) {
+    // 1. Direct DB query
+    const result = await sql`
+        SELECT target_url, district, sticker_title, id 
+        FROM short_links 
+        WHERE code = ${params.code}
+        LIMIT 1
+    `;
 
-export default async function RedirectPage({ params }: RedirectPageProps) {
-    await initDatabase();
-    const { code } = params;
+    const link = result.length > 0 ? result[0] : null;
 
-    // 1. Find the link in the database
-    const links = await sql`
-    SELECT target_url, id 
-    FROM short_links 
-    WHERE code = ${code}
-  `;
-
-    if (links.length === 0) {
-        notFound();
+    if (!link) {
+        // 404
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-black font-sans">
+                <div className="text-center">
+                    <h1 className="text-4xl font-bold text-white mb-2">404</h1>
+                    <p className="text-gray-400">Ссылка не найдена</p>
+                </div>
+            </div>
+        );
     }
 
-    const link = links[0];
+    // Default target if missing (shouldn't happen for referrals)
+    const finalUrl = link.target_url || '/';
 
-    // 2. Increment click count asynchronously (don't block the redirect)
-    // Note: Vercel/Next.js might terminate the execution after redirect, 
-    // so we should ideally await it or use a background job. 
-    // For simplicity here we await it to ensure it's recorded.
-    try {
-        await sql`
-          UPDATE short_links 
-          SET clicks_count = COALESCE(clicks_count, 0) + 1 
-          WHERE id = ${link.id}
-        `;
-    } catch (error) {
-        console.error("Error updating click count:", error);
-    }
-
-    // 3. Redirect to the target URL
-    redirect(link.target_url);
+    // INSTANT REDIRECT
+    return (
+        <html>
+            <head>
+                <meta httpEquiv="refresh" content={`0;url=${finalUrl}`} />
+                <script dangerouslySetInnerHTML={{
+                    __html: `
+                        // Async tracking (non-blocking)
+                        fetch('/api/track-click', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: '${params.code}' }),
+                            keepalive: true
+                        }).catch(() => {});
+                        
+                        // INSTANT redirect
+                        window.location.href = '${finalUrl}';
+                    `
+                }} />
+            </head>
+            <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui', backgroundColor: '#000' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '100vh',
+                    color: '#4b5563'
+                }}>
+                    <p>Переход в Telegram...</p>
+                </div>
+            </body>
+        </html>
+    );
 }
