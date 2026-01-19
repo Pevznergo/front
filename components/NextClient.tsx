@@ -75,11 +75,23 @@ interface StatisticsTabProps {
 function StatisticsTab() {
     const [data, setData] = useState<{
         timeline: { date: string, count: number }[],
-        summary: { totalChats: number, totalQr: number, totalClicks: number, totalSubscribers: number }
+        summary: {
+            totalChats: number,
+            totalQr: number,
+            totalClicks: number,
+            totalSubscribers: number,
+            totalUsers: number,
+            totalSpins: number,
+            totalRequests: number,
+            totalReferralUsers: number,
+            totalPaidUsers: number,
+            totalPaidReferralUsers: number
+        }
     } | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchStats = () => {
+        setLoading(true);
         fetch('/api/stats')
             .then(res => res.json())
             .then(data => {
@@ -90,6 +102,10 @@ function StatisticsTab() {
                 console.error("Failed to load stats", err);
                 setLoading(false);
             });
+    };
+
+    useEffect(() => {
+        fetchStats();
     }, []);
 
     if (loading) {
@@ -121,6 +137,34 @@ function StatisticsTab() {
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Подписчиков</div>
                     <div className="text-3xl font-bold text-purple-400">{data.summary.totalSubscribers}</div>
+                </div>
+
+                {/* Row 2 */}
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Пользователей</div>
+                    <div className="text-3xl font-bold text-blue-400">{data.summary.totalUsers}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Вращений колеса</div>
+                    <div className="text-3xl font-bold text-yellow-400">{data.summary.totalSpins}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего запросов</div>
+                    <div className="text-3xl font-bold text-pink-400">{data.summary.totalRequests}</div>
+                </div>
+
+                {/* Row 3 - Referral & Paid Stats */}
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Пришли по реф.</div>
+                    <div className="text-3xl font-bold text-orange-400">{data.summary.totalReferralUsers}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Платные польз.</div>
+                    <div className="text-3xl font-bold text-teal-400">{data.summary.totalPaidUsers}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Платные (реф.)</div>
+                    <div className="text-3xl font-bold text-cyan-400">{data.summary.totalPaidReferralUsers}</div>
                 </div>
             </div>
 
@@ -158,7 +202,14 @@ function StatisticsTab() {
                         className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
                     >
                         <RefreshCcw className="w-3.5 h-3.5" />
-                        Обновить данные
+                        Синхронизация
+                    </button>
+                    <button
+                        onClick={fetchStats}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Обновить цифры
                     </button>
                 </div>
                 <div className="h-[300px] w-full">
