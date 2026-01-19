@@ -1,10 +1,6 @@
-
 import Header from '../components/Header';
 import Hero from '../components/Hero';
-import HowItWorks from '../components/HowItWorks';
-import ComparisonTable from '../components/ComparisonTable';
-import Pricing from '../components/Pricing';
-import FAQ from '../components/FAQ';
+import FeaturesSection from '../components/FeaturesSection';
 import Footer from '../components/Footer';
 
 import { Suspense } from 'react';
@@ -16,10 +12,8 @@ export default function Home() {
       <Suspense fallback={null}>
         <Hero />
       </Suspense>
-      <HowItWorks />
-      <ComparisonTable />
-      <Pricing />
-      <FAQ />
+      <FeaturesSection />
+      {/* Pricing and other sections can be re-added later when adapted */}
       <Footer />
     </main>
   );

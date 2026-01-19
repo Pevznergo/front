@@ -13,44 +13,38 @@ export default function Footer() {
                             </span>
                         </Link>
                         <p className="text-sm text-slate-500 mb-4">
-                            Your personal AI negotiator. Save money, time, and stress.
+                            Ваш персональный ИИ-ассистент. Экономьте время и нервы с помощью нейросетей.
                         </p>
                     </div>
 
                     <div>
-                        <h4 className="font-semibold text-slate-900 mb-4">Product</h4>
+                        <h4 className="font-semibold text-slate-900 mb-4">Продукт</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
-                            <li><Link href="/use-cases" className="hover:text-primary transition-colors">Use Cases</Link></li>
-                            <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
-                            <li><Link href="/success-stories" className="hover:text-primary transition-colors">Success Stories</Link></li>
+                            <li><Link href="#features" className="hover:text-primary transition-colors">Возможности</Link></li>
+                            <li><Link href="#pricing" className="hover:text-primary transition-colors">Тарифы</Link></li>
                         </ul>
                     </div>
 
                     <div>
-                        <h4 className="font-semibold text-slate-900 mb-4">Company</h4>
+                        <h4 className="font-semibold text-slate-900 mb-4">Компания</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
-                            <li><Link href="/about-us" className="hover:text-primary transition-colors">About Us</Link></li>
-                            <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                            <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+                            <li><Link href="#" className="hover:text-primary transition-colors">О нас</Link></li>
                         </ul>
                     </div>
 
                     <div>
-                        <h4 className="font-semibold text-slate-900 mb-4">Legal</h4>
+                        <h4 className="font-semibold text-slate-900 mb-4">Документы</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
-                            <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                            <li><Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                            <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Политика конфиденциальности</Link></li>
+                            <li><Link href="/terms-of-service" className="hover:text-primary transition-colors">Условия использования</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-sm text-slate-500">
-                        © 2025 Aporto. All rights reserved.
+                        © 2026 Aporto. All rights reserved.
                     </p>
-                    <div className="flex gap-4">
-                        {/* Social icons could go here */}
-                    </div>
                 </div>
             </div>
         </footer>

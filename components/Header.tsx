@@ -19,23 +19,24 @@ export default function Header() {
                     </div>
 
                     <nav className="hidden md:flex space-x-8">
-                        <Link href="#use-cases" className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                            Use Cases
-                        </Link>
-                        <Link href="#how-it-works" className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                            How it Works
+                        <Link href="#features" className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
+                            Возможности
                         </Link>
                         <Link href="#pricing" className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                            Pricing
+                            Тарифы
+                        </Link>
+                        <Link href="#" className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
+                            О нас
                         </Link>
                     </nav>
 
                     <div>
                         <Link
-                            href={session ? "/dashboard" : "/login"}
+                            href="https://t.me/Aporto_bot"
+                            target="_blank"
                             className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-[#007AFF] hover:bg-[#006ee6] transition-colors shadow-sm"
                         >
-                            {session ? "Dashboard" : "Start Risk-Free"}
+                            Запустить
                         </Link>
                     </div>
                 </div>
