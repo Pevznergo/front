@@ -1,5 +1,7 @@
 import Header from '../components/Header';
 import Hero from '../components/Hero';
+import UpdatesSection from '../components/UpdatesSection';
+import ModelsGrid from '../components/ModelsGrid'; // New component
 import FeaturesSection from '../components/FeaturesSection';
 import Footer from '../components/Footer';
 
@@ -12,8 +14,9 @@ export default function Home() {
       <Suspense fallback={null}>
         <Hero />
       </Suspense>
+      <UpdatesSection /> {/* Recent Blog Posts */}
+      <ModelsGrid />
       <FeaturesSection />
-      {/* Pricing and other sections can be re-added later when adapted */}
       <Footer />
     </main>
   );

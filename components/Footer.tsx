@@ -18,16 +18,17 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="font-semibold text-slate-900 mb-4">Продукт</h4>
+                        <h4 className="font-semibold text-slate-900 mb-4">Модели</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
-                            <li><Link href="#features" className="hover:text-primary transition-colors">Возможности</Link></li>
-                            <li><Link href="#pricing" className="hover:text-primary transition-colors">Тарифы</Link></li>
+                            <li><Link href="/claude" className="hover:text-primary transition-colors">Claude 3.5</Link></li>
+                            <li><Link href="/gemini" className="hover:text-primary transition-colors">Gemini 1.5</Link></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-semibold text-slate-900 mb-4">Компания</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
+                            <li><Link href="/blog" className="hover:text-primary transition-colors">Блог обновлений</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors">О нас</Link></li>
                         </ul>
                     </div>
