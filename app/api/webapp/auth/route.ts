@@ -88,16 +88,31 @@ export async function POST(req: Request) {
                 message: 'User created + 20 points for spinning'
             })
         } else {
-            // Update last visit
+            const currentUser = existingUser[0];
+            let points = parseInt(currentUser.points || '0', 10);
+            // Check spins_count (raw DB column) to see if user has ever played
+            const spins = parseInt(currentUser.spins_count || '0', 10);
+
+            // Grant welcome bonus ONLY if user has 0 points AND 0 spins (truly new to WebApp/Game)
+            let bonusGranted = false;
+            if (points === 0 && spins === 0) {
+                points = 20;
+                bonusGranted = true;
+            }
+
+            // Update last visit and points (if bonus granted)
             await sql`
-        UPDATE "User"
-        SET last_visit = CURRENT_TIMESTAMP,
-            name = ${user.first_name || 'Telegram User'}
-        WHERE "telegramId" = ${telegramId}
-`
+                UPDATE "User"
+                SET last_visit = CURRENT_TIMESTAMP,
+                    name = ${user.first_name || 'Telegram User'},
+                    points = ${points}
+                WHERE "telegramId" = ${telegramId}
+            `
+
             return NextResponse.json({
-                user: existingUser[0],
-                isNew: false
+                user: { ...currentUser, points },
+                isNew: false,
+                message: bonusGranted ? 'Welcome bonus: +20 points' : 'Auth successful'
             })
         }
 
