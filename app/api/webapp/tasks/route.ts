@@ -3,25 +3,35 @@ import { sql } from "@/lib/db";
 import { initDatabase } from "@/lib/db";
 
 // Task Definitions
-const TASKS = [
-    {
-        id: 'sub_channel_news',
-        title: 'Подпишись на канал',
-        description: 'Новости и обновления Aporto',
-        reward: 100,
-        type: 'social',
-        link: 'https://t.me/aporto_news', // Replace with actual channel
-        icon: 'Megaphone'
-    },
-    {
-        id: 'join_chat_community',
-        title: 'Вступай в чат',
-        description: 'Общение с сообществом',
-        reward: 100,
-        type: 'social',
-        link: 'https://t.me/aporto_community', // Replace with actual chat
-        icon: 'MessageCircle'
-    },
+interface Task {
+    id: string;
+    title: string;
+    description: string;
+    reward: number;
+    type: string;
+    link: string;
+    icon: string;
+}
+
+const TASKS: Task[] = [
+    // {
+    //     id: 'sub_channel_news',
+    //     title: 'Подпишись на канал',
+    //     description: 'Новости и обновления Aporto',
+    //     reward: 100,
+    //     type: 'social',
+    //     link: 'https://t.me/aporto_news', // Replace with actual channel
+    //     icon: 'Megaphone'
+    // },
+    // {
+    //     id: 'join_chat_community',
+    //     title: 'Вступай в чат',
+    //     description: 'Общение с сообществом',
+    //     reward: 100,
+    //     type: 'social',
+    //     link: 'https://t.me/aporto_community', // Replace with actual chat
+    //     icon: 'MessageCircle'
+    // },
     // Daily task is handled separately via specific logic/UI but can be listed here if needed
     // Profile tasks can also be checked dynamically
 ];
