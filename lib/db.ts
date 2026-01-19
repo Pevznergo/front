@@ -302,7 +302,7 @@ export async function initDatabase() {
         console.log('Migrating data from app_users to User...');
         await sql`
           INSERT INTO "User" (
-            telegram_id, name, points, spins_count, daily_streak, 
+            "telegramId", name, points, spins_count, daily_streak, 
             last_daily_claim, last_visit, created_at,
             utm_source, utm_medium, utm_campaign, utm_content, start_param
           )
@@ -321,7 +321,7 @@ export async function initDatabase() {
             utm_content, 
             start_param
           FROM app_users
-          ON CONFLICT (telegram_id) DO UPDATE SET
+          ON CONFLICT ("telegramId") DO UPDATE SET
             points = EXCLUDED.points,
             spins_count = EXCLUDED.spins_count,
             daily_streak = EXCLUDED.daily_streak,
