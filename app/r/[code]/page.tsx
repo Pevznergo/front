@@ -10,7 +10,26 @@ export default async function ReferralRedirectPage({ params }: { params: { code:
         LIMIT 1
     `;
 
-    const link = result.length > 0 ? result[0] : null;
+    let link = result.length > 0 ? result[0] : null;
+
+    // 2. Fallback: Check User table if not found in short_links
+    if (!link) {
+        // Try to find a user with this referral code
+        const user = await sql`SELECT referral_code FROM "User" WHERE referral_code = ${params.code} LIMIT 1`;
+
+        if (user.length > 0) {
+            const botUsername = process.env.BOT_USERNAME || 'Aporto_bot';
+            // Construct the standard app link dynamically
+            const finalUrl = `https://t.me/${botUsername}/app?startapp=${params.code}`;
+
+            // Create a temporary link object
+            link = {
+                target_url: finalUrl,
+                district: 'referral_fallback', // Analytics marker
+                sticker_title: 'fallback_redirect'
+            };
+        }
+    }
 
     if (!link) {
         // 404
