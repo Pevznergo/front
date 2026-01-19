@@ -124,7 +124,7 @@ function StatisticsTab() {
             <div className="grid grid-cols-4 gap-4">
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего чатов</div>
-                    <div className="text-3xl font-bold text-white">{data.summary.totalChats}</div>
+                    <div className="text-3xl font-bold text-indigo-400">{data.summary.totalChats}</div>
                 </div>
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">QR Кодов</div>

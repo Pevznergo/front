@@ -41,12 +41,12 @@ export async function GET(req: NextRequest) {
                 totalQr: Number(totalQrResult[0].count),
                 totalClicks: Number(totalClicksResult[0].count || 0),
                 totalSubscribers: Number(totalMembersResult[0].count || 0),
-                totalUsers: Number((await sql`SELECT COUNT(*) as count FROM "User"`)[0].count),
+                totalUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE email NOT LIKE 'guest-%'`)[0].count),
                 totalSpins: Number((await sql`SELECT COUNT(*) as count FROM user_prizes`)[0].count),
                 totalRequests: Number((await sql`SELECT COUNT(*) as count FROM analysis_requests`)[0].count),
-                totalReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE start_param IS NOT NULL`)[0].count),
-                totalPaidUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE`)[0].count),
-                totalPaidReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE AND start_param IS NOT NULL`)[0].count)
+                totalReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE start_param IS NOT NULL AND email NOT LIKE 'guest-%'`)[0].count),
+                totalPaidUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE AND email NOT LIKE 'guest-%'`)[0].count),
+                totalPaidReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE AND start_param IS NOT NULL AND email NOT LIKE 'guest-%'`)[0].count)
             }
         });
 
