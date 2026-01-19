@@ -455,6 +455,16 @@ export async function initDatabase() {
       )
     `;
 
+    // User Tasks Table (New)
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_tasks (
+        user_id VARCHAR(255) NOT NULL, -- Telegram ID
+        task_id VARCHAR(50) NOT NULL, -- e.g. 'sub_channel_1'
+        completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, task_id)
+      )
+    `;
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
