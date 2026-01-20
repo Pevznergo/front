@@ -21,8 +21,8 @@ export default async function NextPage() {
     let links: any[] = [];
     let ecosystems: any[] = [];
     try {
-        links = await sql`SELECT * FROM short_links ORDER BY created_at DESC`;
-        ecosystems = await sql`SELECT * FROM ecosystems ORDER BY created_at DESC`;
+        links = await sql`SELECT * FROM short_links ORDER BY created_at DESC LIMIT 1000`;
+        ecosystems = await sql`SELECT * FROM ecosystems ORDER BY created_at DESC LIMIT 1000`;
     } catch (e) {
         console.error("Failed to fetch data", e);
     }

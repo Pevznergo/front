@@ -14,8 +14,8 @@ export async function GET(req: NextRequest) {
     await initDatabase();
 
     try {
-        const links = await sql`SELECT * FROM short_links ORDER BY created_at DESC`;
-        const ecosystems = await sql`SELECT * FROM ecosystems ORDER BY created_at DESC`;
+        const links = await sql`SELECT * FROM short_links ORDER BY created_at DESC LIMIT 1000`;
+        const ecosystems = await sql`SELECT * FROM ecosystems ORDER BY created_at DESC LIMIT 1000`;
 
         return NextResponse.json({
             links,

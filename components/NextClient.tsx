@@ -13,15 +13,26 @@ import {
     AlertCircle, List, Map as MapIcon, Globe, Printer, Play,
     Clipboard as ClipboardIcon, Plus, Gift, Edit, RefreshCcw, RefreshCw, BarChart as BarChartIcon, Megaphone
 } from "lucide-react";
-import QRCode from "react-qr-code";
 import QRCodeLib from "qrcode";
 import dynamic from "next/dynamic";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
-const MapScout = dynamic(() => import("./MapScout"), {
-    ssr: false,
-    loading: () => <div className="h-[600px] w-full bg-white/5 animate-pulse rounded-3xl flex items-center justify-center font-bold text-slate-500 uppercase tracking-tighter">Загрузка карты...</div>
-});
+
+const QrCodeDisplay = ({ value, size = 128 }: { value: string, size?: number }) => {
+    const [dataUrl, setDataUrl] = useState<string>("");
+
+    useEffect(() => {
+        QRCodeLib.toDataURL(value, { width: size, margin: 1 })
+            .then(setDataUrl)
+            .catch(err => console.error(err));
+    }, [value, size]);
+
+    if (!dataUrl) return <div style={{ width: size, height: size }} className="bg-white/5 animate-pulse rounded-xl" />;
+
+    return <img src={dataUrl} alt="QR Code" style={{ width: size, height: size }} className="rounded-xl bg-white p-2" />;
+};
+
+
 
 
 
@@ -261,7 +272,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [printCopies, setPrintCopies] = useState(1);
     const [printModalState, setPrintModalState] = useState<{ isOpen: boolean, link: ShortLink | null }>({ isOpen: false, link: null });
     const [modalPrintCopies, setModalPrintCopies] = useState(1);
-    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'map' | 'stats' | 'prizes'>('qr_batch');
+    const [activeTab, setActiveTab] = useState<'ecosystem' | 'qr_batch' | 'stats' | 'prizes'>('qr_batch');
     const [batchLoading, setBatchLoading] = useState(false);
     const [batchResult, setBatchResult] = useState<{ count: number } | null>(null);
     const [editingTarget, setEditingTarget] = useState<{ id: number; value: string } | null>(null);
@@ -281,7 +292,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
     const [queue, setQueue] = useState<QueueItem[]>([]);
     const [batchInput, setBatchInput] = useState("");
     const [batchInterval, setBatchInterval] = useState(15);
-    const [scoutedAddresses, setScoutedAddresses] = useState<any[]>([]);
+
     const [editingQueueItem, setEditingQueueItem] = useState<QueueItem | null>(null);
     const [nextTask, setNextTask] = useState<{ title: string, scheduled_at: string } | null>(null);
     const [countdown, setCountdown] = useState<string | null>(null);
@@ -1184,59 +1195,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
         }
     };
 
-    const handlePushScoutedToQueue = async () => {
-        if (scoutedAddresses.length === 0) return;
-        setBatchLoading(true);
 
-        const normalizedExisting = new Set([
-            ...links.map(l => l.reviewer_name?.toLowerCase().trim()),
-            ...queue.filter(q => q.status !== 'failed').map(q => q.title.toLowerCase().trim())
-        ]);
-
-        const filteredScouted = scoutedAddresses.filter(a => {
-            const title = `${a.street}, ${a.house}`.toLowerCase().trim();
-            return !normalizedExisting.has(title);
-        });
-
-        if (filteredScouted.length === 0) {
-            alert("Все выбранные адреса уже существуют в базе или очереди.");
-            setBatchLoading(false);
-            return;
-        }
-
-        if (filteredScouted.length < scoutedAddresses.length) {
-            if (!confirm(`Будет добавлено ${filteredScouted.length} новых адресов. ${(scoutedAddresses.length - filteredScouted.length)} дубликатов будут пропущены. Продолжить?`)) {
-                setBatchLoading(false);
-                return;
-            }
-        }
-
-        try {
-            const now = new Date();
-            const items = filteredScouted.map((addr, idx) => ({
-                title: `${addr.street}, ${addr.house}`,
-                district: addr.district || "",
-                // scheduled_at is now handled by server (Smart Scheduling)
-            }));
-
-            const res = await fetch("/api/queue", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ batch: items })
-            });
-
-            if (!res.ok) throw new Error("Failed to add to queue");
-
-            alert(`Добавлено в очередь: ${items.length} адресов`);
-            setScoutedAddresses([]);
-            fetchQueue();
-            setActiveTab('qr_batch'); // Switch to batch tab to see queue
-        } catch (e: any) {
-            alert(e.message);
-        } finally {
-            setBatchLoading(false);
-        }
-    };
 
 
 
@@ -1557,14 +1516,6 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
 
 
 
-    const handleUpdateScouted = (index: number, updates: any) => {
-        setScoutedAddresses(prev => prev.map((a, i) => i === index ? { ...a, ...updates } : a));
-    };
-
-    const handleDeleteScouted = (index: number) => {
-        setScoutedAddresses(prev => prev.filter((_, i) => i !== index));
-    };
-
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text || '');
         setCopiedId(id);
@@ -1587,16 +1538,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         <QrCode className="w-4 h-4" />
                         QR Генератор
                     </button>
-                    <button
-                        onClick={() => setActiveTab('map')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'map'
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            } `}
-                    >
-                        <MapIcon className="w-4 h-4" />
-                        Разведчик
-                    </button>
+
                     <button
                         onClick={() => setActiveTab('stats')}
                         className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'stats'
@@ -1720,7 +1662,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         <div className="p-8 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="flex flex-col md:flex-row gap-8 items-center">
                                 <div className="p-4 bg-white rounded-2xl">
-                                    <QRCode value={result.link} size={180} />
+                                    <QrCodeDisplay value={result.link} size={180} />
                                 </div>
                                 <div className="flex-1 text-left space-y-4">
                                     <div>
@@ -2151,71 +2093,7 @@ export default function NextClient({ initialLinks, initialEcosystems }: NextClie
                         </div>
                     )}
                 </div>
-            ) : activeTab === 'map' ? (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl space-y-8">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-bold">Карта-Разведчик</h2>
-                                <p className="text-slate-500 text-sm">Найдите дома на карте и добавьте их в очередь создания чатов.</p>
-                            </div>
-                            {scoutedAddresses.length > 0 && (
-                                <button
-                                    onClick={handlePushScoutedToQueue}
-                                    disabled={batchLoading}
-                                    className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white flex items-center gap-3 transition-all shadow-xl shadow-indigo-500/20"
-                                >
-                                    {batchLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />}
-                                    Добавить в очередь ({scoutedAddresses.length})
-                                </button>
-                            )}
-                        </div>
 
-                        <MapScout onAddressesFound={setScoutedAddresses} />
-
-                        {scoutedAddresses.length > 0 && (
-                            <div className="mt-8 space-y-4 text-left">
-                                <div className="flex items-center justify-between px-2">
-                                    <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Предпросмотр адресов для очереди</h3>
-                                    <button onClick={() => setScoutedAddresses([])} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase transition-all">Очистить список</button>
-                                </div>
-                                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {scoutedAddresses.map((addr, idx) => (
-                                        <div key={idx} className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 group transition-all hover:border-white/20">
-                                            <div className="flex-1 w-full space-y-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Название / Адрес</span>
-                                                    <input
-                                                        value={addr.title}
-                                                        onChange={(e) => handleUpdateScouted(idx, { title: e.target.value })}
-                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="w-full md:w-64 space-y-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] text-slate-500 uppercase font-bold pl-1">Район</span>
-                                                    <input
-                                                        value={addr.district || ""}
-                                                        onChange={(e) => handleUpdateScouted(idx, { district: e.target.value })}
-                                                        placeholder="Не указан"
-                                                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleDeleteScouted(idx)}
-                                                className="p-3 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all self-end md:self-center"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
             ) : activeTab === 'stats' ? (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <StatisticsTab />
