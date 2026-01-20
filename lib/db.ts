@@ -193,6 +193,10 @@ export async function initDatabase() {
       await sql`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_title VARCHAR(255)`;
       await sql`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_features TEXT`;
       await sql`ALTER TABLE short_links ADD COLUMN IF NOT EXISTS sticker_prizes TEXT`;
+
+      // Fix: Increase code length to support referral codes (ref_xxxxxxxx = 12 chars)
+      await sql`ALTER TABLE short_links ALTER COLUMN code TYPE VARCHAR(50)`;
+
     } catch (e) {
       console.warn("Schema update warning (short_links cols):", e);
     }
