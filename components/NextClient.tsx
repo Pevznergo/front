@@ -165,7 +165,7 @@ function StatisticsTab() {
                         onClick={async () => {
                             if (!confirm("Обновить статистику участников? Это может занять время.")) return;
                             try {
-                                setLoading(true); // temporary lock
+                                setLoading(true); // lock
                                 await fetch("/api/queue", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -178,17 +178,20 @@ function StatisticsTab() {
                                 });
                                 // Trigger immediately
                                 await fetch("/api/queue/process?force=true");
-                                alert("Статистика обновлена! Перезагрузите страницу через пару секунд.");
-                                window.location.reload();
+
+                                // Instead of reload, just fetch new stats
+                                await fetchStats();
+                                alert("Статистика успешно обновлена!");
                             } catch (e) {
                                 alert("Ошибка обновления");
                                 setLoading(false);
                             }
                         }}
-                        className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                        className={`px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={loading}
                     >
-                        <RefreshCcw className="w-3.5 h-3.5" />
-                        Синхронизация
+                        <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                        {loading ? 'Синхронизация...' : 'Синхронизация'}
                     </button>
                     <button
                         onClick={fetchStats}
