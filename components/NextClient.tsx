@@ -123,23 +123,9 @@ function StatisticsTab() {
             {/* KPI Cards */}
             <div className="grid grid-cols-4 gap-4">
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
-                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего чатов</div>
-                    <div className="text-3xl font-bold text-indigo-400">{data.summary.totalChats}</div>
-                </div>
-                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
-                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">QR Кодов</div>
-                    <div className="text-3xl font-bold text-indigo-400">{data.summary.totalQr}</div>
-                </div>
-                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Всего кликов</div>
                     <div className="text-3xl font-bold text-emerald-400">{data.summary.totalClicks}</div>
                 </div>
-                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
-                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Подписчиков</div>
-                    <div className="text-3xl font-bold text-purple-400">{data.summary.totalSubscribers}</div>
-                </div>
-
-                {/* Row 2 */}
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Пользователей</div>
                     <div className="text-3xl font-bold text-blue-400">{data.summary.totalUsers}</div>
@@ -153,7 +139,7 @@ function StatisticsTab() {
                     <div className="text-3xl font-bold text-pink-400">{data.summary.totalRequests}</div>
                 </div>
 
-                {/* Row 3 - Referral & Paid Stats */}
+                {/* Row 2 - Referral & Paid Stats */}
                 <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Пришли по реф.</div>
                     <div className="text-3xl font-bold text-orange-400">{data.summary.totalReferralUsers}</div>
@@ -172,8 +158,8 @@ function StatisticsTab() {
             <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-bold text-white">Динамика создания чатов</h3>
-                        <p className="text-slate-500 text-xs">Количество новых экосистем по дням</p>
+                        <h3 className="text-lg font-bold text-white">Динамика новых пользователей</h3>
+                        <p className="text-slate-500 text-xs">Количество регистраций по дням</p>
                     </div>
                     <button
                         onClick={async () => {

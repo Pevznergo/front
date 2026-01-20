@@ -1,4 +1,15 @@
 import { sql } from '@/lib/db';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: "Aporto - Присоединяйтесь к чату нейросетей",
+    description: "Вас пригласили в Aporto! Используйте GPT-4o, Claude 3.5 и другие модели в одном удобном чате. Начните прямо сейчас.",
+    openGraph: {
+        title: "Вам отправили приглашение в Aporto 🎁",
+        description: "Забирайте доступ к лучшим нейросетям мира в одном окне. Кликайте, чтобы начать!",
+    },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function ReferralRedirectPage({ params }: { params: { code: string } }) {

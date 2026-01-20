@@ -9,15 +9,15 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata = {
   title: {
-    default: "Aporto - AI Review Removal & Legal Defense",
+    default: "Aporto - Все нейросети в одном чате",
     template: "%s | Aporto"
   },
-  description: "Automated AI agent for removing unfair negative reviews from Google, Yelp, and Glassdoor using legal policy audits.",
+  description: "GPT-4o, Claude 3.5, Gemini 1.5 и другие нейросети в одном интерфейсе. Подключитесь через Telegram или WebApp и используйте лучшие ИИ-модели без VPN и сложных подписок.",
   openGraph: {
-    title: "Aporto - AI Review Removal",
-    description: "Delete unfair negative reviews with AI legal precision.",
+    title: "Aporto - Все нейросети в одном чате",
+    description: "Попробуйте лучшие нейросети мира (GPT-4, Claude, Gemini) в одном месте. Быстро, удобно, доступно.",
     type: "website",
-    locale: "en_US",
+    locale: "ru_RU",
     url: "https://aporto.tech",
   },
 };

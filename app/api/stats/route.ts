@@ -15,11 +15,13 @@ export async function GET(req: NextRequest) {
 
     try {
         // 1. Chats over time (Daily)
+        // 1. Users over time (Daily)
         const chatsOverTime = await sql`
             SELECT 
                 TO_CHAR(created_at, 'YYYY-MM-DD') as date,
                 COUNT(*) as count
-            FROM ecosystems
+            FROM "User"
+            WHERE email NOT LIKE 'guest-%'
             GROUP BY 1
             ORDER BY 1 ASC
         `;
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest) {
                 totalSubscribers: Number(totalMembersResult[0].count || 0),
                 totalUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE email NOT LIKE 'guest-%'`)[0].count),
                 totalSpins: Number((await sql`SELECT COUNT(*) as count FROM user_prizes`)[0].count),
-                totalRequests: Number((await sql`SELECT COUNT(*) as count FROM analysis_requests WHERE user_email NOT LIKE 'guest-%'`)[0].count),
+                totalRequests: Number((await sql`SELECT SUM(request_count) as count FROM "User" WHERE email NOT LIKE 'guest-%'`)[0].count || 0),
                 totalReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE start_param IS NOT NULL AND email NOT LIKE 'guest-%'`)[0].count),
                 totalPaidUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE AND email NOT LIKE 'guest-%'`)[0].count),
                 totalPaidReferralUsers: Number((await sql`SELECT COUNT(*) as count FROM "User" WHERE has_paid = TRUE AND start_param IS NOT NULL AND email NOT LIKE 'guest-%'`)[0].count)

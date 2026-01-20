@@ -35,10 +35,20 @@
 ### 2.2. Генерация ссылки (`app/api/webapp/referral/route.ts`)
 -   **GET:** Возвращает `referral_code`, ссылку, кол-во рефералов, заработанные токены.
 
-### 2.3. Обработка оплаты PRO (Webhook)
--   При оплате проверяем наличие записи в `referrals` для этого юзера.
--   Если есть -> Начисляем **1000 токенов (Credits/Balance)** рефереру.
--   Обновляем статус в `referrals` на 'pro_upgraded'.
+### 2.3. Обработка оплаты PRO (Webhook - YooKassa)
+-   **Endpoint:** `app/api/webhooks/payment/route.ts`
+-   **Event:** `payment.succeeded`
+-   **Logic:**
+    -   Parse `req.body` (JSON).
+    -   Check `event === 'payment.succeeded'`.
+    -   Extract `userId` from `object.metadata.userId` (Telegram ID).
+    -   **Update User:** Set `has_paid = TRUE` for this user.
+    -   **Referral Check:**
+        -   Look up in `referrals` table where `referred_id = userId`.
+        -   If found AND status != 'pro_upgraded':
+            -   Update `referrals.status` = 'pro_upgraded'.
+            -   Update `User` (referrer): `points` (or `balance`? Plan says 1000 tokens. `balance` is tokens usually) += 1000.
+            -   Log reward amount in `referrals`.
 
 ### 2.4. Вывод средств (`app/api/webapp/withdraw/route.ts`)
 -   **POST:** Запрос на вывод.

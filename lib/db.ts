@@ -138,9 +138,9 @@ export async function initDatabase() {
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS start_param VARCHAR(50)`;
 
       // Other fields
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS request_count INTEGER DEFAULT 0`;
 
       // Cleanup: drop duplicate telegram_id column if it was created before
       await sql`ALTER TABLE "User" DROP COLUMN IF EXISTS telegram_id`;
