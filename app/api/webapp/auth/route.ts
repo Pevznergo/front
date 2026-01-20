@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
                     if (referrer.length > 0) {
                         referrerId = referrer[0].telegramId
-                        utmSource = 'referral'
+                        utmSource = 'referral_system'
                         utmMedium = 'user_invite'
                         utmCampaign = referrerId // storage of who invited in campaign for analytics
 
@@ -76,10 +76,13 @@ export async function POST(req: Request) {
             // Generate unique referral code for new user
             const newReferralCode = 'ref_' + Math.random().toString(36).substring(2, 10);
 
+            // Generate email for Telegram user
+            const email = `telegram-${telegramId}@telegram.bot`;
+
             // Create new user with 20 points (for spinning) and UTM data
             await sql`
                 INSERT INTO "User"(
-                    "telegramId", name, points,
+                    "telegramId", name, email, points,
                     utm_source, utm_medium, utm_campaign, utm_content, start_param,
                     referral_code,
                     created_at
@@ -87,6 +90,7 @@ export async function POST(req: Request) {
                 VALUES(
                     ${telegramId},
                     ${user.first_name || 'Telegram User'},
+                    ${email},
                     20,
                     ${utmSource},
                     ${utmMedium},
