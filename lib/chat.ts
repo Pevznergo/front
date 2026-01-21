@@ -1,6 +1,6 @@
-import { getTelegramClient } from "@/lib/tg";
+import { getTelegramClient } from "./tg";
 import { Api } from "telegram";
-import { sql } from "@/lib/db";
+import { sql } from "./db";
 
 export async function createEcosystem(title: string, district: string | null) {
     const client = await getTelegramClient();
