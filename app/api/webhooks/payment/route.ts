@@ -42,6 +42,34 @@ export async function POST(req: NextRequest) {
                 WHERE "telegramId" = ${userId}
             `;
 
+            // 3.5 Save Subscription (if tariff info is present)
+            const tariffSlug = metadata?.tariff_slug;
+            const paymentMethodId = object.payment_method?.id;
+
+            if (tariffSlug && paymentMethodId) {
+                console.log(`Saving subscription for user ${userId}, tariff ${tariffSlug}`);
+
+                // Get internal User ID
+                const userRes = await sql`SELECT id FROM "User" WHERE "telegramId" = ${userId}`;
+                const internalUserId = userRes[0]?.id;
+
+                if (internalUserId) {
+                    // Get Tariff Duration
+                    const tariffRes = await sql`SELECT "duration_days" FROM "Tariff" WHERE slug = ${tariffSlug}`;
+                    const durationDays = tariffRes[0]?.duration_days || 30;
+
+                    // Calculate End Date
+                    const endDate = new Date();
+                    endDate.setDate(endDate.getDate() + durationDays);
+
+                    // Insert Subscription
+                    await sql`
+                        INSERT INTO "Subscription" ("userId", "tariff_slug", "payment_method_id", "end_date", "status", "auto_renew")
+                        VALUES (${internalUserId}, ${tariffSlug}, ${paymentMethodId}, ${endDate}, 'active', true)
+                    `;
+                }
+            }
+
             // 4. Referral Reward Logic
             // Check if this user was referred by someone and hasn't triggered a reward yet
             const referralRecord = await sql`
