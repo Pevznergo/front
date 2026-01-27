@@ -47,7 +47,7 @@ export default function ClanPage() {
 
             const data = await getUserClanInfo(user.id.toString());
 
-            if (data?.hasClan) {
+            if (data?.hasClan && data.clan) {
                 setClan(data.clan);
                 setUserRole(data.userRole);
                 setEditedName(data.clan.name);
