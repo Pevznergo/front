@@ -116,10 +116,7 @@ export default function ClanPage() {
 
                 const data = await getUserClanInfo(user.id.toString());
 
-                // If data is null (user doesn't exist) or hasClan is false, show no-clan screen
-                if (!data || !data.hasClan || !data.clan) {
-                    setInClan(false);
-                } else {
+                if (data?.hasClan && data.clan) {
                     setInClan(true);
                     const clanData = data.clan;
                     const nextReq = getNextLevelRequirements(
@@ -142,11 +139,12 @@ export default function ClanPage() {
                         membersList: [],
                     });
                     setEditedName(clanData.name);
+                } else {
+                    setInClan(false);
                 }
             } catch (err) {
                 console.error(err);
-                // On error, still show no-clan screen rather than error screen
-                setInClan(false);
+                setError("Не удалось загрузить данные клана.");
             } finally {
                 setLoading(false);
             }

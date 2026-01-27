@@ -78,23 +78,12 @@ export async function getUserClanInfo(telegramId: string) {
 // Create a new clan
 export async function createClan(telegramId: string, clanName: string) {
     try {
-        // Ensure user exists first
-        let existingUser = await sql`
-      SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
+        // Check if user already in a clan
+        const existingUser = await sql`
+      SELECT clan_id FROM "User" WHERE "telegramId" = ${telegramId}
     `;
 
-        // Create user if doesn't exist
-        if (existingUser.length === 0) {
-            await sql`
-        INSERT INTO "User" ("telegramId", name, email)
-        VALUES (${telegramId}, 'Telegram User', NULL)
-      `;
-            existingUser = await sql`
-        SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
-      `;
-        }
-
-        if (existingUser[0].clan_id) {
+        if (existingUser.length > 0 && existingUser[0].clan_id) {
             throw new Error('Вы уже состоите в клане');
         }
 
@@ -136,23 +125,12 @@ export async function createClan(telegramId: string, clanName: string) {
 // Join a clan by invite code
 export async function joinClan(telegramId: string, inviteCode: string) {
     try {
-        // Ensure user exists first
-        let existingUser = await sql`
-      SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
+        // Check if user already in a clan
+        const existingUser = await sql`
+      SELECT clan_id FROM "User" WHERE "telegramId" = ${telegramId}
     `;
 
-        // Create user if doesn't exist
-        if (existingUser.length === 0) {
-            await sql`
-        INSERT INTO "User" ("telegramId", name, email)
-        VALUES (${telegramId}, 'Telegram User', NULL)
-      `;
-            existingUser = await sql`
-        SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
-      `;
-        }
-
-        if (existingUser[0].clan_id) {
+        if (existingUser.length > 0 && existingUser[0].clan_id) {
             throw new Error('Вы уже состоите в клане');
         }
 
