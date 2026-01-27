@@ -1,57 +1,6 @@
 'use server';
 
 import { sql } from '@/lib/db';
-import { createHmac } from 'node:crypto';
-
-// Validate Telegram Web App data
-function validateTelegramData(initData: string): { success: true; userId: string; username?: string } | { success: false; error: string } {
-    if (!process.env.BOT_TOKEN) {
-        console.error('BOT_TOKEN is not set');
-        return { success: false, error: 'Configuration error' };
-    }
-
-    const urlParams = new URLSearchParams(initData);
-    const hash = urlParams.get('hash');
-
-    if (!hash) {
-        return { success: false, error: 'No hash found' };
-    }
-
-    urlParams.delete('hash');
-
-    const params = Array.from(urlParams.entries());
-    params.sort((a, b) => a[0].localeCompare(b[0]));
-
-    const dataCheckString = params.map(([key, value]) => `${key}=${value}`).join('\n');
-
-    const secretKey = createHmac('sha256', 'WebAppData')
-        .update(process.env.BOT_TOKEN)
-        .digest();
-
-    const calculatedHash = createHmac('sha256', secretKey)
-        .update(dataCheckString)
-        .digest('hex');
-
-    if (calculatedHash !== hash) {
-        return { success: false, error: 'Invalid hash' };
-    }
-
-    const userStr = urlParams.get('user');
-    if (!userStr) {
-        return { success: false, error: 'No user data' };
-    }
-
-    try {
-        const user = JSON.parse(userStr);
-        return {
-            success: true,
-            userId: user.id.toString(),
-            username: user.username
-        };
-    } catch {
-        return { success: false, error: 'Invalid user data format' };
-    }
-}
 
 // Initialize Clan tables
 export async function initClanTables() {
@@ -79,14 +28,8 @@ export async function initClanTables() {
 }
 
 // Get user's clan info
-export async function getUserClanInfo(initData: string) {
+export async function getUserClanInfo(telegramId: string) {
     try {
-        const validation = validateTelegramData(initData);
-        if (!validation.success) {
-            throw new Error(validation.error);
-        }
-        const telegramId = validation.userId;
-
         const result = await sql`
       SELECT 
         u.clan_id,
@@ -133,14 +76,8 @@ export async function getUserClanInfo(initData: string) {
 }
 
 // Create a new clan
-export async function createClan(initData: string, clanName: string) {
+export async function createClan(telegramId: string, clanName: string) {
     try {
-        const validation = validateTelegramData(initData);
-        if (!validation.success) {
-            return { success: false, error: validation.error };
-        }
-        const telegramId = validation.userId;
-
         // Ensure user exists first
         let existingUser = await sql`
       SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
@@ -197,14 +134,8 @@ export async function createClan(initData: string, clanName: string) {
 }
 
 // Join a clan by invite code
-export async function joinClan(initData: string, inviteCode: string) {
+export async function joinClan(telegramId: string, inviteCode: string) {
     try {
-        const validation = validateTelegramData(initData);
-        if (!validation.success) {
-            return { success: false, error: validation.error };
-        }
-        const telegramId = validation.userId;
-
         // Ensure user exists first
         let existingUser = await sql`
       SELECT id, clan_id FROM "User" WHERE "telegramId" = ${telegramId}
@@ -254,14 +185,8 @@ export async function joinClan(initData: string, inviteCode: string) {
 }
 
 // Update clan name (admin only)
-export async function updateClanName(initData: string, newName: string) {
+export async function updateClanName(telegramId: string, newName: string) {
     try {
-        const validation = validateTelegramData(initData);
-        if (!validation.success) {
-            return { success: false, error: validation.error };
-        }
-        const telegramId = validation.userId;
-
         // Get user's clan and role
         const user = await sql`
       SELECT clan_id, clan_role FROM "User" WHERE "telegramId" = ${telegramId}
@@ -297,14 +222,8 @@ export async function updateClanName(initData: string, newName: string) {
 }
 
 // Leave clan
-export async function leaveClan(initData: string) {
+export async function leaveClan(telegramId: string) {
     try {
-        const validation = validateTelegramData(initData);
-        if (!validation.success) {
-            return { success: false, error: validation.error };
-        }
-        const telegramId = validation.userId;
-
         const user = await sql`
       SELECT clan_id, clan_role FROM "User" WHERE "telegramId" = ${telegramId}
     `;
