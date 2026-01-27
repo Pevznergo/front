@@ -117,85 +117,53 @@ export default function ClanPage() {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        // Wait for Telegram SDK to be ready
-        const checkTelegram = () => {
-            if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-                const tg = window.Telegram.WebApp;
-                tg.expand();
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
 
-                const rawInitData = tg.initData;
-                if (rawInitData) {
-                    console.log("Telegram InitData found:", rawInitData.substring(0, 20) + "...");
-                    load(rawInitData);
-                    return true;
+        const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
+
+        async function load() {
+            try {
+                const res = await getUserClanInfo(initData || "");
+
+                if (res.error) {
+                    setError(res.error);
+                } else if (res.hasClan && res.clan) {
+                    setInClan(true);
+
+                    // Enrich data
+                    const c = res.clan;
+                    const nextLevel = c.level < 5 ? c.level + 1 : 5;
+                    const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
+                    const progress = getProgress(c.level, c.totalMembers, c.proMembers);
+
+                    setClan({
+                        ...c,
+                        membersCount: c.totalMembers,
+                        proMembersCount: c.proMembers,
+                        nextLevel,
+                        progress,
+                        nextLevelRequirements: reqs,
+                        isOwner: res.userRole === 'owner',
+                        membersList: c.membersList
+                    });
+                    setEditedName(c.name);
+                } else {
+                    // Not in clan, show No Clan UI
+                    setInClan(false);
                 }
-            }
-            return false;
-        };
-
-        // Attempt 1: Immediate
-        if (checkTelegram()) return;
-
-        // Attempt 2: Interval check (in case script loads async)
-        const interval = setInterval(() => {
-            if (checkTelegram()) {
-                clearInterval(interval);
-            }
-        }, 100);
-
-        // Timeout after 5 seconds to show error/guest mode
-        const timeout = setTimeout(() => {
-            clearInterval(interval);
-            if (!inClan && loading) {
-                console.warn("Telegram WebApp not detected after 5s");
-                setError("Запустите приложение через Telegram");
+            } catch (err) {
+                console.error(err);
+                setError("Не удалось загрузить данные клана.");
+            } finally {
                 setLoading(false);
             }
-        }, 5000);
+        }
 
-        return () => {
-            clearInterval(interval);
-            clearTimeout(timeout);
-        };
+        load();
     }, []);
 
-    async function load(initData: string) {
-        try {
-            const res = await getUserClanInfo(initData);
-
-            if (res.error) {
-                setError(res.error);
-            } else if (res.hasClan && res.clan) {
-                setInClan(true);
-
-                // Enrich data
-                const c = res.clan;
-                const nextLevel = c.level < 5 ? c.level + 1 : 5;
-                const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
-                const progress = getProgress(c.level, c.totalMembers, c.proMembers);
-
-                setClan({
-                    ...c,
-                    membersCount: c.totalMembers,
-                    proMembersCount: c.proMembers,
-                    nextLevel,
-                    progress,
-                    nextLevelRequirements: reqs,
-                    isOwner: res.userRole === 'owner',
-                    membersList: c.membersList
-                });
-                setEditedName(c.name);
-            } else {
-                // Not in clan, show No Clan UI
-                setInClan(false);
-            }
-        } catch (err) {
-            console.error(err);
-            setError("Не удалось загрузить данные клана.");
-        } finally {
-            setLoading(false);
-        }
-    }
     const handleCopy = () => {
         if (!clan) {
             return;
