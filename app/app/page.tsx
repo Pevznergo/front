@@ -104,17 +104,18 @@ export default function ClanPage() {
         }
 
         const tg = window.Telegram?.WebApp;
-        const user = tg?.initDataUnsafe?.user;
+        // const user = tg?.initDataUnsafe?.user; // Insecure, removing usage
+        const initData = tg?.initData;
 
         async function load() {
             try {
-                if (!user?.id) {
+                if (!initData) {
                     setError("Откройте приложение через Telegram");
                     setLoading(false);
                     return;
                 }
 
-                const data = await getUserClanInfo(user.id.toString());
+                const data = await getUserClanInfo(initData);
 
                 // If data is null (user doesn't exist) or hasClan is false, show no-clan screen
                 if (!data || !data.hasClan || !data.clan) {
@@ -214,12 +215,12 @@ export default function ClanPage() {
         setIsEditing(false);
 
         const tg = window.Telegram?.WebApp;
-        const user = tg?.initDataUnsafe?.user;
-        if (!user?.id) {
+        const initData = tg?.initData;
+        if (!initData) {
             return;
         }
 
-        const res = await updateClanName(user.id.toString(), editedName);
+        const res = await updateClanName(initData, editedName);
 
         if (!res.success) {
             setClan((prev) => (prev ? { ...prev, name: oldName } : null));
@@ -233,13 +234,13 @@ export default function ClanPage() {
         }
         setActionLoading(true);
         const tg = window.Telegram?.WebApp;
-        const user = tg?.initDataUnsafe?.user;
-        if (!user?.id) {
+        const initData = tg?.initData;
+        if (!initData) {
             setActionLoading(false);
             return;
         }
 
-        const res = await createClan(user.id.toString(), createName);
+        const res = await createClan(initData, createName);
         setActionLoading(false);
 
         if (res.success) {
@@ -255,13 +256,13 @@ export default function ClanPage() {
         }
         setActionLoading(true);
         const tg = window.Telegram?.WebApp;
-        const user = tg?.initDataUnsafe?.user;
-        if (!user?.id) {
+        const initData = tg?.initData;
+        if (!initData) {
             setActionLoading(false);
             return;
         }
 
-        const res = await joinClan(user.id.toString(), joinCode);
+        const res = await joinClan(initData, joinCode);
         setActionLoading(false);
 
         if (res.success) {
