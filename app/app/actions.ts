@@ -122,9 +122,13 @@ export async function getUserClanInfo(initData: string) {
             userRole: user.clan_role
         };
 
-    } catch (e) {
+    } catch (e: any) {
         console.error('getUserClanInfo error:', e);
-        return { hasClan: false, error: 'Database error' };
+        // Check for specific table missing error
+        if (e.message?.includes('relation "clans" does not exist')) {
+            return { hasClan: false, error: 'Нужно инициализировать базу данных: /api/init-db' };
+        }
+        return { hasClan: false, error: e.message || 'Database error' };
     }
 }
 
