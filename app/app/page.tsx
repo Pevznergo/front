@@ -113,8 +113,12 @@ export default function ClanPage() {
             tg.ready(); // CRITICAL: Signal to Telegram that the app is ready
             tg.expand();
 
+<<<<<<< HEAD
             const rawInitData = tg.initData;
             console.log("ClanPage: InitData length:", rawInitData?.length);
+=======
+        const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
+>>>>>>> parent of cbb6c60 (Update page.tsx)
 
             // Use IIFE to avoid strict mode error with function declaration in block
             (async () => {
