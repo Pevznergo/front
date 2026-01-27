@@ -116,8 +116,7 @@ export default function ClanPage() {
             const rawInitData = tg.initData;
             console.log("ClanPage: InitData length:", rawInitData?.length);
 
-            // Use IIFE to avoid strict mode error with function declaration in block
-            (async () => {
+            async function load() {
                 try {
                     const res = await getUserClanInfo(rawInitData || "");
 
@@ -151,7 +150,9 @@ export default function ClanPage() {
                 } finally {
                     setLoading(false);
                 }
-            })();
+            }
+
+            load();
         } else {
             // Not in Telegram environment
             setLoading(false);
