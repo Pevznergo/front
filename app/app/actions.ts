@@ -5,10 +5,8 @@ import { createHmac } from 'node:crypto';
 
 // Validate Telegram Web App data
 function validateTelegramData(initData: string): { success: true; userId: string; username?: string } | { success: false; error: string } {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
-
-    if (!botToken) {
-        console.error('TELEGRAM_BOT_TOKEN is not set');
+    if (!process.env.BOT_TOKEN) {
+        console.error('BOT_TOKEN is not set');
         return { success: false, error: 'Configuration error' };
     }
 
@@ -27,7 +25,7 @@ function validateTelegramData(initData: string): { success: true; userId: string
     const dataCheckString = params.map(([key, value]) => `${key}=${value}`).join('\n');
 
     const secretKey = createHmac('sha256', 'WebAppData')
-        .update(botToken)
+        .update(process.env.BOT_TOKEN)
         .digest();
 
     const calculatedHash = createHmac('sha256', secretKey)
