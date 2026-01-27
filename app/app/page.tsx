@@ -14,10 +14,10 @@ import {
     Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils"; // Assuming utils.ts exists in front/lib
+import { cn } from "@/lib/utils";
 import {
     createClan,
-    getUserClanInfo, // mapped from fetchClanData
+    getUserClanInfo,
     joinClan,
     updateClanName,
 } from "./actions";
@@ -71,19 +71,13 @@ type ClanData = {
     level: number;
     membersCount: number;
     proMembersCount: number;
-    // nextLevel, progress, nextLevelRequirements - calculated on frontend or backend?
-    // backend getUserClanInfo returns: id, name, level, totalMembers, proMembers, inviteCode, membersList
-    // We need to calculate progress etc here or update backend to return it.
-    // The new backend `getUserClanInfo` (my implementation) returns minimal data.
-    // Let's implement helpers to calculate UI fields if backend misses them.
     inviteCode: string;
     membersList: ClanMember[];
 };
 
-// UI Helpers (since my simplified backend doesn't return these)
+// UI Helpers
 function getNextLevelRequirements(level: number, members: number, pros: number) {
     if (level >= 5) return "MAX LEVEL";
-    // Logic from newchat actions:
     if (level === 4) return `Нужно еще ${Math.max(0, 15 - members)} чел. и ${Math.max(0, 3 - pros)} Pro`;
     if (level === 3) return `Нужно еще ${Math.max(0, 2 - pros)} Pro`;
     if (level === 2) return `Нужно еще ${Math.max(0, 10 - members)} чел. и 1 Pro`;
@@ -91,22 +85,18 @@ function getNextLevelRequirements(level: number, members: number, pros: number) 
 }
 
 function getProgress(level: number, members: number, pros: number): number {
-    // Simple mock progress based on requirements
-    // This is purely visual.
     if (level === 1) return Math.min(100, (members / 2) * 100);
-    return 0; // TODO improve
+    return 0;
 }
 
 export default function ClanPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [clan, setClan] = useState<(ClanData & { nextLevel: number, progress: number, nextLevelRequirements: string, isOwner: boolean }) | null>(null);
+    const [clan, setClan] = useState<(ClanData & { nextLevel: number; progress: number; nextLevelRequirements: string; isOwner: boolean }) | null>(null);
     const [inClan, setInClan] = useState(false);
 
     // UI State
-    const [activeTab, setActiveTab] = useState<"overview" | "members">(
-        "overview"
-    );
+    const [activeTab, setActiveTab] = useState<"overview" | "members">("overview");
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState("");
     const [copied, setCopied] = useState(false);
@@ -117,76 +107,70 @@ export default function ClanPage() {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-            window.Telegram.WebApp.expand();
-        }
+        // Initialize WebApp - CRITICAL: call ready() first
+        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+            const tg = (window as any).Telegram.WebApp;
+            tg.ready(); // CRITICAL: Signal to Telegram that the app is ready
+            tg.expand();
 
-        // Move initData check inside useEffect to ensure window is available
-        const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
-        console.log("ClanPage mounted. InitData length:", initData?.length);
+            const rawInitData = tg.initData;
+            console.log("ClanPage: InitData length:", rawInitData?.length);
 
-        async function load() {
-            try {
-                const res = await getUserClanInfo(initData || "");
+            async function load() {
+                try {
+                    const res = await getUserClanInfo(rawInitData || "");
 
-                if (res.error) {
-                    setError(res.error);
-                } else if (res.hasClan && res.clan) {
-                    setInClan(true);
+                    if (res.error) {
+                        setError(res.error);
+                    } else if (res.hasClan && res.clan) {
+                        setInClan(true);
 
-                    // Enrich data
-                    const c = res.clan;
-                    const nextLevel = c.level < 5 ? c.level + 1 : 5;
-                    const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
-                    const progress = getProgress(c.level, c.totalMembers, c.proMembers);
+                        const c = res.clan;
+                        const nextLevel = c.level < 5 ? c.level + 1 : 5;
+                        const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
+                        const progress = getProgress(c.level, c.totalMembers, c.proMembers);
 
-                    setClan({
-                        ...c,
-                        membersCount: c.totalMembers,
-                        proMembersCount: c.proMembers,
-                        nextLevel,
-                        progress,
-                        nextLevelRequirements: reqs,
-                        isOwner: res.userRole === 'owner',
-                        membersList: c.membersList
-                    });
-                    setEditedName(c.name);
-                } else {
-                    // Not in clan, show No Clan UI
-                    setInClan(false);
+                        setClan({
+                            ...c,
+                            membersCount: c.totalMembers,
+                            proMembersCount: c.proMembers,
+                            nextLevel,
+                            progress,
+                            nextLevelRequirements: reqs,
+                            isOwner: res.userRole === 'owner',
+                            membersList: c.membersList
+                        });
+                        setEditedName(c.name);
+                    } else {
+                        setInClan(false);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    setError("Не удалось загрузить данные клана.");
+                } finally {
+                    setLoading(false);
                 }
-            } catch (err) {
-                console.error(err);
-                setError("Не удалось загрузить данные клана.");
-            } finally {
-                setLoading(false);
             }
-        }
 
-        load();
+            load();
+        } else {
+            // Not in Telegram environment
+            setLoading(false);
+            setError("Запустите приложение через Telegram");
+        }
     }, []);
 
     const handleCopy = () => {
-        if (!clan) {
-            return;
-        }
-        navigator.clipboard.writeText(
-            `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`
-        );
+        if (!clan) return;
+        navigator.clipboard.writeText(`https://t.me/aporto_bot?start=clan_${clan.inviteCode}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleShare = () => {
-        if (!clan) {
-            return;
-        }
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.switchInlineQuery(clan.inviteCode, [
-                "users",
-                "groups",
-                "channels",
-            ]);
+        if (!clan) return;
+        if ((window as any).Telegram?.WebApp) {
+            (window as any).Telegram.WebApp.switchInlineQuery(clan.inviteCode, ["users", "groups", "channels"]);
         } else {
             const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
             window.open(url, "_blank");
@@ -194,14 +178,12 @@ export default function ClanPage() {
     };
 
     const saveName = async () => {
-        if (!clan || !editedName.trim()) {
-            return;
-        }
+        if (!clan || !editedName.trim()) return;
         const oldName = clan.name;
         setClan((prev) => (prev ? { ...prev, name: editedName } : null));
         setIsEditing(false);
 
-        const initData = window.Telegram?.WebApp?.initData || "";
+        const initData = (window as any).Telegram?.WebApp?.initData || "";
         const res = await updateClanName(initData, editedName);
 
         if (!res.success) {
@@ -211,11 +193,9 @@ export default function ClanPage() {
     };
 
     const handleCreateClan = async () => {
-        if (!createName.trim()) {
-            return;
-        }
+        if (!createName.trim()) return;
         setActionLoading(true);
-        const initData = window.Telegram?.WebApp?.initData || "";
+        const initData = (window as any).Telegram?.WebApp?.initData || "";
         const res = await createClan(initData, createName);
         setActionLoading(false);
 
@@ -227,11 +207,9 @@ export default function ClanPage() {
     };
 
     const handleJoinClan = async () => {
-        if (!joinCode.trim()) {
-            return;
-        }
+        if (!joinCode.trim()) return;
         setActionLoading(true);
-        const initData = window.Telegram?.WebApp?.initData || "";
+        const initData = (window as any).Telegram?.WebApp?.initData || "";
         const res = await joinClan(initData, joinCode);
         setActionLoading(false);
 
@@ -258,12 +236,9 @@ export default function ClanPage() {
                     <Shield className="w-8 h-8 text-blue-400" />
                 </div>
 
-                <h1 className="text-2xl font-bold mb-2 text-center">
-                    Присоединяйтесь к битве
-                </h1>
+                <h1 className="text-2xl font-bold mb-2 text-center">Присоединяйтесь к битве</h1>
                 <p className="text-gray-400 text-center mb-10 max-w-xs text-sm">
-                    Создайте клан, чтобы получать бонусы, или вступите по коду
-                    приглашения.
+                    Создайте клан, чтобы получать бонусы, или вступите по коду приглашения.
                 </p>
 
                 {/* Create Section */}
@@ -281,54 +256,41 @@ export default function ClanPage() {
                         onClick={handleCreateClan}
                         type="button"
                     >
-                        {actionLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <Plus className="w-5 h-5" />
-                        )}
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                         Создать клан
                     </button>
                 </div>
 
                 <div className="flex items-center gap-4 w-full max-w-sm mb-8">
                     <div className="h-[1px] bg-[#2c2c2e] flex-1" />
-                    <span className="text-gray-500 text-xs uppercase font-medium">
-                        ИЛИ
-                    </span>
+                    <span className="text-gray-500 text-xs uppercase font-medium">ИЛИ</span>
                     <div className="h-[1px] bg-[#2c2c2e] flex-1" />
                 </div>
 
                 {/* Join Section */}
                 <div className="w-full max-w-sm space-y-3">
-                    <div className="relative">
-                        <input
-                            className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors"
-                            onChange={(e) => setJoinCode(e.target.value)}
-                            placeholder="Код приглашения (например: CLAN-XYZ)"
-                            style={{ textTransform: "uppercase" }}
-                            type="text"
-                            value={joinCode}
-                        />
-                    </div>
+                    <input
+                        className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors"
+                        onChange={(e) => setJoinCode(e.target.value)}
+                        placeholder="Код приглашения (например: CLAN-XYZ)"
+                        style={{ textTransform: "uppercase" }}
+                        type="text"
+                        value={joinCode}
+                    />
                     <button
                         className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                         disabled={actionLoading || !joinCode.trim()}
                         onClick={handleJoinClan}
                         type="button"
                     >
-                        {actionLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <ArrowRight className="w-5 h-5" />
-                        )}
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                         Вступить по коду
                     </button>
                 </div>
 
                 <div className="mt-8 text-center">
                     <p className="text-xs text-gray-500">
-                        Получили ссылку? <br /> Откройте ее в Telegram для автоматического
-                        вступления.
+                        Получили ссылку? <br /> Откройте ее в Telegram для автоматического вступления.
                     </p>
                 </div>
             </div>
@@ -339,20 +301,10 @@ export default function ClanPage() {
         return (
             <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
                 <div>
-                    <p className="mb-4 text-red-400 font-bold">
-                        {error || "Что-то пошло не так"}
-                    </p>
+                    <p className="mb-4 text-red-400 font-bold">{error || "Что-то пошло не так"}</p>
                     <div className="text-xs text-gray-500 mb-4 bg-black/20 p-2 rounded text-left overflow-auto max-w-[300px] break-all">
-                        <p>
-                            URL:{" "}
-                            {typeof window !== "undefined" ? window.location.href : "N/A"}
-                        </p>
-                        <p>
-                            User ID:{" "}
-                            {(typeof window !== "undefined" &&
-                                window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
-                                "Missing"}
-                        </p>
+                        <p>URL: {typeof window !== "undefined" ? window.location.href : "N/A"}</p>
+                        <p>User ID: {(typeof window !== "undefined" && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) || "Missing"}</p>
                     </div>
                     <button
                         className="bg-[#2c2c2e] px-4 py-2 rounded-lg text-sm"
@@ -371,18 +323,12 @@ export default function ClanPage() {
         <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden selection:bg-blue-500/30">
             {/* Header */}
             <div className="flex flex-col items-center pt-10 pb-6 px-4">
-                {/* Icon */}
                 <div className="flex justify-center mb-6">
                     <div className="relative w-16 h-16">
-                        <Zap
-                            className="w-16 h-16 text-white rotate-12 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
-                            fill="currentColor"
-                            strokeWidth={1.5}
-                        />
+                        <Zap className="w-16 h-16 text-white rotate-12 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" fill="currentColor" strokeWidth={1.5} />
                     </div>
                 </div>
 
-                {/* Title / Edit */}
                 <div className="flex items-center justify-center gap-2 mb-2 w-full max-w-sm">
                     {isEditing ? (
                         <div className="flex items-center gap-2 w-full animate-in fade-in zoom-in-95 bg-[#2c2c2e] rounded-lg p-1 ring-2 ring-blue-500">
@@ -393,19 +339,13 @@ export default function ClanPage() {
                                 type="text"
                                 value={editedName}
                             />
-                            <button
-                                className="p-2 bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
-                                onClick={saveName}
-                                type="button"
-                            >
+                            <button className="p-2 bg-blue-500 rounded-md hover:bg-blue-600 transition-colors" onClick={saveName} type="button">
                                 <Check className="w-4 h-4" />
                             </button>
                         </div>
                     ) : (
                         <>
-                            <h1 className="text-xl font-bold text-center leading-tight tracking-tight">
-                                {clan.name}
-                            </h1>
+                            <h1 className="text-xl font-bold text-center leading-tight tracking-tight">{clan.name}</h1>
                             {clan.isOwner && (
                                 <button
                                     className="p-1.5 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full hover:bg-white/10"
@@ -420,8 +360,7 @@ export default function ClanPage() {
                 </div>
 
                 <p className="text-gray-400 text-sm text-center max-w-xs mx-auto mb-8 leading-relaxed">
-                    Участники клана повышают уровень группы и открывают дополнительные
-                    возможности.
+                    Участники клана повышают уровень группы и открывают дополнительные возможности.
                 </p>
 
                 {/* Level Stats Bar */}
@@ -430,16 +369,12 @@ export default function ClanPage() {
                         <span>Уровень {clan.level}</span>
                         <span>Уровень {clan.nextLevel}</span>
                     </div>
-
-                    {/* Progress Track */}
                     <div className="h-[6px] bg-[#2c2c2e] rounded-full overflow-hidden w-full relative">
-                        {/* Active Progress */}
                         <div
                             className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(96,165,250,0.5)]"
                             style={{ width: `${clan.progress}%` }}
                         />
                     </div>
-
                     <div className="flex justify-between items-center mt-2 text-[10px] text-gray-500 px-1">
                         <div className="flex gap-3">
                             <span>{clan.membersCount} Участников</span>
@@ -453,34 +388,20 @@ export default function ClanPage() {
             {/* Tabs */}
             <div className="flex justify-center mb-6 border-b border-[#2c2c2e] max-w-sm mx-auto">
                 <button
-                    className={cn(
-                        "pb-3 px-6 text-sm font-medium transition-colors relative",
-                        activeTab === "overview"
-                            ? "text-white"
-                            : "text-gray-500 hover:text-gray-300"
-                    )}
+                    className={cn("pb-3 px-6 text-sm font-medium transition-colors relative", activeTab === "overview" ? "text-white" : "text-gray-500 hover:text-gray-300")}
                     onClick={() => setActiveTab("overview")}
                     type="button"
                 >
                     Обзор
-                    {activeTab === "overview" && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
-                    )}
+                    {activeTab === "overview" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />}
                 </button>
                 <button
-                    className={cn(
-                        "pb-3 px-6 text-sm font-medium transition-colors relative",
-                        activeTab === "members"
-                            ? "text-white"
-                            : "text-gray-500 hover:text-gray-300"
-                    )}
+                    className={cn("pb-3 px-6 text-sm font-medium transition-colors relative", activeTab === "members" ? "text-white" : "text-gray-500 hover:text-gray-300")}
                     onClick={() => setActiveTab("members")}
                     type="button"
                 >
                     Участники
-                    {activeTab === "members" && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
-                    )}
+                    {activeTab === "members" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />}
                 </button>
             </div>
 
@@ -489,16 +410,7 @@ export default function ClanPage() {
                 {activeTab === "overview" && (
                     <div className="space-y-8 animate-in slide-in-from-right-4 fade-in duration-300">
                         {LEVELS.map((lvl) => (
-                            <div
-                                className={cn(
-                                    "transition-opacity duration-300",
-                                    clan.level >= lvl.level
-                                        ? "opacity-100"
-                                        : "opacity-50 grayscale-[0.5]"
-                                )}
-                                key={lvl.level}
-                            >
-                                {/* Pill Header */}
+                            <div className={cn("transition-opacity duration-300", clan.level >= lvl.level ? "opacity-100" : "opacity-50 grayscale-[0.5]")} key={lvl.level}>
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#2c2c2e]" />
                                     <div className="px-5 py-1.5 rounded-full bg-gradient-to-r from-[#7059e3] to-[#9c71e8] text-white text-xs font-bold shadow-lg shadow-purple-900/40">
@@ -506,20 +418,13 @@ export default function ClanPage() {
                                     </div>
                                     <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#2c2c2e]" />
                                 </div>
-
-                                {/* Benefits Items */}
                                 <div className="space-y-4 px-2">
                                     {lvl.benefits.map((benefit) => (
-                                        <div
-                                            className="flex items-start gap-4"
-                                            key={`${lvl.level}-${benefit.text}`}
-                                        >
+                                        <div className="flex items-start gap-4" key={`${lvl.level}-${benefit.text}`}>
                                             <div className="w-6 h-6 rounded-full border border-blue-400/30 flex items-center justify-center bg-blue-500/10 shrink-0">
                                                 <span className="text-xs">{benefit.icon}</span>
                                             </div>
-                                            <div className="text-sm font-medium leading-tight pt-1">
-                                                {benefit.text}
-                                            </div>
+                                            <div className="text-sm font-medium leading-tight pt-1">{benefit.text}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -531,10 +436,7 @@ export default function ClanPage() {
                 {activeTab === "members" && (
                     <div className="space-y-3 animate-in slide-in-from-right-4 fade-in duration-300">
                         {clan.membersList.map((member) => (
-                            <div
-                                className="flex items-center justify-between bg-[#2c2c2e]/50 p-3 rounded-xl border border-[#3a3a3c] mb-2"
-                                key={member.id}
-                            >
+                            <div className="flex items-center justify-between bg-[#2c2c2e]/50 p-3 rounded-xl border border-[#3a3a3c] mb-2" key={member.id}>
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold">
                                         {member.name.substring(0, 2).toUpperCase()}
@@ -542,13 +444,9 @@ export default function ClanPage() {
                                     <div>
                                         <div className="text-sm font-semibold flex items-center gap-1.5">
                                             {member.name}
-                                            {member.role === "owner" && (
-                                                <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                                            )}
+                                            {member.role === "owner" && <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
                                         </div>
-                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
-                                            {member.role}
-                                        </div>
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{member.role}</div>
                                     </div>
                                 </div>
                                 {member.isPro && (
@@ -570,17 +468,12 @@ export default function ClanPage() {
                         <div className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-300 truncate font-mono outline-none">
                             t.me/aporto_bot?start=clan_{clan.inviteCode}
                         </div>
-                        {/* Circle Button for Copy */}
                         <button
                             className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
                             onClick={handleCopy}
                             type="button"
                         >
-                            {copied ? (
-                                <Check className="w-5 h-5 text-white" />
-                            ) : (
-                                <Copy className="w-5 h-5 text-white" />
-                            )}
+                            {copied ? <Check className="w-5 h-5 text-white" /> : <Copy className="w-5 h-5 text-white" />}
                         </button>
                     </div>
 
@@ -608,6 +501,7 @@ declare global {
                     user?: { id: number; first_name: string; username?: string };
                     start_param?: string;
                 };
+                ready: () => void;
                 expand: () => void;
                 switchInlineQuery: (query: string, types?: string[]) => void;
                 platform?: string;
