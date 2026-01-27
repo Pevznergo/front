@@ -469,6 +469,32 @@ export async function initDatabase() {
       )
     `;
 
+    // Clans Table (New)
+    await sql`
+      CREATE TABLE IF NOT EXISTS clans (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        invite_code VARCHAR(50) UNIQUE NOT NULL,
+        level INTEGER DEFAULT 1 NOT NULL,
+        owner_id INTEGER REFERENCES "User"(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // User extensions for Clans
+    try {
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_id INTEGER`; // REFERENCES clans(id) added via separate constraint usually, or implied if simple
+      // Add constraint if not exists is hard in raw SQL without block, so skipping explicit constraint for now or using simple ADD
+      // Ideally:
+      // await sql`ALTER TABLE "User" ADD CONSTRAINT fk_user_clan FOREIGN KEY (clan_id) REFERENCES clans(id) ON DELETE SET NULL`;
+    } catch (e) {
+      console.warn("User clan_id column logic:", e);
+    }
+
+    try {
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_role VARCHAR(50) DEFAULT 'member'`;
+    } catch (e) { }
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)

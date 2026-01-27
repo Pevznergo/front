@@ -1,421 +1,615 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import SlotMachine from '@/components/webapp/SlotMachine'
-import DailyBonus from '@/components/webapp/DailyBonus'
-import { Loader2, Gift, Target, Coins } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
-import WinModal from '@/components/webapp/WinModal'
-import PrizesModal from '@/components/webapp/PrizesModal'
-import TasksModal from '@/components/webapp/TasksModal'
+import {
+    ArrowRight,
+    Check,
+    Copy,
+    Crown,
+    Loader2,
+    Pencil,
+    Plus,
+    Share2,
+    Shield,
+    Star,
+    Zap,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils"; // Assuming utils.ts exists in front/lib
+import {
+    createClan,
+    getUserClanInfo, // mapped from fetchClanData
+    joinClan,
+    updateClanName,
+} from "./actions";
 
-// Define types locally for now
-interface Prize {
-    id: number
-    name: string
-    probability: string
-    type: string
-    value: string
-    image_url?: string
+// Levels Config (Frontend Display)
+const LEVELS = [
+    {
+        level: 1,
+        benefits: [
+            { text: "15 бесплатных запросов / неделю", icon: "⚡" },
+            { text: "Доступ к базовым моделям", icon: "🤖" },
+            { text: "7 цветов для названия клана", icon: "🎨" },
+        ],
+    },
+    {
+        level: 2,
+        benefits: [
+            { text: "30 бесплатных запросов / неделю", icon: "⚡" },
+            { text: "Приоритетная очередь", icon: "🚀" },
+            { text: "7 цветовых схем для ссылок", icon: "🔗" },
+        ],
+    },
+    {
+        level: 3,
+        benefits: [
+            { text: "50 бесплатных запросов / неделю", icon: "⚡" },
+            { text: "3 генерации изображений", icon: "🎨" },
+            { text: "Авто-перевод сообщений", icon: "🌐" },
+        ],
+    },
+    {
+        level: 5,
+        benefits: [
+            { text: "Безлимит GPT-5 Nano", icon: "♾️" },
+            { text: "Безлимит Gemini Flash", icon: "♾️" },
+            { text: "10 генераций изображений", icon: "🎨" },
+        ],
+    },
+];
+
+type ClanMember = {
+    id: string;
+    name: string;
+    role: string;
+    isPro: boolean;
+};
+
+type ClanData = {
+    id: string;
+    name: string;
+    level: number;
+    membersCount: number;
+    proMembersCount: number;
+    // nextLevel, progress, nextLevelRequirements - calculated on frontend or backend?
+    // backend getUserClanInfo returns: id, name, level, totalMembers, proMembers, inviteCode, membersList
+    // We need to calculate progress etc here or update backend to return it.
+    // The new backend `getUserClanInfo` (my implementation) returns minimal data.
+    // Let's implement helpers to calculate UI fields if backend misses them.
+    inviteCode: string;
+    membersList: ClanMember[];
+};
+
+// UI Helpers (since my simplified backend doesn't return these)
+function getNextLevelRequirements(level: number, members: number, pros: number) {
+    if (level >= 5) return "MAX LEVEL";
+    // Logic from newchat actions:
+    if (level === 4) return `Нужно еще ${Math.max(0, 15 - members)} чел. и ${Math.max(0, 3 - pros)} Pro`;
+    if (level === 3) return `Нужно еще ${Math.max(0, 2 - pros)} Pro`;
+    if (level === 2) return `Нужно еще ${Math.max(0, 10 - members)} чел. и 1 Pro`;
+    return `Нужно еще ${Math.max(0, 2 - members)} чел.`;
 }
 
-interface UserData {
-    telegram_id: number | string
-    first_name: string
-    points: number
+function getProgress(level: number, members: number, pros: number): number {
+    // Simple mock progress based on requirements
+    // This is purely visual.
+    if (level === 1) return Math.min(100, (members / 2) * 100);
+    return 0; // TODO improve
 }
 
-export default function WebAppPage() {
-    const [initData, setInitData] = useState<string>('')
-    const [user, setUser] = useState<UserData | null>(null)
-    const [prizes, setPrizes] = useState<Prize[]>([])
-    const [loading, setLoading] = useState(true)
-    const [spinning, setSpinning] = useState(false)
-    const [winIndex, setWinIndex] = useState<number | null>(null)
-    const [winResult, setWinResult] = useState<Prize | null>(null)
-    const [isPrizesOpen, setIsPrizesOpen] = useState(false)
-    const [isTasksOpen, setIsTasksOpen] = useState(false)
+export default function ClanPage() {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [clan, setClan] = useState<(ClanData & { nextLevel: number, progress: number, nextLevelRequirements: string, isOwner: boolean }) | null>(null);
+    const [inClan, setInClan] = useState(false);
 
-    // Daily Bonus State
-    const [isDailyOpen, setIsDailyOpen] = useState(false);
-    const [dailyStreak, setDailyStreak] = useState(1);
-    const [lastDailyDate, setLastDailyDate] = useState<string | null>(null); // ISO date
-    const [isDailyAvailable, setIsDailyAvailable] = useState(false);
+    // UI State
+    const [activeTab, setActiveTab] = useState<"overview" | "members">(
+        "overview"
+    );
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState("");
+    const [copied, setCopied] = useState(false);
 
-    // Countdown Timer Logic
-    const [timeLeft, setTimeLeft] = useState("");
+    // Creation / Join State
+    const [createName, setCreateName] = useState("");
+    const [joinCode, setJoinCode] = useState("");
+    const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        // Initialize WebApp (Visuals Only)
-        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-            const tg = (window as any).Telegram.WebApp
-            tg.ready()
-            tg.expand() // Fullscreen
-            tg.setHeaderColor('#FF4500'); // Orange header
-
-            const rawInitData = tg.initData
-            setInitData(rawInitData)
-
-            // RESTORED AUTH: Attempt to get real user data
-            fetch('/api/webapp/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: rawInitData })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.user) {
-                        setUser(data.user)
-                        // Fix: Don't force 1 if streak is 0. Use 0 for new users.
-                        setDailyStreak(data.user.daily_streak ?? 0)
-
-                        let lastDate = data.user.last_daily_claim;
-
-                        // Rule: If no last claim (new user), check registration date.
-                        // "For 1 day one can receive only on the next day after registration"
-                        if (!lastDate && data.user.created_at) {
-                            const created = new Date(data.user.created_at);
-                            const now = new Date();
-                            if (created.toDateString() === now.toDateString()) {
-                                // Registered today -> Treat as "claimed today" (locked)
-                                lastDate = data.user.created_at;
-                            }
-                        }
-
-                        setLastDailyDate(lastDate)
-
-                        // Check availability based on resolved lastDate
-                        let available = false;
-                        if (!lastDate) {
-                            available = true;
-                        } else {
-                            const last = new Date(lastDate).toDateString()
-                            const today = new Date().toDateString()
-                            available = (last !== today)
-                        }
-                        setIsDailyAvailable(available)
-
-                        // Auto-open if available
-                        if (available) {
-                            setIsDailyOpen(true)
-                        }
-                    }
-                })
-                .catch(err => console.error("Auth failed, using mock:", err))
-            // 3. Real Data Fetch for Prizes
-            setLoading(true);
-            fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}&t=${Date.now()}`)
-                .then(async res => {
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.error || 'Network response was not ok');
-                    }
-                    const data = await res.json();
-                    if (data.activePrizes) {
-                        setPrizes(data.activePrizes);
-                    }
-                })
-                .catch(err => {
-                    console.error("Failed to fetch prizes", err);
-                    alert(`Failed to load prizes: ${err.message}`);
-                })
-                .finally(() => setLoading(false));
-        } else {
-            // Non-Telegram environment
-            setLoading(false);
-            // Leave empty to show "No prizes" state instead of confusing mocks
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+            window.Telegram.WebApp.expand();
         }
 
-        // Timer
-        const updateTimer = () => {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
+        const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
 
-            const diff = tomorrow.getTime() - now.getTime();
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const minutes = Math.floor((diff / (1000 * 60)) % 60);
-            const seconds = Math.floor((diff / 1000) % 60);
+        async function load() {
+            try {
+                const res = await getUserClanInfo(initData || "");
 
-            setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-        };
-        const timer = setInterval(updateTimer, 1000);
-        updateTimer();
-        return () => clearInterval(timer);
+                if (res.error) {
+                    setError(res.error);
+                } else if (res.hasClan && res.clan) {
+                    setInClan(true);
 
-    }, [])
+                    // Enrich data
+                    const c = res.clan;
+                    const nextLevel = c.level < 5 ? c.level + 1 : 5;
+                    const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
+                    const progress = getProgress(c.level, c.totalMembers, c.proMembers);
 
-    const [pendingPrize, setPendingPrize] = useState<Prize | null>(null)
-
-    const handleSpin = async () => {
-        if (spinning || !user || user.points < 10) return
-
-        // 1. Optimistic Update (Instant feedback)
-        setUser(prev => prev ? { ...prev, points: prev.points - 10 } : null)
-
-        setSpinning(true)
-        setWinIndex(null)
-        setWinResult(null)
-        setPendingPrize(null)
-
-        try {
-            // MOCK SPIN RESPONSE (Simulate Network)
-            await new Promise(resolve => setTimeout(resolve, 500)); // 0.5s network delay
-
-            // Real Spin API
-            const res = await fetch('/api/webapp/spin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                if (typeof data.points === 'number') {
-                    setUser(prev => prev ? { ...prev, points: data.points } : null)
-                }
-
-                // Find index of prize from the updated prize list
-                const idx = prizes.findIndex(p => p.id === data.prize.id)
-                if (idx !== -1) {
-                    setWinIndex(idx)
-                    setPendingPrize(data.prize)
+                    setClan({
+                        ...c,
+                        membersCount: c.totalMembers,
+                        proMembersCount: c.proMembers,
+                        nextLevel,
+                        progress,
+                        nextLevelRequirements: reqs,
+                        isOwner: res.userRole === 'owner',
+                        membersList: c.membersList
+                    });
+                    setEditedName(c.name);
                 } else {
-                    // Fallback if prize not found in local list (e.g. was just added)
-                    // We just show the prize data returned from server
-                    setWinIndex(0); // Default to first item just to spin
-                    setPendingPrize(data.prize);
+                    // Not in clan, show No Clan UI
+                    setInClan(false);
                 }
-            } else {
-                alert(data.error || 'Error spinning')
-                setSpinning(false)
+            } catch (err) {
+                console.error(err);
+                setError("Не удалось загрузить данные клана.");
+            } finally {
+                setLoading(false);
             }
-        } catch (e) {
-            console.error(e)
-            setSpinning(false)
         }
-    }
 
-    const onSpinEnd = useCallback(() => {
-        setSpinning(false)
-        // Wait a moment after stopping before showing the modal (Fixation effect)
-        setTimeout(() => {
-            setWinResult(pendingPrize)
-            setWinIndex(null)
-            setPendingPrize(null)
-        }, 1200);
-    }, [pendingPrize])
+        load();
+    }, []);
 
-    // Real Daily Bonus Handler
-    const handleDailyClaim = async () => {
-        try {
-            const res = await fetch('/api/webapp/claim-daily', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData })
-            })
-            const data = await res.json()
-
-            if (data.success) {
-                setUser(prev => prev ? { ...prev, points: data.points } : null);
-                setDailyStreak(data.streak);
-                setLastDailyDate(new Date().toISOString());
-                setIsDailyAvailable(false);
-                setIsDailyOpen(false);
-            } else {
-                alert(data.error || 'Ошибка получения бонуса');
-            }
-        } catch (e) {
-            console.error(e)
-            alert('Ошибка сети');
+    const handleCopy = () => {
+        if (!clan) {
+            return;
         }
-    }
+        navigator.clipboard.writeText(
+            `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`
+        );
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
-    const canSpin = (user?.points || 0) >= 10;
+    const handleShare = () => {
+        if (!clan) {
+            return;
+        }
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.switchInlineQuery(clan.inviteCode, [
+                "users",
+                "groups",
+                "channels",
+            ]);
+        } else {
+            const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
+            window.open(url, "_blank");
+        }
+    };
 
-    if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FF4500]"><Loader2 className="animate-spin text-white" /></div>
+    const saveName = async () => {
+        if (!clan || !editedName.trim()) {
+            return;
+        }
+        const oldName = clan.name;
+        setClan((prev) => (prev ? { ...prev, name: editedName } : null));
+        setIsEditing(false);
 
-    // Removed the "Open in Telegram" check for this Test Mode
+        const initData = window.Telegram?.WebApp?.initData || "";
+        const res = await updateClanName(initData, editedName);
 
-    return (
-        <div className="flex flex-col h-screen bg-gradient-to-b from-[#FF4500] to-[#FF5500] overflow-hidden relative font-sans">
+        if (!res.success) {
+            setClan((prev) => (prev ? { ...prev, name: oldName } : null));
+            console.error(`Failed to update name: ${res.error || "Unknown error"}`);
+        }
+    };
 
-            {/* 1. Main Background Content: Slot Machine (Full Screen) */}
-            <div className="absolute inset-0 z-0">
-                {prizes.length > 0 && (
-                    <SlotMachine
-                        prizes={prizes}
-                        spinning={spinning}
-                        winIndex={winIndex}
-                        onSpinEnd={onSpinEnd}
-                    />
-                )}
+    const handleCreateClan = async () => {
+        if (!createName.trim()) {
+            return;
+        }
+        setActionLoading(true);
+        const initData = window.Telegram?.WebApp?.initData || "";
+        const res = await createClan(initData, createName);
+        setActionLoading(false);
+
+        if (res.success) {
+            window.location.reload();
+        } else {
+            console.error(`Failed: ${res.error}`);
+        }
+    };
+
+    const handleJoinClan = async () => {
+        if (!joinCode.trim()) {
+            return;
+        }
+        setActionLoading(true);
+        const initData = window.Telegram?.WebApp?.initData || "";
+        const res = await joinClan(initData, joinCode);
+        setActionLoading(false);
+
+        if (res.success) {
+            window.location.reload();
+        } else {
+            console.error(`Failed: ${res.error}`);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
+        );
+    }
 
-            {/* 2. UI Overlay Layer - Hidden during spin */}
-            <div className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-500 ${spinning ? 'opacity-0' : 'opacity-100'}`}>
+    // --- No Clan View ---
+    if (!inClan && !error) {
+        return (
+            <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden p-6 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 ring-1 ring-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                    <Shield className="w-8 h-8 text-blue-400" />
+                </div>
 
-                {/* Top Right: Balance */}
-                <div className="absolute top-4 right-4 pointer-events-auto">
-                    <div className="bg-black/40 backdrop-blur-md rounded-2xl pl-3 pr-2 py-1.5 flex items-center gap-2 border border-white/10 shadow-lg group active:scale-95 transition-transform">
-                        <span className="font-black text-xl text-white tracking-wider leading-none pt-0.5">{user?.points || 0}</span>
-                        <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
-                            <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
-                        </div>
+                <h1 className="text-2xl font-bold mb-2 text-center">
+                    Присоединяйтесь к битве
+                </h1>
+                <p className="text-gray-400 text-center mb-10 max-w-xs text-sm">
+                    Создайте клан, чтобы получать бонусы, или вступите по коду
+                    приглашения.
+                </p>
+
+                {/* Create Section */}
+                <div className="w-full max-w-sm space-y-3 mb-8">
+                    <input
+                        className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                        onChange={(e) => setCreateName(e.target.value)}
+                        placeholder="Название клана"
+                        type="text"
+                        value={createName}
+                    />
+                    <button
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={actionLoading || !createName.trim()}
+                        onClick={handleCreateClan}
+                        type="button"
+                    >
+                        {actionLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <Plus className="w-5 h-5" />
+                        )}
+                        Создать клан
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 w-full max-w-sm mb-8">
+                    <div className="h-[1px] bg-[#2c2c2e] flex-1" />
+                    <span className="text-gray-500 text-xs uppercase font-medium">
+                        ИЛИ
+                    </span>
+                    <div className="h-[1px] bg-[#2c2c2e] flex-1" />
+                </div>
+
+                {/* Join Section */}
+                <div className="w-full max-w-sm space-y-3">
+                    <div className="relative">
+                        <input
+                            className="w-full bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors"
+                            onChange={(e) => setJoinCode(e.target.value)}
+                            placeholder="Код приглашения (например: CLAN-XYZ)"
+                            style={{ textTransform: "uppercase" }}
+                            type="text"
+                            value={joinCode}
+                        />
+                    </div>
+                    <button
+                        className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                        disabled={actionLoading || !joinCode.trim()}
+                        onClick={handleJoinClan}
+                        type="button"
+                    >
+                        {actionLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <ArrowRight className="w-5 h-5" />
+                        )}
+                        Вступить по коду
+                    </button>
+                </div>
+
+                <div className="mt-8 text-center">
+                    <p className="text-xs text-gray-500">
+                        Получили ссылку? <br /> Откройте ее в Telegram для автоматического
+                        вступления.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !clan) {
+        return (
+            <div className="min-h-screen bg-[#1c1c1e] flex items-center justify-center text-white p-4 text-center">
+                <div>
+                    <p className="mb-4 text-red-400 font-bold">
+                        {error || "Что-то пошло не так"}
+                    </p>
+                    <div className="text-xs text-gray-500 mb-4 bg-black/20 p-2 rounded text-left overflow-auto max-w-[300px] break-all">
+                        <p>
+                            URL:{" "}
+                            {typeof window !== "undefined" ? window.location.href : "N/A"}
+                        </p>
+                        <p>
+                            User ID:{" "}
+                            {(typeof window !== "undefined" &&
+                                window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
+                                "Missing"}
+                        </p>
+                    </div>
+                    <button
+                        className="bg-[#2c2c2e] px-4 py-2 rounded-lg text-sm"
+                        onClick={() => window.location.reload()}
+                        type="button"
+                    >
+                        Повторить
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- Clan View ---
+    return (
+        <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden selection:bg-blue-500/30">
+            {/* Header */}
+            <div className="flex flex-col items-center pt-10 pb-6 px-4">
+                {/* Icon */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative w-16 h-16">
+                        <Zap
+                            className="w-16 h-16 text-white rotate-12 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                            fill="currentColor"
+                            strokeWidth={1.5}
+                        />
                     </div>
                 </div>
 
-                {/* Right Column: Actions */}
-                <div className="absolute top-20 right-4 flex flex-col gap-6 items-center pointer-events-auto">
-
-                    {/* Prizes */}
-                    <button
-                        onClick={() => setIsPrizesOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
-                    >
-                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <Gift className="w-6 h-6 text-green-300 drop-shadow-md" />
+                {/* Title / Edit */}
+                <div className="flex items-center justify-center gap-2 mb-2 w-full max-w-sm">
+                    {isEditing ? (
+                        <div className="flex items-center gap-2 w-full animate-in fade-in zoom-in-95 bg-[#2c2c2e] rounded-lg p-1 ring-2 ring-blue-500">
+                            <input
+                                autoFocus
+                                className="bg-transparent border-none outline-none text-xl font-bold text-center w-full px-2"
+                                onChange={(e) => setEditedName(e.target.value)}
+                                type="text"
+                                value={editedName}
+                            />
+                            <button
+                                className="p-2 bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
+                                onClick={saveName}
+                                type="button"
+                            >
+                                <Check className="w-4 h-4" />
+                            </button>
                         </div>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Призы</span>
-                    </button>
+                    ) : (
+                        <>
+                            <h1 className="text-xl font-bold text-center leading-tight tracking-tight">
+                                {clan.name}
+                            </h1>
+                            {clan.isOwner && (
+                                <button
+                                    className="p-1.5 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full hover:bg-white/10"
+                                    onClick={() => setIsEditing(true)}
+                                    type="button"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
 
-                    {/* Tasks */}
-                    <button
-                        onClick={() => setIsTasksOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
-                    >
-                        <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <Target className="w-6 h-6 text-white drop-shadow-md" />
+                <p className="text-gray-400 text-sm text-center max-w-xs mx-auto mb-8 leading-relaxed">
+                    Участники клана повышают уровень группы и открывают дополнительные
+                    возможности.
+                </p>
+
+                {/* Level Stats Bar */}
+                <div className="w-full max-w-sm">
+                    <div className="flex justify-between text-xs text-blue-300 font-medium mb-2 px-1">
+                        <span>Уровень {clan.level}</span>
+                        <span>Уровень {clan.nextLevel}</span>
+                    </div>
+
+                    {/* Progress Track */}
+                    <div className="h-[6px] bg-[#2c2c2e] rounded-full overflow-hidden w-full relative">
+                        {/* Active Progress */}
+                        <div
+                            className="h-full bg-gradient-to-r from-blue-400 to-purple-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(96,165,250,0.5)]"
+                            style={{ width: `${clan.progress}%` }}
+                        />
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2 text-[10px] text-gray-500 px-1">
+                        <div className="flex gap-3">
+                            <span>{clan.membersCount} Участников</span>
+                            <span>{clan.proMembersCount} Pro</span>
                         </div>
-                        <div className="flex flex-col items-center leading-none gap-0.5">
-                            <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Задания</span>
-                            <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">и игры</span>
-                        </div>
-                    </button>
-
-                    {/* Daily Login + Timer */}
-                    <button
-                        onClick={() => setIsDailyOpen(true)}
-                        className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
-                    >
-                        {isDailyAvailable ? (
-                            <>
-                                {/* READY TO CLAIM STATE */}
-                                <div className="w-14 h-14 bg-gradient-to-b from-[#ff9500] to-[#ff5e00] rounded-2xl border-2 border-white/50 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(255,165,0,0.6)] relative overflow-hidden animate-pulse">
-                                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                    <Coins className="w-6 h-6 text-white drop-shadow-md mb-0.5" />
-                                    <div className="bg-black/80 px-1 rounded text-[7px] font-black uppercase text-white tracking-widest leading-tight py-0.5">
-                                        ЗАБИРАЙТЕ
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center leading-none gap-0.5 mt-1">
-                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md text-[#ffcc00]">Монетки</span>
-                                    <span className="text-[9px] font-bold text-white/90 uppercase tracking-wide drop-shadow-md">за вход</span>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                {/* WAITING STATE */}
-                                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex items-center justify-center shadow-lg relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <Coins className="w-6 h-6 text-yellow-400 drop-shadow-md" />
-
-                                    {/* Timer Overlay Tag */}
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] font-mono text-white text-center py-[2px] backdrop-blur-[1px]">
-                                        {timeLeft}
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center leading-none gap-0.5">
-                                    <span className="text-[10px] font-bold text-white uppercase tracking-wide drop-shadow-md">Монетки</span>
-                                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-wide drop-shadow-md">за вход</span>
-                                </div>
-                            </>
-                        )}
-                    </button>
-
+                        <span>{clan.nextLevelRequirements}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Bottom: Spin Button Pinned */}
-            <div className="absolute bottom-8 left-6 right-6 z-30 pointer-events-auto">
+            {/* Tabs */}
+            <div className="flex justify-center mb-6 border-b border-[#2c2c2e] max-w-sm mx-auto">
                 <button
-                    onClick={handleSpin}
-                    disabled={spinning || !canSpin}
-                    className={`
-                        w-full h-[52px] rounded-2xl font-black text-2xl uppercase tracking-widest italic flex items-center justify-center gap-3
-                        shadow-[0_4px_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[4px]
-                        transition-all duration-200
-                        ${!canSpin
-                            ? 'bg-black text-white' // Black bg, White text for idle
-                            : 'bg-black text-white' // Always Black for Spin
-                        }
-                    `}
+                    className={cn(
+                        "pb-3 px-6 text-sm font-medium transition-colors relative",
+                        activeTab === "overview"
+                            ? "text-white"
+                            : "text-gray-500 hover:text-gray-300"
+                    )}
+                    onClick={() => setActiveTab("overview")}
+                    type="button"
                 >
-                    {spinning ? (
-                        <>
-                            <Loader2 className="animate-spin mr-2" />
-                            <span className="animate-pulse opacity-50">КРУТИМ...</span>
-                        </>
-                    ) : canSpin ? (
-                        <>
-                            <span>ВРАЩАТЬ ЗА 10</span>
-                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
-                                <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <span>НУЖНО 10</span>
-                            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
-                                <span className="font-serif font-bold text-yellow-700 text-xs">$</span>
-                            </div>
-                        </>
+                    Обзор
+                    {activeTab === "overview" && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
                     )}
                 </button>
-                <p className="text-center text-white/40 text-[9px] mt-3 uppercase tracking-wider font-bold">
-                    Нажимая «Вращать», я соглашаюсь с <a href="#" className="underline hover:text-white">Правилами</a>
-                </p>
+                <button
+                    className={cn(
+                        "pb-3 px-6 text-sm font-medium transition-colors relative",
+                        activeTab === "members"
+                            ? "text-white"
+                            : "text-gray-500 hover:text-gray-300"
+                    )}
+                    onClick={() => setActiveTab("members")}
+                    type="button"
+                >
+                    Участники
+                    {activeTab === "members" && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-full" />
+                    )}
+                </button>
             </div>
 
-            {/* Daily Bonus Modal */}
-            <DailyBonus
-                isOpen={isDailyOpen}
-                onClose={() => setIsDailyOpen(false)}
-                streak={dailyStreak}
-                onClaim={handleDailyClaim}
-                lastClaimDate={lastDailyDate}
-            />
+            {/* Content */}
+            <div className="px-4 pb-48 max-w-sm mx-auto">
+                {activeTab === "overview" && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 fade-in duration-300">
+                        {LEVELS.map((lvl) => (
+                            <div
+                                className={cn(
+                                    "transition-opacity duration-300",
+                                    clan.level >= lvl.level
+                                        ? "opacity-100"
+                                        : "opacity-50 grayscale-[0.5]"
+                                )}
+                                key={lvl.level}
+                            >
+                                {/* Pill Header */}
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#2c2c2e]" />
+                                    <div className="px-5 py-1.5 rounded-full bg-gradient-to-r from-[#7059e3] to-[#9c71e8] text-white text-xs font-bold shadow-lg shadow-purple-900/40">
+                                        Доступно на уровне {lvl.level}:
+                                    </div>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#2c2c2e]" />
+                                </div>
 
-            {/* Tasks Modal */}
-            <TasksModal
-                isOpen={isTasksOpen}
-                onClose={() => setIsTasksOpen(false)}
-                initData={initData}
-            />
-
-            {/* Win Modal */}
-            <AnimatePresence>
-                {/* Prizes Modal */}
-                <PrizesModal
-                    isOpen={isPrizesOpen}
-                    onClose={() => setIsPrizesOpen(false)}
-                    initData={initData}
-                />
-
-                {winResult && !spinning && (
-                    <WinModal
-                        prize={winResult}
-                        onClose={() => {
-                            setWinResult(null)
-                            // Also reset spin state here just in case, though onSpinEnd handles it
-                        }}
-                    />
+                                {/* Benefits Items */}
+                                <div className="space-y-4 px-2">
+                                    {lvl.benefits.map((benefit) => (
+                                        <div
+                                            className="flex items-start gap-4"
+                                            key={`${lvl.level}-${benefit.text}`}
+                                        >
+                                            <div className="w-6 h-6 rounded-full border border-blue-400/30 flex items-center justify-center bg-blue-500/10 shrink-0">
+                                                <span className="text-xs">{benefit.icon}</span>
+                                            </div>
+                                            <div className="text-sm font-medium leading-tight pt-1">
+                                                {benefit.text}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
-            </AnimatePresence>
 
+                {activeTab === "members" && (
+                    <div className="space-y-3 animate-in slide-in-from-right-4 fade-in duration-300">
+                        {clan.membersList.map((member) => (
+                            <div
+                                className="flex items-center justify-between bg-[#2c2c2e]/50 p-3 rounded-xl border border-[#3a3a3c] mb-2"
+                                key={member.id}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold">
+                                        {member.name.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold flex items-center gap-1.5">
+                                            {member.name}
+                                            {member.role === "owner" && (
+                                                <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                            )}
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+                                            {member.role}
+                                        </div>
+                                    </div>
+                                </div>
+                                {member.isPro && (
+                                    <div className="bg-purple-500/20 px-2 py-1 rounded text-purple-300 text-[10px] font-bold flex items-center gap-1">
+                                        <Star className="w-3 h-3 fill-purple-300" />
+                                        PRO
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer / Invite */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#1c1c1e] border-t border-[#2c2c2e]/50 backdrop-blur-xl z-10 pb-12">
+                <div className="max-w-md mx-auto space-y-3">
+                    <div className="bg-[#2c2c2e] p-1 rounded-xl flex items-center gap-2 pr-2">
+                        <div className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-300 truncate font-mono outline-none">
+                            t.me/aporto_bot?start=clan_{clan.inviteCode}
+                        </div>
+                        {/* Circle Button for Copy */}
+                        <button
+                            className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
+                            onClick={handleCopy}
+                            type="button"
+                        >
+                            {copied ? (
+                                <Check className="w-5 h-5 text-white" />
+                            ) : (
+                                <Copy className="w-5 h-5 text-white" />
+                            )}
+                        </button>
+                    </div>
+
+                    <button
+                        className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(59,130,246,0.3)] active:scale-[0.98]"
+                        onClick={handleShare}
+                        type="button"
+                    >
+                        <Share2 className="w-5 h-5" />
+                        Поделиться
+                    </button>
+                </div>
+            </div>
         </div>
-    )
+    );
+}
+
+// Global declaration for Telegram WebApp
+declare global {
+    interface Window {
+        Telegram?: {
+            WebApp?: {
+                initData: string;
+                initDataUnsafe: {
+                    user?: { id: number; first_name: string; username?: string };
+                    start_param?: string;
+                };
+                expand: () => void;
+                switchInlineQuery: (query: string, types?: string[]) => void;
+                platform?: string;
+            };
+        };
+    }
 }
