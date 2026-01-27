@@ -121,7 +121,9 @@ export default function ClanPage() {
             window.Telegram.WebApp.expand();
         }
 
+        // Move initData check inside useEffect to ensure window is available
         const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
+        console.log("ClanPage mounted. InitData length:", initData?.length);
 
         async function load() {
             try {
