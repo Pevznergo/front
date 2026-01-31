@@ -476,10 +476,22 @@ export async function initDatabase() {
         name VARCHAR(255) UNIQUE NOT NULL,
         invite_code VARCHAR(50) UNIQUE NOT NULL,
         level INTEGER DEFAULT 1 NOT NULL,
-        owner_id UUID REFERENCES "User"(id),
+        owner_id INTEGER REFERENCES "User"(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // FIX: Ensure owner_id is INTEGER (Matching User.id SERIAL)
+    try {
+      // Drop FK if exists (to allow type change)
+      await sql`ALTER TABLE clans DROP CONSTRAINT IF EXISTS clans_owner_id_fkey`;
+      // Change type to INTEGER
+      await sql`ALTER TABLE clans ALTER COLUMN owner_id TYPE INTEGER USING owner_id::integer`;
+      // Re-add FK
+      await sql`ALTER TABLE clans ADD CONSTRAINT clans_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES "User"(id)`;
+    } catch (e) {
+      console.warn("Fix owner_id type warning:", e);
+    }
 
     // User extensions for Clans
     try {
