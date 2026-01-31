@@ -51,19 +51,27 @@ function validateTelegramData(initData: string) {
 
     // Validate hash
     const isValid = verifyTelegramWebAppData(initData);
-    if (!isValid) return { success: false, error: 'Invalid hash' };
+    if (!isValid) {
+        console.warn('[Validation] Hash verification failed for:', initData.substring(0, 50) + '...');
+        return { success: false, error: 'Invalid hash' };
+    }
 
     // Parse user
     try {
         const urlParams = new URLSearchParams(initData);
         const userStr = urlParams.get('user');
+        console.log('[Validation] Params parsed. UserStr present:', !!userStr);
+
         if (!userStr) return { success: false, error: 'No user data' };
 
         const user = JSON.parse(userStr);
+        console.log('[Validation] User object parsed. ID:', user.id);
+
         if (!user.id) return { success: false, error: 'No user ID' };
 
         return { success: true, userId: user.id.toString(), username: user.username, firstName: user.first_name };
     } catch (e) {
+        console.error('[Validation] Parse error:', e);
         return { success: false, error: 'Parse error' };
     }
 }
@@ -166,14 +174,20 @@ export async function fetchClanData(initData: string) {
 }
 
 export async function createClan(initData: string, name: string) {
+    console.log('[CreateClan] Action started. Name:', name);
     const validation = validateTelegramData(initData);
-    if (!validation.success) return { success: false, error: validation.error };
+    if (!validation.success) {
+        console.error('[CreateClan] Validation failed:', validation.error);
+        return { success: false, error: validation.error };
+    }
 
     const telegramId = validation.userId;
+    console.log('[CreateClan] Validated User:', telegramId);
 
     try {
         const users = await sql`SELECT * FROM "User" WHERE "telegramId" = ${telegramId}`;
         const user = users[0];
+        console.log('[CreateClan] DB User found:', !!user, 'ID:', user?.id, 'Current ClanID:', user?.clan_id);
 
         if (!user) return { success: false, error: 'User not found' };
         if (user.clan_id) return { success: false, error: 'Already in a clan' };
@@ -184,14 +198,17 @@ export async function createClan(initData: string, name: string) {
         // Transaction-like logic (Postgres.js doesn't support strict transactions in `sql` tag easily without `begin`, assume optimistic)
 
         // 1. Create Clan
+        console.log('[CreateClan] Inserting new clan...');
         const newClan = await sql`
             INSERT INTO clans (name, invite_code, owner_id)
             VALUES (${name}, ${inviteCode}, ${user.id})
             RETURNING id
         `;
         const clanId = newClan[0].id;
+        console.log('[CreateClan] Clan created. ID:', clanId);
 
         // 2. Update User (Owner)
+        console.log('[CreateClan] Updating user role...');
         await sql`
             UPDATE "User" 
             SET clan_id = ${clanId}, clan_role = 'owner'
@@ -202,11 +219,11 @@ export async function createClan(initData: string, name: string) {
         return { success: true, clan: { id: clanId } };
 
     } catch (e: any) {
-        console.error('createClan error:', e);
+        console.error('[CreateClan] EXCEPTION:', e);
         if (e.message?.includes('violates unique constraint') || e.code === '23505') {
             return { success: false, error: 'Name already taken' };
         }
-        return { success: false, error: 'Failed to create clan' };
+        return { success: false, error: 'Failed to create clan: ' + e.message };
     }
 }
 
