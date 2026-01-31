@@ -117,36 +117,59 @@ export default function ClanPage() {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        // Initialize Telegram Web App
-        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            try {
-                tg.setHeaderColor('#1c1c1e'); // Match background
-            } catch (e) {
-                console.warn('Failed to set header color', e);
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        const initTelegram = async () => {
+            // Wait for window.Telegram to be available
+            if (typeof window === 'undefined') return;
+
+            // Simple polling to ensure script is loaded
+            while (!window.Telegram?.WebApp && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
-        }
 
-        const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
+            const tg = window.Telegram?.WebApp;
 
-        async function load() {
+            if (tg) {
+                tg.ready();
+                tg.expand();
+                try {
+                    tg.setHeaderColor('#1c1c1e');
+                } catch (e) {
+                    console.warn('Failed to set header color', e);
+                }
+            } else {
+                console.error("Telegram WebApp not found after polling");
+                setError("Telegram SDK not loaded. Please reload.");
+                setLoading(false);
+                return;
+            }
+
+            const initData = tg.initData;
+
+            // Debug info
+            console.log("WebApp Init:", {
+                platform: tg.platform,
+                initDataLen: initData?.length || 0,
+                user: tg.initDataUnsafe?.user
+            });
+
             if (!initData) {
-                // If no initData, we might be in browser debug mode or just not loaded yet
-                // But usually it should be present if in Telegram.
                 console.warn("No initData found");
+                // Allow proceeding if in development/browser but warn
+                // setError("Missing initData. Are you in Telegram?");
             }
 
             try {
                 const res = await getUserClanInfo(initData || "");
 
                 if (res.error) {
-                    setError(res.error);
+                    setError(`${res.error} (Platform: ${tg.platform || 'unknown'})`);
                 } else if (res.hasClan && res.clan) {
                     setInClan(true);
 
-                    // Enrich data
                     const c = res.clan;
                     const nextLevel = c.level < 5 ? c.level + 1 : 5;
                     const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
@@ -164,7 +187,6 @@ export default function ClanPage() {
                     });
                     setEditedName(c.name);
                 } else {
-                    // Not in clan, show No Clan UI
                     setInClan(false);
                 }
             } catch (err) {
@@ -173,9 +195,9 @@ export default function ClanPage() {
             } finally {
                 setLoading(false);
             }
-        }
+        };
 
-        load();
+        initTelegram();
     }, []);
 
     const handleCopy = () => {
