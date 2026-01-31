@@ -160,7 +160,7 @@ export default function ClanPage() {
                     username: user.username,
                     language_code: 'ru', // Telegram WebApp doesn't always give lang, but we can assume or get it from elsewhere
                 });
-                trackEvent('Page View', { page: 'Clan Page' });
+                trackEvent('Page: View', { page: 'Clan Page' });
             }
 
             if (res.error) {
@@ -189,12 +189,12 @@ export default function ClanPage() {
         );
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        trackEvent('Clan Link Copied', { clan_id: clan.id });
+        trackEvent('Clan: Copy Link', { clan_id: clan.id });
     };
 
     const handleShowQr = async () => {
         if (!clan) return;
-        trackEvent('Clan QR Opened', { clan_id: clan.id });
+        trackEvent('Clan: Open QR', { clan_id: clan.id });
         const link = `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`;
         try {
             const url = await QRCode.toDataURL(link, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
@@ -209,7 +209,7 @@ export default function ClanPage() {
         if (!clan) {
             return;
         }
-        trackEvent('Clan Shared', { clan_id: clan.id });
+        trackEvent('Clan: Share', { clan_id: clan.id });
         const text = "Вступай в мой клан!";
         const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=${encodeURIComponent(text)}`;
 
@@ -245,7 +245,7 @@ export default function ClanPage() {
         setActionLoading(false);
 
         if (res.success) {
-            trackEvent('Clan Created', { name: createName });
+            trackEvent('Clan: Create', { name: createName });
             window.location.reload();
         } else {
             console.error(`Failed: ${res.error}`);
@@ -261,6 +261,7 @@ export default function ClanPage() {
         setActionLoading(false);
 
         if (res.success) {
+            trackEvent('Clan: Join', { code: joinCode });
             window.location.reload();
         } else {
             console.error(`Failed: ${res.error}`);
