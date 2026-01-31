@@ -476,7 +476,7 @@ export async function initDatabase() {
         name VARCHAR(255) UNIQUE NOT NULL,
         invite_code VARCHAR(50) UNIQUE NOT NULL,
         level INTEGER DEFAULT 1 NOT NULL,
-        owner_id UUID REFERENCES "User"(id),
+        owner_id INTEGER REFERENCES "User"(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
