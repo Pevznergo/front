@@ -117,27 +117,13 @@ export default function ClanPage() {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        // Initialize Telegram Web App
         if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            try {
-                tg.setHeaderColor('#1c1c1e'); // Match background
-            } catch (e) {
-                console.warn('Failed to set header color', e);
-            }
+            window.Telegram.WebApp.expand();
         }
 
         const initData = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initData : "";
 
         async function load() {
-            if (!initData) {
-                // If no initData, we might be in browser debug mode or just not loaded yet
-                // But usually it should be present if in Telegram.
-                console.warn("No initData found");
-            }
-
             try {
                 const res = await getUserClanInfo(initData || "");
 
