@@ -30,6 +30,8 @@ import Mixpanel from '@/components/Mixpanel';
 
 // ... imports
 
+import Script from 'next/script';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,6 +39,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className={cn("font-sans antialiased", inter.variable)}>
         <Suspense fallback={null}>
           <GoogleTagManager />
