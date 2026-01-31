@@ -23,6 +23,7 @@ import {
     fetchClanData,
     joinClan,
     updateClanName,
+    kickMember,
 } from "./actions";
 import { trackEvent, identifyUser } from "@/lib/mixpanel";
 
@@ -50,6 +51,14 @@ const LEVELS = [
             { text: "50 бесплатных запросов / неделю", icon: "⚡" },
             { text: "3 генерации изображений", icon: "🎨" },
             { text: "Авто-перевод сообщений", icon: "🌐" },
+        ],
+    },
+    {
+        level: 4,
+        benefits: [
+            { text: "75 бесплатных запросов / неделю", icon: "⚡" },
+            { text: "Приоритетная поддержка", icon: "💎" },
+            { text: "5 генераций изображений", icon: "🎨" },
         ],
     },
     {
@@ -108,6 +117,7 @@ export default function ClanPage() {
     const [createName, setCreateName] = useState("");
     const [joinCode, setJoinCode] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
+    const [creationError, setCreationError] = useState(""); // UI Error State
 
     useEffect(() => {
         const initTelegram = async () => {
@@ -171,6 +181,11 @@ export default function ClanPage() {
                 setEditedName(res.clan.name);
             } else {
                 setInClan(false);
+                // Pre-fill Join Code
+                const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+                if (startParam && startParam.startsWith('clan_')) {
+                    setJoinCode(startParam.replace('clan_', ''));
+                }
             }
         } catch (err) {
             console.error(err);
@@ -240,6 +255,7 @@ export default function ClanPage() {
         if (!createName.trim()) {
             return;
         }
+        setCreationError(""); // Reset error
         setActionLoading(true);
         const res = await createClan(initData, createName);
         setActionLoading(false);
@@ -249,6 +265,14 @@ export default function ClanPage() {
             window.location.reload();
         } else {
             console.error(`Failed: ${res.error}`);
+            // Map simple error codes to user messages
+            if (res.error === "name_taken") {
+                setCreationError("Это имя уже занято. Попробуйте другое.");
+            } else if (res.error === "invalid_name") {
+                setCreationError("Недопустимое имя (минимум 3 символа).");
+            } else {
+                setCreationError("Ошибка создания клана. Попробуйте позже.");
+            }
         }
     };
 
@@ -261,6 +285,11 @@ export default function ClanPage() {
         setActionLoading(false);
 
         if (res.success) {
+            // @ts-ignore
+            if (res.status === 'clan_full_redirect') {
+                // @ts-ignore
+                alert(res.message);
+            }
             trackEvent('Clan: Join', { code: joinCode });
             window.location.reload();
         } else {
@@ -301,6 +330,11 @@ export default function ClanPage() {
                         type="text"
                         value={createName}
                     />
+                    {creationError && (
+                        <p className="text-red-400 text-xs px-1 animate-in slide-in-from-top-1 font-medium">
+                            {creationError}
+                        </p>
+                    )}
                     <button
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={actionLoading || !createName.trim()}
@@ -574,12 +608,27 @@ export default function ClanPage() {
                                         </div>
                                     </div>
                                 </div>
-                                {member.isPro && (
-                                    <div className="bg-purple-500/20 px-2 py-1 rounded text-purple-300 text-[10px] font-bold flex items-center gap-1">
-                                        <Star className="w-3 h-3 fill-purple-300" />
-                                        PRO
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {member.isPro && (
+                                        <div className="bg-purple-500/20 px-2 py-1 rounded text-purple-300 text-[10px] font-bold flex items-center gap-1">
+                                            <Star className="w-3 h-3 fill-purple-300" />
+                                            PRO
+                                        </div>
+                                    )}
+                                    {clan.isOwner && member.role !== 'owner' && (
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('Выгнать этого участника?')) {
+                                                    await kickMember(initData, member.id);
+                                                    window.location.reload();
+                                                }
+                                            }}
+                                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

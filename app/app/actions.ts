@@ -226,7 +226,40 @@ export async function joinClan(initData: string, code: string) {
 
         if (!clan) return { success: false, error: 'Clan not found' };
 
-        // Check limits? (Optional)
+        // Check limits (Max 15)
+        const membersFn = await sql`SELECT count(*) FROM "User" WHERE clan_id = ${clan.id}`;
+        const memberCount = Number(membersFn[0].count);
+
+        if (memberCount >= 15) {
+            // Clan is full -> Auto-create new clan for user
+            const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+            const newName = `My Clan ${randomSuffix}`;
+            const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            // Create Clan
+            const newClan = await sql`
+                INSERT INTO clans (name, invite_code, owner_id)
+                VALUES (${newName}, ${inviteCode}, ${user.id})
+                RETURNING id
+            `;
+            const newClanId = newClan[0].id;
+
+            // Assign User
+            await sql`
+                UPDATE "User"
+                SET clan_id = ${newClanId}, clan_role = 'owner'
+                WHERE id = ${user.id}
+            `;
+
+            revalidatePath('/app');
+            // Special status for frontend handling
+            return {
+                success: true,
+                status: 'clan_full_redirect',
+                clanId: newClanId,
+                message: 'Клан полон (макс 15). Мы создали для вас новый!'
+            };
+        }
 
         // Join
         await sql`
@@ -241,6 +274,39 @@ export async function joinClan(initData: string, code: string) {
     } catch (e) {
         console.error('joinClan error:', e);
         return { success: false, error: 'Failed to join' };
+    }
+}
+
+export async function kickMember(initData: string, targetUserId: string) {
+    const validation = validateTelegramData(initData);
+    if (!validation.success) return { success: false, error: validation.error };
+
+    const telegramId = validation.userId;
+
+    try {
+        // 1. Get Requester (Owner)
+        const users = await sql`SELECT * FROM "User" WHERE "telegramId" = ${telegramId}`;
+        const owner = users[0];
+        if (!owner) return { success: false, error: 'User not found' };
+
+        // 2. Validate Ownership
+        if (owner.clan_role !== 'owner' || !owner.clan_id) {
+            return { success: false, error: 'No permission' };
+        }
+
+        // 3. Kick Target
+        // Ensure target is in the SAME clan
+        await sql`
+            UPDATE "User"
+            SET clan_id = NULL, clan_role = 'member'
+            WHERE id = ${targetUserId} AND clan_id = ${owner.clan_id} AND id != ${owner.id}
+        `;
+
+        revalidatePath('/app');
+        return { success: true };
+    } catch (e) {
+        console.error('kickMember error:', e);
+        return { success: false, error: 'Failed to kick' };
     }
 }
 
