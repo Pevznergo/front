@@ -136,20 +136,13 @@ export async function createClan(initData: string, name: string) {
     if (!validation.success) return { success: false, error: validation.error };
 
     const telegramId = validation.userId;
-    console.log('[createClan] Request from:', telegramId, 'Name:', name);
 
     try {
         const users = await sql`SELECT * FROM "User" WHERE "telegramId" = ${telegramId}`;
         const user = users[0];
 
-        if (!user) {
-            console.log('[createClan] User not found during DB lookup');
-            return { success: false, error: 'User not found' };
-        }
-        if (user.clan_id) {
-            console.log('[createClan] User already has clan:', user.clan_id);
-            return { success: false, error: 'Already in a clan' };
-        }
+        if (!user) return { success: false, error: 'User not found' };
+        if (user.clan_id) return { success: false, error: 'Already in a clan' };
 
         // Generate Code
         const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
