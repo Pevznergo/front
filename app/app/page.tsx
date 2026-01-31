@@ -113,30 +113,24 @@ export default function ClanPage() {
             }
 
             const tg = window.Telegram?.WebApp;
-            let data = "";
-
             if (tg) {
                 tg.ready();
                 tg.expand();
                 try { tg.setHeaderColor('#1c1c1e'); } catch (e) { }
 
-                data = tg.initData;
-            }
+                const data = tg.initData || "";
+                setInitData(data);
 
-            // Fallback: Check Hash for initData (common in inline buttons / direct links)
-            if (!data && window.location.hash) {
-                console.log('[Page] Checking hash for initData...');
-                const hash = window.location.hash.substring(1);
-                const params = new URLSearchParams(hash);
-                const hashData = params.get('tgWebAppData');
-                if (hashData) {
-                    data = hashData;
-                    console.log('[Page] Found initData in hash!');
+                load(data);
+            } else {
+                // Fallback for browser testing (if hash present)
+                // or just fail gently
+                if (window.location.hash.includes('tgWebAppData')) {
+                    // try parse hash
                 }
+                setLoading(false);
+                setError("Telegram SDK not found");
             }
-
-            setInitData(data || "");
-            load(data || "");
         }
 
         initTelegram();
