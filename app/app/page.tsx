@@ -47,14 +47,34 @@ export default function WebAppPage() {
     const [timeLeft, setTimeLeft] = useState("");
 
     useEffect(() => {
-        // Initialize WebApp (Visuals Only)
-        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-            const tg = (window as any).Telegram.WebApp
-            tg.ready()
-            tg.expand() // Fullscreen
-            tg.setHeaderColor('#FF4500'); // Orange header
+        const init = async () => {
+            if (typeof window === 'undefined') return;
 
-            let rawInitData = tg.initData || ""
+            // Wait for Telegram SDK to be ready
+            let tg = (window as any).Telegram?.WebApp;
+            let attempts = 0;
+
+            // Retry loop for SDK availability OR InitData presence
+            while (attempts < 5) {
+                tg = (window as any).Telegram?.WebApp;
+                if (tg && tg.initData) break;
+
+                // Also check Hash availability during retry
+                if (window.location.hash && window.location.hash.includes('tgWebAppData')) break;
+
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+
+            tg = (window as any).Telegram?.WebApp;
+
+            if (tg) {
+                tg.ready();
+                tg.expand();
+                tg.setHeaderColor('#FF4500');
+            }
+
+            let rawInitData = tg?.initData || ""
 
             // Fallback: Check Hash for initData (Fix for Inline Buttons on macOS/Desktop)
             if (!rawInitData && window.location.hash) {
@@ -75,85 +95,60 @@ export default function WebAppPage() {
             setInitData(rawInitData)
 
             // RESTORED AUTH: Attempt to get real user data
-            fetch('/api/webapp/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: rawInitData })
-            })
-                .then(async res => {
-                    if (!res.ok) {
-                        const errBody = await res.json().catch(() => ({}))
-                        throw new Error(errBody.error || "Auth Failed")
-                    }
-                    return res.json()
-                })
-                .then(data => {
-                    if (data.user) {
-                        setUser(data.user)
-                        // Fix: Don't force 1 if streak is 0. Use 0 for new users.
-                        setDailyStreak(data.user.daily_streak ?? 0)
+            try {
+                const res = await fetch('/api/webapp/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData: rawInitData })
+                });
 
-                        let lastDate = data.user.last_daily_claim;
+                if (!res.ok) {
+                    const errBody = await res.json().catch(() => ({}));
+                    throw new Error(errBody.error || "Auth Failed");
+                }
 
-                        // Rule: If no last claim (new user), check registration date.
-                        // "For 1 day one can receive only on the next day after registration"
-                        if (!lastDate && data.user.created_at) {
-                            const created = new Date(data.user.created_at);
-                            const now = new Date();
-                            if (created.toDateString() === now.toDateString()) {
-                                // Registered today -> Treat as "claimed today" (locked)
-                                lastDate = data.user.created_at;
-                            }
-                        }
+                const data = await res.json();
+                if (data.user) {
+                    setUser(data.user)
+                    setDailyStreak(data.user.daily_streak ?? 0)
 
-                        setLastDailyDate(lastDate)
-
-                        // Check availability based on resolved lastDate
-                        let available = false;
-                        if (!lastDate) {
-                            available = true;
-                        } else {
-                            const last = new Date(lastDate).toDateString()
-                            const today = new Date().toDateString()
-                            available = (last !== today)
-                        }
-                        setIsDailyAvailable(available)
-
-                        // Auto-open if available
-                        if (available) {
-                            setIsDailyOpen(true)
+                    let lastDate = data.user.last_daily_claim;
+                    if (!lastDate && data.user.created_at) {
+                        const created = new Date(data.user.created_at);
+                        const now = new Date();
+                        if (created.toDateString() === now.toDateString()) {
+                            lastDate = data.user.created_at;
                         }
                     }
-                })
-                .catch(err => {
-                    console.error("Auth failed:", err)
-                    setError(`Auth Error: ${err.message}`)
-                    setLoading(false)
-                })
+
+                    setLastDailyDate(lastDate)
+                    let available = !lastDate || (new Date(lastDate).toDateString() !== new Date().toDateString());
+                    setIsDailyAvailable(available)
+                    if (available) setIsDailyOpen(true)
+                }
+            } catch (err: any) {
+                console.error("Auth failed:", err)
+                setError(`Auth Error: ${err.message}`)
+                setLoading(false)
+                return // Stop here if auth failed
+            }
 
             // 3. Real Data Fetch for Prizes
-            // Only fetch prizes if User Auth didn't fail hard (though they run in parallel here, let's keep it optimistic)
-            fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}&t=${Date.now()}`)
-                .then(async res => {
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.error || 'Network response was not ok');
-                    }
-                    const data = await res.json();
-                    if (data.activePrizes) {
-                        setPrizes(data.activePrizes);
-                    }
-                })
-                .catch(err => {
-                    console.error("Failed to fetch prizes", err);
-                    // Prize fetch failure is non-critical? Maybe. But Auth failure is critical.
-                })
-                .finally(() => setLoading(false));
-        } else {
-            // Non-Telegram environment
-            setLoading(false);
-            setError("Telegram SDK not found. Open in Telegram.");
-        }
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}&t=${Date.now()}`);
+                if (!res.ok) throw new Error('Failed to fetch prizes');
+                const data = await res.json();
+                if (data.activePrizes) setPrizes(data.activePrizes);
+            } catch (err: any) {
+                console.error("Failed to fetch prizes", err);
+                // Non-critical
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        init();
 
         // Timer
         const updateTimer = () => {
@@ -273,8 +268,10 @@ export default function WebAppPage() {
                 </div>
                 <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
                 <p className="text-gray-400 mb-6">{error}</p>
-                <div className="text-xs bg-black/30 p-3 rounded text-left w-full break-all font-mono text-gray-500">
-                    DEBUG: {typeof window !== 'undefined' ? window.location.hash.substring(0, 50) : 'N/A'}...
+                <div className="text-xs bg-black/30 p-3 rounded text-left w-full break-all font-mono text-gray-500 max-h-40 overflow-auto">
+                    DEBUG KEYS: {typeof window !== 'undefined' ? JSON.stringify(Array.from(new URLSearchParams(window.location.hash.substring(1)).keys())) : 'N/A'}
+                    <br />
+                    FULL HASH: {typeof window !== 'undefined' ? window.location.hash.substring(0, 100) : 'N/A'}...
                 </div>
                 <button
                     onClick={() => window.location.reload()}
