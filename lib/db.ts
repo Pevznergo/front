@@ -56,15 +56,13 @@ export async function initDatabase() {
     `
 
     // Clans Table (New - Integer ID Adaptation)
-    // Clans Table (Fix: Use UUID to match Live DB User.id)
-    // Note: If User.id is UUID, owner_id must be UUID.
     await sql`
       CREATE TABLE IF NOT EXISTS clans (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         invite_code VARCHAR(50) UNIQUE NOT NULL,
         level INTEGER DEFAULT 1 NOT NULL,
-        owner_id UUID REFERENCES "User"(id),
+        owner_id INTEGER REFERENCES "User"(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
@@ -156,8 +154,8 @@ export async function initDatabase() {
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS request_count INTEGER DEFAULT 0`;
 
-      // Clan fields (UUID Adaptation)
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_id UUID`;
+      // Clan fields (Integer ID Adaptation)
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_id INTEGER`; // Intentionally no FK constraint to avoid strict dependency issues during migration, but ideally REFERENCES clans(id)
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_role VARCHAR(50) DEFAULT 'member'`;
 
       // Cleanup: drop duplicate telegram_id column if it was created before

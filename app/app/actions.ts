@@ -107,8 +107,6 @@ export async function fetchClanData(initData: string) {
         const clans = await sql`SELECT * FROM clans WHERE id = ${user.clan_id}`;
         const clan = clans[0];
 
-        console.log('[FetchClan] User:', user.id, 'ClanID:', user.clan_id, 'Found:', !!clan);
-
         if (!clan) {
             // Data inconsistency: User has clan_id but clan doesn't exist
             await sql`UPDATE "User" SET clan_id = NULL WHERE id = ${userId}`;
