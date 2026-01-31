@@ -97,6 +97,9 @@ function getProgress(level: number, members: number, pros: number): number {
     return 0; // TODO improve
 }
 
+// DEV ONLY: Mock Data for testing when Link is broken
+const MOCK_INIT_DATA = "query_id=AAG8CQAAAAAAALwJAAAAAA&user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22Test%22%2C%22last_name%22%3A%22User%22%2C%22username%22%3A%22testuser%22%2C%22language_code%22%3A%22en%22%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1700000000&hash=mocked_hash_for_dev_only";
+
 export default function ClanPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -113,6 +116,7 @@ export default function ClanPage() {
 
     // Auth State
     const [initData, setInitData] = useState("");
+    const [isMock, setIsMock] = useState(false);
 
     // Creation / Join State
     const [createName, setCreateName] = useState("");
@@ -147,7 +151,7 @@ export default function ClanPage() {
                 // Fallback: Manually parse from hash if SDK fails
                 if (!rawInitData && typeof window !== 'undefined') {
                     const hash = window.location.hash.slice(1);
-                    console.log("Debug: Raw Hash:", hash); // ADDED DEBUG LOG
+                    console.log("Debug: Raw Hash:", hash);
                     const params = new URLSearchParams(hash);
                     if (params.has('tgWebAppData')) {
                         rawInitData = params.get('tgWebAppData') || "";
@@ -155,6 +159,15 @@ export default function ClanPage() {
                     } else {
                         console.warn("Debug: Hash does not contain tgWebAppData");
                     }
+                }
+
+                // DEV FALLBACK: If still no data, use MOCK
+                if (!rawInitData) {
+                    console.warn("USING MOCK DATA FALLBACK");
+                    rawInitData = MOCK_INIT_DATA;
+                    setIsMock(true);
+                } else {
+                    setIsMock(false);
                 }
 
                 setInitData(rawInitData);
@@ -426,6 +439,11 @@ export default function ClanPage() {
     // --- Clan View ---
     return (
         <div className="min-h-screen bg-[#1c1c1e] text-white font-sans overflow-x-hidden selection:bg-blue-500/30">
+            {isMock && (
+                <div className="bg-orange-500 text-black px-4 py-1 text-xs font-bold text-center fixed top-0 left-0 right-0 z-50">
+                    DEV MODE: USING MOCK DATA (Link is broken)
+                </div>
+            )}
             {/* Header */}
             <div className="flex flex-col items-center pt-10 pb-6 px-4">
                 {/* Icon */}
