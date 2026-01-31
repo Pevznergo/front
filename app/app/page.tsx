@@ -419,22 +419,9 @@ export default function ClanPage() {
                         </p>
                         <p>
                             User ID:{" "}
-                            {(function () {
-                                if (typeof window === "undefined") return "Server";
-                                // 1. Try SDK
-                                if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-                                    return window.Telegram.WebApp.initDataUnsafe.user.id;
-                                }
-                                // 2. Try parsing initData string (works for Mock & Manual Fallback)
-                                try {
-                                    const params = new URLSearchParams(initData);
-                                    const userStr = params.get('user');
-                                    if (userStr) {
-                                        return JSON.parse(userStr).id;
-                                    }
-                                } catch (e) { }
-                                return "Missing";
-                            })()}
+                            {(typeof window !== "undefined" &&
+                                window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
+                                "Missing"}
                         </p>
                     </div>
                     <button
