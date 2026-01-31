@@ -30,6 +30,7 @@ export default function WebAppPage() {
     const [user, setUser] = useState<UserData | null>(null)
     const [prizes, setPrizes] = useState<Prize[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [spinning, setSpinning] = useState(false)
     const [winIndex, setWinIndex] = useState<number | null>(null)
     const [winResult, setWinResult] = useState<Prize | null>(null)
@@ -54,6 +55,13 @@ export default function WebAppPage() {
             tg.setHeaderColor('#FF4500'); // Orange header
 
             const rawInitData = tg.initData
+
+            if (!rawInitData) {
+                setLoading(false)
+                setError("No InitData found. Launch from Telegram.")
+                return
+            }
+
             setInitData(rawInitData)
 
             // RESTORED AUTH: Attempt to get real user data
@@ -62,7 +70,13 @@ export default function WebAppPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ initData: rawInitData })
             })
-                .then(res => res.json())
+                .then(async res => {
+                    if (!res.ok) {
+                        const errBody = await res.json().catch(() => ({}))
+                        throw new Error(errBody.error || "Auth Failed")
+                    }
+                    return res.json()
+                })
                 .then(data => {
                     if (data.user) {
                         setUser(data.user)
@@ -101,9 +115,14 @@ export default function WebAppPage() {
                         }
                     }
                 })
-                .catch(err => console.error("Auth failed, using mock:", err))
+                .catch(err => {
+                    console.error("Auth failed:", err)
+                    setError(`Auth Error: ${err.message}`)
+                    setLoading(false)
+                })
+
             // 3. Real Data Fetch for Prizes
-            setLoading(true);
+            // Only fetch prizes if User Auth didn't fail hard (though they run in parallel here, let's keep it optimistic)
             fetch(`/api/webapp/user-prizes?initData=${encodeURIComponent(rawInitData)}&t=${Date.now()}`)
                 .then(async res => {
                     if (!res.ok) {
@@ -117,13 +136,14 @@ export default function WebAppPage() {
                 })
                 .catch(err => {
                     console.error("Failed to fetch prizes", err);
-                    alert(`Failed to load prizes: ${err.message}`);
+                    // Prize fetch failure is non-critical? Maybe. But Auth failure is critical.
                 })
                 .finally(() => setLoading(false));
+
         } else {
             // Non-Telegram environment
             setLoading(false);
-            // Leave empty to show "No prizes" state instead of confusing mocks
+            setError("Telegram SDK not found. Open in Telegram.");
         }
 
         // Timer
@@ -235,6 +255,27 @@ export default function WebAppPage() {
     const canSpin = (user?.points || 0) >= 10;
 
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FF4500]"><Loader2 className="animate-spin text-white" /></div>
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#1c1c1e] text-white p-6 text-center font-sans">
+                <div className="bg-red-500/10 p-4 rounded-full mb-4">
+                    <Target className="w-12 h-12 text-red-500" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+                <p className="text-gray-400 mb-6">{error}</p>
+                <div className="text-xs bg-black/30 p-3 rounded text-left w-full break-all font-mono text-gray-500">
+                    DEBUG: {typeof window !== 'undefined' ? window.location.hash.substring(0, 50) : 'N/A'}...
+                </div>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="mt-8 px-6 py-3 bg-white text-black font-bold rounded-xl active:scale-95 transition-transform"
+                >
+                    Retry
+                </button>
+            </div>
+        )
+    }
 
     // Removed the "Open in Telegram" check for this Test Mode
 
