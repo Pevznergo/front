@@ -147,13 +147,10 @@ export default function ClanPage() {
                 // Fallback: Manually parse from hash if SDK fails
                 if (!rawInitData && typeof window !== 'undefined') {
                     const hash = window.location.hash.slice(1);
-                    console.log("Debug: Raw Hash:", hash); // ADDED DEBUG LOG
                     const params = new URLSearchParams(hash);
                     if (params.has('tgWebAppData')) {
                         rawInitData = params.get('tgWebAppData') || "";
                         console.log("Fallback: Parsed initData from hash", rawInitData.length);
-                    } else {
-                        console.warn("Debug: Hash does not contain tgWebAppData");
                     }
                 }
 
