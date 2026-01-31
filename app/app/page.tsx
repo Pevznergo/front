@@ -111,9 +111,6 @@ export default function ClanPage() {
     const [editedName, setEditedName] = useState("");
     const [copied, setCopied] = useState(false);
 
-    // Auth State
-    const [initData, setInitData] = useState("");
-
     // Creation / Join State
     const [createName, setCreateName] = useState("");
     const [joinCode, setJoinCode] = useState("");
@@ -124,8 +121,10 @@ export default function ClanPage() {
         const maxAttempts = 10;
 
         const initTelegram = async () => {
+            // Wait for window.Telegram to be available
             if (typeof window === 'undefined') return;
 
+            // Simple polling to ensure script is loaded
             while (!window.Telegram?.WebApp && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
@@ -141,67 +140,65 @@ export default function ClanPage() {
                 } catch (e) {
                     console.warn('Failed to set header color', e);
                 }
-
-                const rawInitData = tg.initData || "";
-                setInitData(rawInitData);
-
-                // Debug log
-                console.log("WebApp Init:", {
-                    platform: tg.platform,
-                    initDataLen: rawInitData.length,
-                    user: tg.initDataUnsafe?.user
-                });
-
-                if (!rawInitData) {
-                    console.warn("No initData found");
-                }
-
-                loadClanData(rawInitData);
-
             } else {
-                console.error("Telegram SDK not found");
-                setError("Telegram SDK not loaded");
+                console.error("Telegram WebApp not found after polling");
+                setError("Telegram SDK not loaded. Please reload.");
+                setLoading(false);
+                return;
+            }
+
+            const initData = tg.initData;
+
+            // Debug info
+            console.log("WebApp Init:", {
+                platform: tg.platform,
+                initDataLen: initData?.length || 0,
+                user: tg.initDataUnsafe?.user
+            });
+
+            if (!initData) {
+                console.warn("No initData found");
+                // Allow proceeding if in development/browser but warn
+                // setError("Missing initData. Are you in Telegram?");
+            }
+
+            try {
+                const res = await getUserClanInfo(initData || "");
+
+                if (res.error) {
+                    setError(`${res.error} (Platform: ${tg.platform || 'unknown'})`);
+                } else if (res.hasClan && res.clan) {
+                    setInClan(true);
+
+                    const c = res.clan;
+                    const nextLevel = c.level < 5 ? c.level + 1 : 5;
+                    const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
+                    const progress = getProgress(c.level, c.totalMembers, c.proMembers);
+
+                    setClan({
+                        ...c,
+                        membersCount: c.totalMembers,
+                        proMembersCount: c.proMembers,
+                        nextLevel,
+                        progress,
+                        nextLevelRequirements: reqs,
+                        isOwner: res.userRole === 'owner',
+                        membersList: c.membersList
+                    });
+                    setEditedName(c.name);
+                } else {
+                    setInClan(false);
+                }
+            } catch (err) {
+                console.error(err);
+                setError("Не удалось загрузить данные клана.");
+            } finally {
                 setLoading(false);
             }
         };
 
         initTelegram();
     }, []);
-
-    async function loadClanData(data: string) {
-        try {
-            const res = await getUserClanInfo(data);
-
-            if (res.error) {
-                setError(`${res.error} (Len: ${data.length})`);
-            } else if (res.hasClan && res.clan) {
-                setInClan(true);
-                const c = res.clan;
-                const nextLevel = c.level < 5 ? c.level + 1 : 5;
-                const reqs = getNextLevelRequirements(c.level, c.totalMembers, c.proMembers);
-                const progress = getProgress(c.level, c.totalMembers, c.proMembers);
-
-                setClan({
-                    ...c,
-                    membersCount: c.totalMembers,
-                    proMembersCount: c.proMembers,
-                    nextLevel,
-                    progress,
-                    nextLevelRequirements: reqs,
-                    isOwner: res.userRole === 'owner',
-                    membersList: c.membersList
-                });
-                setEditedName(c.name);
-            } else {
-                setInClan(false);
-            }
-        } catch (err) {
-            console.error(err);
-            setError("Не удалось загрузить данные клана.");
-        } finally {
-            setLoading(false);
-        }
-    }
 
     const handleCopy = () => {
         if (!clan) {
@@ -386,9 +383,6 @@ export default function ClanPage() {
                         </p>
                         <p className="mt-2 text-[10px] text-gray-400">
                             Hash Length: {typeof window !== "undefined" ? window.location.hash.length : 0}
-                        </p>
-                        <p className="mt-1 text-[10px] text-blue-400">
-                            InitData Length: {initData.length}
                         </p>
                         <p>
                             User ID:{" "}
