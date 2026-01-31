@@ -54,7 +54,17 @@ export default function WebAppPage() {
             tg.expand() // Fullscreen
             tg.setHeaderColor('#FF4500'); // Orange header
 
-            const rawInitData = tg.initData
+            let rawInitData = tg.initData || ""
+
+            // Fallback: Check Hash for initData (Fix for Inline Buttons on macOS/Desktop)
+            if (!rawInitData && window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const hashData = params.get('tgWebAppData');
+                if (hashData) {
+                    rawInitData = hashData;
+                }
+            }
 
             if (!rawInitData) {
                 setLoading(false)
