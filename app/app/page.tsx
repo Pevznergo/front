@@ -195,14 +195,12 @@ export default function ClanPage() {
         if (!clan) {
             return;
         }
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.switchInlineQuery(clan.inviteCode, [
-                "users",
-                "groups",
-                "channels",
-            ]);
+        const text = "Вступай в мой клан!";
+        const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=${encodeURIComponent(text)}`;
+
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(url);
         } else {
-            const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=Вступай в мой клан!`;
             window.open(url, "_blank");
         }
     };
@@ -656,6 +654,7 @@ declare global {
                 expand: () => void;
                 setHeaderColor: (color: string) => void;
                 switchInlineQuery: (query: string, types?: string[]) => void;
+                openTelegramLink: (url: string) => void;
                 platform?: string;
             };
         };
