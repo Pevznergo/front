@@ -55,18 +55,6 @@ export async function initDatabase() {
       )
     `
 
-    // Clans Table (New - Integer ID Adaptation)
-    await sql`
-      CREATE TABLE IF NOT EXISTS clans (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) UNIQUE NOT NULL,
-        invite_code VARCHAR(50) UNIQUE NOT NULL,
-        level INTEGER DEFAULT 1 NOT NULL,
-        owner_id INTEGER REFERENCES "User"(id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-
     // Partners table
     await sql`
       CREATE TABLE IF NOT EXISTS partners (
@@ -153,10 +141,6 @@ export async function initDatabase() {
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`;
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS request_count INTEGER DEFAULT 0`;
-
-      // Clan fields (Integer ID Adaptation)
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_id INTEGER`; // Intentionally no FK constraint to avoid strict dependency issues during migration, but ideally REFERENCES clans(id)
-      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_role VARCHAR(50) DEFAULT 'member'`;
 
       // Cleanup: drop duplicate telegram_id column if it was created before
       await sql`ALTER TABLE "User" DROP COLUMN IF EXISTS telegram_id`;
