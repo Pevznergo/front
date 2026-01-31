@@ -49,23 +49,23 @@ const LEVELS = [
         level: 3,
         benefits: [
             { text: "50 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "3 генерации изображений", icon: "🎨" },
-            { text: "Авто-перевод сообщений", icon: "🌐" },
+            { text: "5 генераций изображений", icon: "🎨" },
+            { text: "Продвинутые модели", icon: "🌐" },
         ],
     },
     {
         level: 4,
         benefits: [
             { text: "75 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "Приоритетная поддержка", icon: "💎" },
             { text: "5 генераций изображений", icon: "🎨" },
+            { text: "Продвинутые модели", icon: "🌐" },
         ],
     },
     {
         level: 5,
         benefits: [
-            { text: "Безлимит GPT-5 Nano", icon: "♾️" },
-            { text: "Безлимит Gemini Flash", icon: "♾️" },
+            { text: "Безлимит GPT-5 Nano/Gemini Flash", icon: "♾️" },
+            { text: "100 запросов в неделю", icon: "♾️" },
             { text: "10 генераций изображений", icon: "🎨" },
         ],
     },
@@ -248,6 +248,13 @@ export default function ClanPage() {
         if (!res.success) {
             setClan((prev) => (prev ? { ...prev, name: oldName } : null));
             console.error(`Failed to update name: ${res.error || "Unknown error"}`);
+            // Reuse setCreationError or add alert?
+            // Since it's inline editing, an alert is acceptable or a toast.
+            if (res.error === 'name_taken') {
+                alert("Это имя уже занято!");
+            } else {
+                alert("Ошибка обновления имени.");
+            }
         }
     };
 
