@@ -1,5 +1,6 @@
 "use client";
 
+import QRCode from 'qrcode';
 import {
     ArrowRight,
     Check,
@@ -12,6 +13,8 @@ import {
     Shield,
     Star,
     Zap,
+    QrCode,
+    X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -93,6 +96,10 @@ export default function ClanPage() {
     const [editedName, setEditedName] = useState("");
     const [copied, setCopied] = useState(false);
 
+    // QR State
+    const [showQr, setShowQr] = useState(false);
+    const [qrSrc, setQrSrc] = useState("");
+
     // Auth State
     const [initData, setInitData] = useState("");
 
@@ -170,6 +177,18 @@ export default function ClanPage() {
         );
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleShowQr = async () => {
+        if (!clan) return;
+        const link = `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`;
+        try {
+            const url = await QRCode.toDataURL(link, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+            setQrSrc(url);
+            setShowQr(true);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const handleShare = () => {
@@ -559,7 +578,7 @@ export default function ClanPage() {
                         <div className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-300 truncate font-mono outline-none">
                             t.me/aporto_bot?start=clan_{clan.inviteCode}
                         </div>
-                        {/* Circle Button for Copy */}
+                        {/* Copy Button */}
                         <button
                             className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
                             onClick={handleCopy}
@@ -570,6 +589,14 @@ export default function ClanPage() {
                             ) : (
                                 <Copy className="w-5 h-5 text-white" />
                             )}
+                        </button>
+                        {/* QR Button */}
+                        <button
+                            className="w-10 h-10 bg-purple-500 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors shadow-lg shadow-purple-500/20 active:scale-95"
+                            onClick={handleShowQr}
+                            type="button"
+                        >
+                            <QrCode className="w-5 h-5 text-white" />
                         </button>
                     </div>
 
@@ -583,6 +610,34 @@ export default function ClanPage() {
                     </button>
                 </div>
             </div>
+
+            {/* QR Code Modal */}
+            {showQr && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#1c1c1e] w-full max-w-sm rounded-2xl p-6 relative border border-[#2c2c2e] shadow-2xl">
+                        <button
+                            onClick={() => setShowQr(false)}
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-[#2c2c2e] rounded-full transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="text-center space-y-4">
+                            <h3 className="text-xl font-bold text-white mb-2">QR-код Клана</h3>
+                            <div className="bg-white p-4 rounded-xl inline-block mx-auto mb-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={qrSrc} alt="Clan QR" className="w-48 h-48" />
+                            </div>
+                            <p className="text-sm text-gray-400">
+                                Отсканируйте код камерой телефона <br /> для быстрого вступления
+                            </p>
+                            <p className="font-mono text-blue-400 bg-blue-500/10 py-2 rounded-lg text-sm select-all">
+                                {clan.inviteCode}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
