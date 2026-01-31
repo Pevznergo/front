@@ -142,18 +142,7 @@ export default function ClanPage() {
                     console.warn('Failed to set header color', e);
                 }
 
-                let rawInitData = tg.initData || "";
-
-                // Fallback: Manually parse from hash if SDK fails
-                if (!rawInitData && typeof window !== 'undefined') {
-                    const hash = window.location.hash.slice(1);
-                    const params = new URLSearchParams(hash);
-                    if (params.has('tgWebAppData')) {
-                        rawInitData = params.get('tgWebAppData') || "";
-                        console.log("Fallback: Parsed initData from hash", rawInitData.length);
-                    }
-                }
-
+                const rawInitData = tg.initData || "";
                 setInitData(rawInitData);
 
                 // Debug log
