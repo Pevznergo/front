@@ -205,23 +205,17 @@ export default function ClanPage() {
     };
 
     const handleCreateClan = async () => {
-        console.log('[Page] handleCreateClan clicked. Name:', createName);
         if (!createName.trim()) {
             return;
         }
         setActionLoading(true);
-        console.log('[Page] Calling createClan action...');
         const res = await createClan(initData, createName);
-        console.log('[Page] Action response:', res);
         setActionLoading(false);
 
         if (res.success) {
-            console.log('[Page] Success! Reloading...');
             window.location.reload();
         } else {
-            console.error(`[Page] Failed: ${res.error}`);
-            // Optional: Set UI error state here if you have one
-            setError(res.error || "Creation Failed");
+            console.error(`Failed: ${res.error}`);
         }
     };
 
