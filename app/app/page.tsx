@@ -586,3 +586,23 @@ export default function ClanPage() {
         </div>
     );
 }
+
+// Global declaration for Telegram WebApp
+declare global {
+    interface Window {
+        Telegram?: {
+            WebApp?: {
+                initData: string;
+                initDataUnsafe: {
+                    user?: { id: number; first_name: string; username?: string };
+                    start_param?: string;
+                };
+                ready: () => void;
+                expand: () => void;
+                setHeaderColor: (color: string) => void;
+                switchInlineQuery: (query: string, types?: string[]) => void;
+                platform?: string;
+            };
+        };
+    }
+}
