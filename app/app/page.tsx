@@ -137,8 +137,11 @@ export default function ClanPage() {
     }, []);
 
     async function load(data: string) {
+        console.log('[Page] Loading with data length:', data.length);
         if (!data) {
+            console.error('[Page] No initData found in load()');
             setLoading(false);
+            setError("InitData is missing. Launch from Telegram properly.");
             return;
         }
         try {
