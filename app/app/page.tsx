@@ -24,6 +24,7 @@ import {
     joinClan,
     updateClanName,
 } from "./actions";
+import { trackEvent, identifyUser } from "@/lib/mixpanel";
 
 // Levels Config (Frontend Display)
 const LEVELS = [
@@ -151,6 +152,17 @@ export default function ClanPage() {
         try {
             const res = await fetchClanData(data);
 
+            // Identify User
+            if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                const user = window.Telegram.WebApp.initDataUnsafe.user;
+                identifyUser(user.id.toString(), {
+                    name: user.first_name,
+                    username: user.username,
+                    language_code: 'ru', // Telegram WebApp doesn't always give lang, but we can assume or get it from elsewhere
+                });
+                trackEvent('Page View', { page: 'Clan Page' });
+            }
+
             if (res.error) {
                 setError(res.error);
             } else if (res.inClan && res.clan) {
@@ -177,10 +189,12 @@ export default function ClanPage() {
         );
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+        trackEvent('Clan Link Copied', { clan_id: clan.id });
     };
 
     const handleShowQr = async () => {
         if (!clan) return;
+        trackEvent('Clan QR Opened', { clan_id: clan.id });
         const link = `https://t.me/aporto_bot?start=clan_${clan.inviteCode}`;
         try {
             const url = await QRCode.toDataURL(link, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
@@ -195,6 +209,7 @@ export default function ClanPage() {
         if (!clan) {
             return;
         }
+        trackEvent('Clan Shared', { clan_id: clan.id });
         const text = "Вступай в мой клан!";
         const url = `https://t.me/share/url?url=https://t.me/aporto_bot?start=clan_${clan.inviteCode}&text=${encodeURIComponent(text)}`;
 
@@ -230,6 +245,7 @@ export default function ClanPage() {
         setActionLoading(false);
 
         if (res.success) {
+            trackEvent('Clan Created', { name: createName });
             window.location.reload();
         } else {
             console.error(`Failed: ${res.error}`);
