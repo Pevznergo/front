@@ -381,6 +381,9 @@ export default function ClanPage() {
                             URL:{" "}
                             {typeof window !== "undefined" ? window.location.href : "N/A"}
                         </p>
+                        <p className="mt-2 text-[10px] text-gray-400">
+                            Hash Length: {typeof window !== "undefined" ? window.location.hash.length : 0}
+                        </p>
                         <p>
                             User ID:{" "}
                             {(typeof window !== "undefined" &&
