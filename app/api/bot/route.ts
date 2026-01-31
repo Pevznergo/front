@@ -12,6 +12,35 @@ function getBot() {
 
     bot = new Bot(token);
 
+    // Initial Handler for /start
+    bot.command("start", async (ctx) => {
+        const webAppUrl = "https://aporto.tech/app"; // Mini App URL
+        const keyboard = {
+            keyboard: [[{ text: "📱 Открыть App", web_app: { url: webAppUrl } }]],
+            resize_keyboard: true,
+            persistent: true
+        };
+
+        // Also inline button
+        const inlineKeyboard = {
+            inline_keyboard: [[{ text: "📱 Открыть Clan App", web_app: { url: webAppUrl } }]]
+        };
+
+        if (ctx.match) {
+            // If start param exists (e.g. clan_CODE)
+            // We can pass it to the web app via start_param if supported, 
+            // but usually we just open the app. 
+            // The start param is passed in initData.start_param automatically if we open via menu/attachment menu,
+            // but for inline button we might need to append it?
+            // Actually Telegram handles start_param in initData if opened from link with startapp?
+            // For now, simple button is enough.
+        }
+
+        await ctx.reply("Добро пожаловать в Aporto Clan! 🚀\nНажмите кнопку ниже, чтобы запустить приложение.", {
+            reply_markup: inlineKeyboard
+        });
+    });
+
     // Bot logic - Invite tracking
     bot.on("message:new_chat_members", async (ctx) => {
         const chatId = ctx.chat.id.toString();
