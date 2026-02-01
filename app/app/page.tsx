@@ -139,7 +139,10 @@ export default function ClanPage() {
                 const data = tg.initData || "";
                 setInitData(data);
 
+                trackEvent('App: Open', { source: 'mini_app' });
+
                 load(data);
+
             } else {
                 // Fallback for browser testing (if hash present)
                 // or just fail gently
@@ -165,11 +168,22 @@ export default function ClanPage() {
             // Identify User
             if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
-                identifyUser(user.id.toString(), {
+                const userProps: any = {
                     name: user.first_name,
                     username: user.username,
-                    language_code: 'ru', // Telegram WebApp doesn't always give lang, but we can assume or get it from elsewhere
-                });
+                    language_code: 'ru',
+                };
+
+                // @ts-ignore
+                if (res.inClan && res.clan && res.clan.isOwner) {
+                    // @ts-ignore
+                    userProps.owned_clan_members_count = res.clan.membersCount;
+                    // @ts-ignore
+                    userProps.owned_clan_pro_members_count = res.clan.proMembersCount;
+                }
+
+                identifyUser(user.id.toString(), userProps);
+
                 trackEvent('Page: View', { page: 'Clan Page' });
             }
 
