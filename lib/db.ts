@@ -157,6 +157,7 @@ export async function initDatabase() {
       // Clan fields (Integer ID Adaptation)
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_id INTEGER`; // Intentionally no FK constraint to avoid strict dependency issues during migration, but ideally REFERENCES clans(id)
       await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS clan_role VARCHAR(50) DEFAULT 'member'`;
+      await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS free_images_count INTEGER DEFAULT 0`;
 
       // Cleanup: drop duplicate telegram_id column if it was created before
       await sql`ALTER TABLE "User" DROP COLUMN IF EXISTS telegram_id`;
