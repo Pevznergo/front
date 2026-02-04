@@ -332,3 +332,36 @@ export async function updateClanName(initData: string, newName: string) {
         return { success: false, error: 'Update failed' };
     }
 }
+
+export async function getClanLevels() {
+    try {
+        const levels = await sql`SELECT * FROM "ClanLevel" ORDER BY level ASC`;
+        return {
+            success: true, levels: levels.map(l => ({
+                level: l.level,
+                minUsers: l.min_users,
+                minPro: l.min_pro,
+                weeklyTextCredits: l.weekly_text_credits, // mapping snake_case to camelCase
+                weeklyImageGenerations: l.weekly_image_generations,
+                description: l.description, // already correctly named or needs specific handling if description is text
+                // Add mapping if needed for frontend specific keys
+                benefits: l.description ? l.description.split('\n').map((text: string) => {
+                    // Simple heurestic to assign icons based on text content since DB only stores text
+                    let icon = "⚡";
+                    if (text.toLowerCase().includes("цветов")) icon = "🎨";
+                    if (text.toLowerCase().includes("схем")) icon = "🔗";
+                    if (text.toLowerCase().includes("изображений")) icon = "🎨";
+                    if (text.toLowerCase().includes("модели")) icon = "🤖";
+                    if (text.toLowerCase().includes("продвинутые")) icon = "🌐";
+                    if (text.toLowerCase().includes("безлимит")) icon = "♾️";
+                    if (text.toLowerCase().includes("тег")) icon = "🏷️";
+
+                    return { text, icon };
+                }) : []
+            }))
+        };
+    } catch (e) {
+        console.error("Failed to fetch clan levels:", e);
+        return { success: false, levels: [] };
+    }
+}

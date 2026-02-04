@@ -24,52 +24,12 @@ import {
     joinClan,
     updateClanName,
     kickMember,
+    getClanLevels, // added
 } from "./actions";
 import { trackEvent, identifyUser } from "@/lib/mixpanel";
 
-// Levels Config (Frontend Display)
-const LEVELS = [
-    {
-        level: 1,
-        benefits: [
-            { text: "15 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "Доступ к базовым моделям", icon: "🤖" },
-            { text: "7 цветов для названия клана", icon: "🎨" },
-        ],
-    },
-    {
-        level: 2,
-        benefits: [
-            { text: "30 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "Приоритетная очередь", icon: "🚀" },
-            { text: "7 цветовых схем для ссылок", icon: "🔗" },
-        ],
-    },
-    {
-        level: 3,
-        benefits: [
-            { text: "50 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "5 генераций изображений", icon: "🎨" },
-            { text: "Продвинутые модели", icon: "🌐" },
-        ],
-    },
-    {
-        level: 4,
-        benefits: [
-            { text: "75 бесплатных запросов / неделю", icon: "⚡" },
-            { text: "5 генераций изображений", icon: "🎨" },
-            { text: "Продвинутые модели", icon: "🌐" },
-        ],
-    },
-    {
-        level: 5,
-        benefits: [
-            { text: "Безлимит GPT-5 Nano/Gemini Flash", icon: "♾️" },
-            { text: "100 запросов в неделю", icon: "♾️" },
-            { text: "10 генераций изображений", icon: "🎨" },
-        ],
-    },
-];
+// Levels are now fetched dynamically
+// const LEVELS = ...
 
 type ClanMember = {
     id: string;
@@ -157,13 +117,23 @@ export default function ClanPage() {
         initTelegram();
     }, []);
 
+    const [levels, setLevels] = useState<any[]>([]); // Dynamic levels
+
     async function load(data: string) {
         if (!data) {
             setLoading(false);
             return;
         }
         try {
-            const res = await fetchClanData(data);
+            // Parallel fetch
+            const [res, levelsRes] = await Promise.all([
+                fetchClanData(data),
+                getClanLevels()
+            ]);
+
+            if (levelsRes.success) {
+                setLevels(levelsRes.levels);
+            }
 
             // Identify User
             if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
@@ -566,7 +536,7 @@ export default function ClanPage() {
             <div className="px-4 pb-48 max-w-sm mx-auto">
                 {activeTab === "overview" && (
                     <div className="space-y-8 animate-in slide-in-from-right-4 fade-in duration-300">
-                        {LEVELS.map((lvl) => (
+                        {levels.map((lvl) => (
                             <div
                                 className={cn(
                                     "transition-opacity duration-300",
@@ -587,7 +557,7 @@ export default function ClanPage() {
 
                                 {/* Benefits Items */}
                                 <div className="space-y-4 px-2">
-                                    {lvl.benefits.map((benefit) => (
+                                    {lvl.benefits.map((benefit: any) => (
                                         <div
                                             className="flex items-start gap-4"
                                             key={`${lvl.level}-${benefit.text}`}
