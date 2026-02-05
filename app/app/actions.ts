@@ -21,6 +21,7 @@ export type ClanData = {
     nextLevel: number;
     progress: number;
     nextLevelRequirements: string;
+    nextLevelBenefits?: string; // Benefits preview for next level
     inviteCode: string;
     isOwner: boolean;
     membersList: ClanMember[];
@@ -193,6 +194,44 @@ export async function fetchClanData(initData: string) {
             progress = level === 5 ? 100 : 50; // Fallback
         }
 
+        // Get next level benefits preview
+        let nextLevelBenefits = "";
+        try {
+            const levels = await sql`SELECT * FROM "ClanLevel" ORDER BY level ASC`;
+            const currentLevelData = levels.find(l => l.level === level);
+            const nextLevelData = levels.find(l => l.level === level + 1);
+
+            if (nextLevelData && currentLevelData) {
+                const benefits = [];
+
+                // Text credits increase
+                if (nextLevelData.weekly_text_credits > currentLevelData.weekly_text_credits) {
+                    const increase = nextLevelData.weekly_text_credits - currentLevelData.weekly_text_credits;
+                    benefits.push(`+${increase} запросов`);
+                }
+
+                // Image generations increase
+                if (nextLevelData.weekly_image_generations > currentLevelData.weekly_image_generations) {
+                    const increase = nextLevelData.weekly_image_generations - currentLevelData.weekly_image_generations;
+                    benefits.push(`+${increase} генераций`);
+                }
+
+                // Unlimited models
+                if (nextLevelData.unlimited_models && nextLevelData.unlimited_models.length > 0) {
+                    benefits.push("безлимит топ моделей");
+                }
+
+                // Advanced models mention
+                if (nextLevelData.description && nextLevelData.description.toLowerCase().includes("продвинутые модели")) {
+                    benefits.push("новые модели");
+                }
+
+                nextLevelBenefits = benefits.join(" • ");
+            }
+        } catch (e) {
+            console.error('Error getting next level benefits:', e);
+        }
+
         return {
             inClan: true,
             userRole: user.clan_role || 'member',
@@ -205,6 +244,7 @@ export async function fetchClanData(initData: string) {
                 nextLevel: Math.min(5, level + 1),
                 progress: progress,
                 nextLevelRequirements: nextReq,
+                nextLevelBenefits: nextLevelBenefits,
                 inviteCode: clan.invite_code,
                 isOwner: user.clan_role === 'owner',
                 membersList: membersData.map((m: any) => ({
