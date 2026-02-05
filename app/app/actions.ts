@@ -28,22 +28,60 @@ export type ClanData = {
 
 // --- Helpers ---
 
-// Logic port from newchat
-function calculateClanLevel(totalMembers: number, proMembers: number) {
-    if (totalMembers >= 15 && proMembers >= 3) return 5;
-    if (proMembers >= 2) return 4;
-    if (totalMembers >= 10 && proMembers >= 1) return 3;
-    if (totalMembers >= 2) return 2;
-    return 1;
+// Dynamic clan level calculation based on database levels
+async function calculateClanLevel(totalMembers: number, proMembers: number) {
+    try {
+        const levels = await sql`SELECT * FROM "ClanLevel" ORDER BY level DESC`;
+
+        for (const level of levels) {
+            if (totalMembers >= level.min_users && proMembers >= level.min_pro) {
+                return level.level;
+            }
+        }
+        return 1; // Default to level 1
+    } catch (e) {
+        console.error('Error calculating clan level:', e);
+        // Fallback to hardcoded logic
+        if (totalMembers >= 15 && proMembers >= 3) return 5;
+        if (proMembers >= 2) return 4;
+        if (totalMembers >= 10 && proMembers >= 1) return 3;
+        if (totalMembers >= 2) return 2;
+        return 1;
+    }
 }
 
-function getNextLevelRequirements(level: number, totalMembers: number, proMembers: number) {
-    if (level >= 5) return "МАКС. УРОВЕНЬ";
-    if (level === 4) return `Нужно еще ${Math.max(0, 15 - totalMembers)} чел. и ${Math.max(0, 3 - proMembers)} Pro`;
-    if (level === 3) return `Нужно еще ${Math.max(0, 2 - proMembers)} Pro`;
-    if (level === 2) return `Нужно еще ${Math.max(0, 10 - totalMembers)} чел. и 1 Pro`;
-    if (level === 1) return `Нужно еще ${Math.max(0, 2 - totalMembers)} чел.`;
-    return "";
+async function getNextLevelRequirements(level: number, totalMembers: number, proMembers: number) {
+    try {
+        const levels = await sql`SELECT * FROM "ClanLevel" ORDER BY level ASC`;
+        const maxLevel = levels[levels.length - 1]?.level || 5;
+
+        if (level >= maxLevel) return "МАКС. УРОВЕНЬ";
+
+        // Find the next level requirements
+        const nextLevel = levels.find(l => l.level === level + 1);
+        if (!nextLevel) return "";
+
+        const membersNeeded = Math.max(0, nextLevel.min_users - totalMembers);
+        const proNeeded = Math.max(0, nextLevel.min_pro - proMembers);
+
+        if (membersNeeded > 0 && proNeeded > 0) {
+            return `Нужно еще ${membersNeeded} чел. и ${proNeeded} Pro`;
+        } else if (proNeeded > 0) {
+            return `Нужно еще ${proNeeded} Pro`;
+        } else if (membersNeeded > 0) {
+            return `Нужно еще ${membersNeeded} чел.`;
+        }
+        return "Готово к следующему уровню!";
+    } catch (e) {
+        console.error('Error getting next level requirements:', e);
+        // Fallback to hardcoded logic
+        if (level >= 5) return "МАКС. УРОВЕНЬ";
+        if (level === 4) return `Нужно еще ${Math.max(0, 15 - totalMembers)} чел. и ${Math.max(0, 3 - proMembers)} Pro`;
+        if (level === 3) return `Нужно еще ${Math.max(0, 2 - proMembers)} Pro`;
+        if (level === 2) return `Нужно еще ${Math.max(0, 10 - totalMembers)} чел. и 1 Pro`;
+        if (level === 1) return `Нужно еще ${Math.max(0, 2 - totalMembers)} чел.`;
+        return "";
+    }
 }
 
 function validateTelegramData(initData: string) {
@@ -126,12 +164,33 @@ export async function fetchClanData(initData: string) {
         const proMembers = membersData.filter((m: any) => m.has_paid).length;
 
         // 5. Calculate Levels
-        const level = calculateClanLevel(totalMembers, proMembers);
-        const nextReq = getNextLevelRequirements(level, totalMembers, proMembers);
+        const level = await calculateClanLevel(totalMembers, proMembers);
+        const nextReq = await getNextLevelRequirements(level, totalMembers, proMembers);
 
         // Update level in DB if changed (optional, but good for keeping sync)
         if (clan.level !== level) {
             await sql`UPDATE clans SET level = ${level} WHERE id = ${clan.id}`;
+        }
+
+        // Calculate progress percentage
+        let progress = 100; // Default to 100% if at max level
+        try {
+            const levels = await sql`SELECT * FROM "ClanLevel" ORDER BY level ASC`;
+            const maxLevel = levels[levels.length - 1]?.level || 5;
+
+            if (level < maxLevel) {
+                const nextLevel = levels.find(l => l.level === level + 1);
+                if (nextLevel) {
+                    // Calculate progress based on which requirement is more restrictive
+                    const userProgress = nextLevel.min_users > 0 ? (totalMembers / nextLevel.min_users) * 100 : 100;
+                    const proProgress = nextLevel.min_pro > 0 ? (proMembers / nextLevel.min_pro) * 100 : 100;
+                    // Use the minimum of the two (the one that's holding us back)
+                    progress = Math.min(100, Math.min(userProgress, proProgress));
+                }
+            }
+        } catch (e) {
+            console.error('Error calculating progress:', e);
+            progress = level === 5 ? 100 : 50; // Fallback
         }
 
         return {
@@ -144,7 +203,7 @@ export async function fetchClanData(initData: string) {
                 membersCount: totalMembers,
                 proMembersCount: proMembers,
                 nextLevel: Math.min(5, level + 1),
-                progress: level === 5 ? 100 : 50, // Simplified
+                progress: progress,
                 nextLevelRequirements: nextReq,
                 inviteCode: clan.invite_code,
                 isOwner: user.clan_role === 'owner',
