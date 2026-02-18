@@ -118,7 +118,7 @@ export default function Header() {
                         <div className="flex-shrink-0 flex items-center gap-2">
                             <Link href="/" className="flex items-center gap-2">
                                 <span className="font-bold text-lg text-gray-900 dark:text-white">
-                                    OpenRouter
+                                    AportoTech
                                 </span>
                             </Link>
 

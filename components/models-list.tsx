@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search, SlidersHorizontal, ArrowUpDown, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
+import { CopyModelId } from './ui/copy-model-id';
 
 interface Model {
     id: number;
@@ -129,10 +130,11 @@ export function ModelsList({ initialModels }: ModelsListProps) {
                             <Link href={`/models/${model.id}`} className="block">
                                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div className="flex-grow">
-                                        <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2 mb-2">
                                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
                                                 {getProviderName(model.api_model_name)}: {model.name}
                                             </h3>
+                                            <CopyModelId id={model.api_model_name} />
                                         </div>
 
                                         <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2 max-w-2xl">

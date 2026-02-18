@@ -2,6 +2,7 @@ import { sql } from '@/lib/db';
 import Header from '../../../components/Header';
 import { SiteFooter } from '../../../components/site-footer';
 import Link from 'next/link';
+import { CopyModelId } from '../../../components/ui/copy-model-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,9 +42,12 @@ export default async function ModelDetailsPage({ params }: { params: { id: strin
                         ← Back to Models
                     </Link>
                     <h1 className="text-4xl font-bold mb-2">{model.name}</h1>
-                    <code className="text-sm font-mono text-purple-600 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">
-                        {model.api_model_name}
-                    </code>
+                    <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono text-purple-600 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">
+                            {model.api_model_name}
+                        </code>
+                        <CopyModelId id={model.api_model_name} />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
