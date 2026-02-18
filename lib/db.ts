@@ -486,6 +486,19 @@ export async function initDatabase() {
       )
     `;
 
+    // Models Table (New - for Litellm frontend)
+    await sql`
+      CREATE TABLE IF NOT EXISTS models_new (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        api_model_name VARCHAR(255) NOT NULL,
+        cost_fal DECIMAL(10, 6),
+        cost_our DECIMAL(10, 6),
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
