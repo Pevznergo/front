@@ -1,6 +1,6 @@
 import Header from '../components/Header';
 import { HeroSection } from '../components/hero-section';
-import { StatsSection } from '../components/stats-section';
+
 import { SiteFooter } from '../components/site-footer';
 
 export default function Home() {
@@ -11,9 +11,6 @@ export default function Home() {
       <div className="flex-grow flex flex-col">
         {/* Main Content Area */}
         <HeroSection />
-
-        {/* Stats Section */}
-        <StatsSection />
       </div>
 
       <SiteFooter />

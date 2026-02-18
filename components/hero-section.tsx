@@ -3,7 +3,7 @@ import { SearchBar } from './ui/search-bar';
 
 export function HeroSection() {
     return (
-        <section className="flex flex-col items-center justify-center pt-24 pb-12 px-4 text-center">
+        <section className="flex flex-col items-center justify-center pt-36 pb-12 px-4 text-center">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
                 The Unified Interface For LLMs
             </h1>
