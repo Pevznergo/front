@@ -56,7 +56,6 @@ export function ModelsList({ initialModels }: ModelsListProps) {
         if (provider.toLowerCase().includes('gemini') || apiModelName.toLowerCase().includes('gemini')) {
             return 'Google';
         }
-        // Capitalize first letter
         return provider.charAt(0).toUpperCase() + provider.slice(1);
     };
 
@@ -67,8 +66,15 @@ export function ModelsList({ initialModels }: ModelsListProps) {
         if (isNaN(ourPrice) || isNaN(falPrice) || falPrice === 0) return null;
 
         const discount = ((falPrice - ourPrice) / falPrice) * 100;
-        if (discount <= 0) return null; // No discount or more expensive
+        if (discount <= 0) return null;
         return discount.toFixed(1);
+    };
+
+    const formatPrice = (price: string | null) => {
+        if (!price) return '0.00';
+        const num = parseFloat(price);
+        if (isNaN(num)) return '0.00';
+        return num.toFixed(2);
     };
 
     return (
@@ -143,14 +149,14 @@ export function ModelsList({ initialModels }: ModelsListProps) {
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider">Our Price</span>
                                                 <span className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
-                                                    ${model.cost_our ?? '0.00'}
+                                                    ${formatPrice(model.cost_our)}
                                                 </span>
                                             </div>
 
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider">Fal Price</span>
                                                 <span className="text-lg font-medium text-gray-500 dark:text-gray-500 font-mono line-through decoration-gray-400/50">
-                                                    ${model.cost_fal ?? model.cost_our ?? '0.00'}
+                                                    ${formatPrice(model.cost_fal ?? model.cost_our)}
                                                 </span>
                                             </div>
 
