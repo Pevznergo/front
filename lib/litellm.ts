@@ -31,8 +31,21 @@ export async function getUser(email: string): Promise<LiteLLMUser> {
 }
 
 export async function listKeys(email: string): Promise<LiteLLMKey[]> {
-    // Mock data
-    return [];
+    // Mock data for verification
+    return [
+        {
+            key_alias: "Test Key 1",
+            key: "sk-litellm-test-123456",
+            spend: 1.23,
+            max_budget: 10.0
+        },
+        {
+            key_alias: "Prod Key",
+            key: "sk-litellm-prod-987654",
+            spend: 5.67,
+            max_budget: 50.0
+        }
+    ];
 }
 
 export async function generateKey(email: string, budget?: number, alias?: string): Promise<string> {

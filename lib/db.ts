@@ -499,6 +499,18 @@ export async function initDatabase() {
       )
     `;
 
+    // Model Usage Logs Table (New - for Dashboard Stats)
+    await sql`
+      CREATE TABLE IF NOT EXISTS model_usage_logs (
+        id SERIAL PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        model VARCHAR(255) NOT NULL,
+        tokens INTEGER DEFAULT 0,
+        spend DECIMAL(10, 6) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     console.log('Database initialized successfully')
   } catch (error) {
     console.error('Error initializing database:', error)
