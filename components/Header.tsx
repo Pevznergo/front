@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { AuthModal } from './ui/auth-modal';
+import { HeaderSearch } from './ui/header-search';
 
 export default function Header() {
     const { data: session } = useSession();
@@ -21,12 +22,9 @@ export default function Header() {
                                 </span>
                             </Link>
 
-                            {/* Search Bar Placeholder (as seen in header in screenshot) */}
+                            {/* Search Bar - Client Component */}
                             <div className="hidden md:block ml-4 relative">
-                                <div className="bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-1.5 flex items-center text-sm text-gray-500 w-64">
-                                    <span>Lyria</span>
-                                    <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 px-1.5 rounded">/</span>
-                                </div>
+                                <HeaderSearch />
                             </div>
                         </div>
 
@@ -36,15 +34,6 @@ export default function Header() {
                             </Link>
                             <Link href="/chat" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
                                 Chat
-                            </Link>
-                            <Link href="/rankings" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
-                                Rankings
-                            </Link>
-                            <Link href="/enterprise" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
-                                Enterprise
-                            </Link>
-                            <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
-                                Pricing
                             </Link>
                             <Link href="/docs" className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
                                 Docs
