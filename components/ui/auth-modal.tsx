@@ -57,15 +57,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             const res = await signIn('credentials', {
                 email,
                 password,
-                redirect: true,
-                callbackUrl: 'https://api.aporto.tech/client'
+                redirect: false,
             });
 
             if (res?.error) {
                 setError('Invalid credentials');
                 setIsLoading(false);
+            } else {
+                // Manual redirect on success
+                window.location.href = 'https://api.aporto.tech/client';
             }
-            // NextAuth redirect handles success
         } catch (err) {
             console.error(err);
             setError('Something went wrong');
