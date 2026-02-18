@@ -55,7 +55,19 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            4. Required Request Headers
+            4. API Base URL
+          </h2>
+          <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4">
+            https://api.aporto.tech/v1
+          </div>
+          <p className="text-gray-700 dark:text-gray-300 mb-2">
+            This is an OpenAI-compatible endpoint. You can use it with the official OpenAI SDKs by changing the <code>base_url</code>.
+          </p>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            5. Required Request Headers
           </h2>
           <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4">
             Authorization: Bearer &lt;YOUR_API_KEY&gt;<br />
@@ -71,7 +83,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            5. Logs & Task Details
+            6. Logs & Task Details
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>We provide detailed logs for every request.</li>
@@ -83,7 +95,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            6. Data Retention Policy
+            7. Data Retention Policy
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>Generated media files: stored for 14 days, then automatically deleted.</li>
@@ -93,7 +105,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            7. Asynchronous Task Model
+            8. Asynchronous Task Model
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>Requests return HTTP 200 and a <code>task_id</code> immediately.</li>
@@ -104,7 +116,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            8. Rate Limits & Concurrency
+            9. Rate Limits & Concurrency
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>Up to 20 new generation requests per 10 seconds.</li>
@@ -116,7 +128,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            9. Developer Support
+            10. Developer Support
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>Get help regarding API integration or account issues.</li>
@@ -128,7 +140,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            10. Stability Expectations
+            11. Stability Expectations
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>We are not perfect, but we strive for high availability.</li>
@@ -139,7 +151,7 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            11. About the Team
+            12. About the Team
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>We move fast and care deeply about developer experience.</li>

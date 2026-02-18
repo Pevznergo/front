@@ -3,6 +3,7 @@ import Header from '../../../components/Header';
 import { SiteFooter } from '../../../components/site-footer';
 import Link from 'next/link';
 import { CopyModelId } from '../../../components/ui/copy-model-id';
+import { ModelAPIViewer } from '../../../components/model-api-viewer';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,11 +53,16 @@ export default async function ModelDetailsPage({ params }: { params: { id: strin
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                     <div className="md:col-span-2">
-                        <div className="prose dark:prose-invert max-w-none">
+                        <div className="prose dark:prose-invert max-w-none mb-8">
                             <h3 className="text-xl font-semibold mb-2">Description</h3>
                             <p className="text-gray-700 dark:text-gray-300">
                                 {model.description || "No description available for this model."}
                             </p>
+                        </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-xl font-semibold mb-4">API Usage</h3>
+                            <ModelAPIViewer modelName={model.api_model_name} />
                         </div>
                     </div>
 
