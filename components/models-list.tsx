@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import { Search, SlidersHorizontal, ArrowUpDown, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 
 interface Model {
@@ -20,7 +20,7 @@ interface ModelsListProps {
 
 export function ModelsList({ initialModels }: ModelsListProps) {
     const [query, setQuery] = useState('');
-    const [sort, setSort] = useState<'newest' | 'name' | 'price'>('newest');
+    const [sort, setSort] = useState<'newest' | 'name' | 'price' | 'discount'>('newest');
 
     const filteredModels = useMemo(() => {
         let result = initialModels.filter(m =>
@@ -34,10 +34,42 @@ export function ModelsList({ initialModels }: ModelsListProps) {
             result.sort((a, b) => a.name.localeCompare(b.name));
         } else if (sort === 'price') {
             result.sort((a, b) => parseFloat(a.cost_our || '0') - parseFloat(b.cost_our || '0'));
+        } else if (sort === 'discount') {
+            result.sort((a, b) => {
+                const getDiscount = (m: Model) => {
+                    if (!m.cost_fal || !m.cost_our) return 0;
+                    const fal = parseFloat(m.cost_fal);
+                    const our = parseFloat(m.cost_our);
+                    if (fal === 0) return 0;
+                    return ((fal - our) / fal) * 100;
+                };
+                return getDiscount(b) - getDiscount(a);
+            });
         }
 
         return result;
     }, [initialModels, query, sort]);
+
+    const getProviderName = (apiModelName: string) => {
+        const parts = apiModelName.split('/');
+        let provider = parts[0] || 'Unknown';
+        if (provider.toLowerCase().includes('gemini') || apiModelName.toLowerCase().includes('gemini')) {
+            return 'Google';
+        }
+        // Capitalize first letter
+        return provider.charAt(0).toUpperCase() + provider.slice(1);
+    };
+
+    const calculateDiscount = (our: string | null, fal: string | null) => {
+        if (!our || !fal) return null;
+        const ourPrice = parseFloat(our);
+        const falPrice = parseFloat(fal);
+        if (isNaN(ourPrice) || isNaN(falPrice) || falPrice === 0) return null;
+
+        const discount = ((falPrice - ourPrice) / falPrice) * 100;
+        if (discount <= 0) return null; // No discount or more expensive
+        return discount.toFixed(1);
+    };
 
     return (
         <div>
@@ -77,45 +109,72 @@ export function ModelsList({ initialModels }: ModelsListProps) {
                         <option value="newest">Newest</option>
                         <option value="name">Name</option>
                         <option value="price">Price</option>
+                        <option value="discount">Discount</option>
                     </select>
                     <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 </div>
             </div>
 
             <div className="space-y-6">
-                {filteredModels.map((model) => (
-                    <div key={model.id} className="group border-b border-gray-100 dark:border-gray-800 pb-6 last:border-0">
-                        <Link href={`/models/${model.id}`} className="block">
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                                    {model.name}
-                                </h3>
-                                <div className="text-xs text-gray-400 font-mono">
-                                    {/* Placeholder for context length or other stat */}
-                                    128k context
+                {filteredModels.map((model) => {
+                    const discount = calculateDiscount(model.cost_our, model.cost_fal);
+                    return (
+                        <div key={model.id} className="group border-b border-gray-100 dark:border-gray-800 pb-6 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 -mx-4 px-4 rounded-xl transition-colors">
+                            <Link href={`/models/${model.id}`} className="block">
+                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                    <div className="flex-grow">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                                {getProviderName(model.api_model_name)}: {model.name}
+                                            </h3>
+                                        </div>
+
+                                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2 max-w-2xl">
+                                            {model.description || "No description available."}
+                                        </p>
+
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            by <span className="underline decoration-dotted hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{getProviderName(model.api_model_name)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-shrink-0 w-full md:w-auto mt-2 md:mt-0">
+                                        <div className="grid grid-cols-3 gap-6 text-right items-center bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800/50">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider">Our Price</span>
+                                                <span className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
+                                                    ${model.cost_our ?? '0.00'}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider">Fal Price</span>
+                                                <span className="text-lg font-medium text-gray-500 dark:text-gray-500 font-mono line-through decoration-gray-400/50">
+                                                    ${model.cost_fal ?? model.cost_our ?? '0.00'}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider flex items-center gap-1">
+                                                    Discount
+                                                </span>
+                                                {discount ? (
+                                                    <span className="text-lg font-bold text-green-500 flex items-center gap-0.5 bg-green-50 dark:bg-green-900/20 px-1.5 rounded">
+                                                        -{discount}% <ArrowDown className="h-3 w-3" />
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-lg font-medium text-gray-300 dark:text-gray-700">
+                                                        -
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
-                                {model.description || "No description available."}
-                            </p>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center gap-1">
-                                    by <span className="underline decoration-dotted">{model.api_model_name.split('/')[0] || 'Unknown'}</span>
-                                </span>
-                                <span>|</span>
-                                <span>${model.cost_our ?? '0.00'}/1M tokens</span>
-                                {model.cost_fal && (
-                                    <>
-                                        <span>|</span>
-                                        <span className="text-gray-400">Est. Provider: ${model.cost_fal}</span>
-                                    </>
-                                )}
-                            </div>
-                        </Link>
-                    </div>
-                ))}
+                            </Link>
+                        </div>
+                    )
+                })}
 
                 {filteredModels.length === 0 && (
                     <div className="text-center py-12 text-gray-500">
