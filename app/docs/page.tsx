@@ -11,7 +11,7 @@ export default function DocsPage() {
       <div className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full">
         <h1 className="text-4xl font-bold mb-6">Getting Started with Aporto API</h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 border-l-4 border-blue-500 pl-4 italic">
-          Welcome to Aporto. This guide walks you through the essential information you need to start integrating Aporto APIs into your product. We aim to be transparent, practical, and developer-friendly.
+          Welcome to Aporto. This guide walks you through the essential information you need to start integrating Aporto APIs into your product, including models, pricing, authentication, request flow, limits, and support. We aim to be transparent, practical, and developer-friendly. Please read this carefully before going to production.
         </p>
 
         <section className="mb-12">
@@ -20,8 +20,9 @@ export default function DocsPage() {
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li>We continuously update and onboard new models as soon as they are stable.</li>
-            <li>Each model page links to its details, where you can see pricing and capabilities.</li>
-            <li>Our <a href="/models" className="text-blue-600 hover:underline">Models page</a> is the best place to understand all available options.</li>
+            <li>Each model page links to its details, where you can test and experiment directly in our UI before calling the API.</li>
+            <li>The Playground (Chat) is the best place to understand model behavior, parameters, and output formats.</li>
+            <li>See all models on our <a href="/models" className="text-blue-600 hover:underline">Models page</a>.</li>
           </ul>
         </section>
 
@@ -30,9 +31,9 @@ export default function DocsPage() {
             2. Pricing
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-            <li>Our prices are typically competitive with or lower than official APIs.</li>
+            <li>Our prices are typically 30%–50% lower than official APIs.</li>
+            <li>For some models, discounts can reach up to 80%.</li>
             <li>Pricing may change as upstream providers adjust their costs, so always refer to the <a href="/models" className="text-blue-600 hover:underline">Models page</a> for the latest numbers.</li>
-            <li>We offer a unified billing system for all models.</li>
           </ul>
         </section>
 
@@ -47,8 +48,8 @@ export default function DocsPage() {
           </div>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
             <li><strong>Never</strong> expose your API key in frontend code (browser, mobile apps, public repositories).</li>
-            <li>Use environment variables on your backend to store keys.</li>
-            <li>We enforce rate limits per key to protect system stability.</li>
+            <li>Rate limits per key (hourly, daily, and total usage caps) are enforced.</li>
+            <li>Use environment variables on your backend to store keys securely.</li>
           </ul>
         </section>
 
@@ -70,34 +71,81 @@ export default function DocsPage() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            5. Rate Limits & Concurrency
+            5. Logs & Task Details
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-            <li>Rate limits are applied per account.</li>
-            <li>Excessive requests will be rejected with <code>HTTP 429 Too Many Requests</code>.</li>
-            <li>We recommend implementing exponential backoff for retries.</li>
+            <li>We provide detailed logs for every request.</li>
+            <li>Creation time, Model used, Input parameters.</li>
+            <li>Task status, Credit consumption.</li>
+            <li>Final results or error details.</li>
           </ul>
         </section>
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            6. Developer Support
+            6. Data Retention Policy
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-            <li>Get help via our Telegram bot: <a href="https://t.me/Aporto_bot" className="text-blue-600 hover:underline">@Aporto_bot</a></li>
-            <li>We value your feedback and feature requests.</li>
-            <li>For enterprise support, please contact us directly.</li>
+            <li>Generated media files: stored for 14 days, then automatically deleted.</li>
+            <li>Log records (text / metadata): stored for 2 months, then automatically deleted.</li>
           </ul>
         </section>
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            7. Stability Expectations
+            7. Asynchronous Task Model
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
-            <li>We strive for high availability, but we depend on upstream providers.</li>
-            <li>If a specific model provider goes down, we try to route to alternatives where possible.</li>
-            <li>Check our status page (coming soon) for real-time updates.</li>
+            <li>Requests return HTTP 200 and a <code>task_id</code> immediately.</li>
+            <li>You can provide a callback (webhook) URL in the request.</li>
+            <li>Or actively poll the “query record info” API using the <code>task_id</code>.</li>
+          </ul>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            8. Rate Limits & Concurrency
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+            <li>Up to 20 new generation requests per 10 seconds.</li>
+            <li>This typically allows 100+ concurrent running tasks.</li>
+            <li>Limits are applied per account.</li>
+            <li>Excessive requests will be rejected with <code>HTTP 429</code>.</li>
+          </ul>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            9. Developer Support
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+            <li>Get help regarding API integration or account issues.</li>
+            <li>Email us at: <a href="mailto:support@aporto.tech" className="text-blue-600 hover:underline">support@aporto.tech</a></li>
+            <li>Your data and conversations remain confidential.</li>
+            <li>We aim for fast and technical responses.</li>
+          </ul>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            10. Stability Expectations
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+            <li>We are not perfect, but we strive for high availability.</li>
+            <li>Our overall stability may be slightly lower than official providers due to aggregation complexity.</li>
+            <li>This is a conscious trade-off for significantly lower prices and unified access.</li>
+          </ul>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            11. About the Team
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+            <li>We move fast and care deeply about developer experience.</li>
+            <li>We are constantly improving our infrastructure.</li>
+            <li>Not everything is perfect, but we are transparent about it.</li>
+            <li>We can’t satisfy every use case immediately, but we listen to feedback.</li>
           </ul>
         </section>
 
