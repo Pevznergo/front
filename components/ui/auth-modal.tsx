@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Mail } from 'lucide-react';
 import { signIn } from 'next-auth/react';
+import { registerUser } from '@/app/actions/auth';
 import Image from 'next/image';
 
 interface AuthModalProps {
@@ -11,14 +12,20 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+    const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            setError(null);
+            setPassword('');
         } else {
             document.body.style.overflow = 'unset';
+            setMode('signin'); // Reset mode on close
         }
         return () => {
             document.body.style.overflow = 'unset';
@@ -27,16 +34,53 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     if (!isOpen) return null;
 
-    const handleEmailSignIn = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await signIn('credentials', { email, redirect: false });
-        setIsLoading(false);
+        setError(null);
+
+        try {
+            if (mode === 'signup') {
+                const formData = new FormData();
+                formData.append('email', email);
+                formData.append('password', password);
+
+                const result = await registerUser(formData);
+                if (result.error) {
+                    setError(result.error);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            // Sign In (for both modes)
+            const res = await signIn('credentials', {
+                email,
+                password,
+                redirect: true,
+                callbackUrl: 'https://api.aporto.tech/client'
+            });
+
+            if (res?.error) {
+                setError('Invalid credentials');
+                setIsLoading(false);
+            }
+            // NextAuth redirect handles success
+        } catch (err) {
+            console.error(err);
+            setError('Something went wrong');
+            setIsLoading(false);
+        }
     };
 
     const handleGoogleSignIn = () => {
         setIsLoading(true);
-        signIn('google');
+        signIn('google', { callbackUrl: 'https://api.aporto.tech/client' });
+    };
+
+    const toggleMode = () => {
+        setMode(mode === 'signin' ? 'signup' : 'signin');
+        setError(null);
     };
 
     return (
@@ -50,14 +94,18 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             {/* Modal */}
             <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 transform transition-all scale-100">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create your account</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+                    </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">
-                    Welcome! Please fill in the details to get started.
+                    {mode === 'signup'
+                        ? 'Welcome! Please fill in the details to get started.'
+                        : 'Please enter your details to sign in.'}
                 </p>
 
                 <div className="space-y-3 mb-6">
@@ -98,7 +146,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     </div>
                 </div>
 
-                <form onSubmit={handleEmailSignIn}>
+                <form onSubmit={handleSubmit}>
+                    {error && (
+                        <div className="mb-4 text-sm text-red-500 text-center">
+                            {error}
+                        </div>
+                    )}
                     <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Email address
@@ -121,9 +174,11 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         <input
                             type="password"
                             id="password"
-                            // Add state if implementing password auth fully
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
                             placeholder="Enter your password"
+                            required
                         />
                     </div>
 
@@ -137,15 +192,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
                     >
-                        Continue
+                        {isLoading ? 'Processing...' : (mode === 'signup' ? 'Continue' : 'Sign In')}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Already have an account? </span>
-                    <button onClick={() => { }} className="text-blue-600 hover:underline font-medium">Sign in</button>
+                    <span className="text-gray-500 dark:text-gray-400">
+                        {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
+                    </span>
+                    <button onClick={toggleMode} className="text-blue-600 hover:underline font-medium">
+                        {mode === 'signup' ? 'Sign in' : 'Sign up'}
+                    </button>
                 </div>
 
             </div>
