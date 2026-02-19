@@ -66,72 +66,188 @@ export default async function ModelDetailsPage({ params }: { params: { slug: str
                             </p>
                         </div>
 
-                        {/* Full API Documentation Section */}
+                        {/* Key Features Section */}
+                        <div className="mb-12">
+                            <h2 className="text-2xl font-bold mb-6">Key Features of {model.name} API</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <h3 className="font-semibold text-lg mb-2">Advanced Reasoning</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Capable of handling complex multi-step problems with enhanced logic and deduction capabilities, making it ideal for sophisticated applications.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <h3 className="font-semibold text-lg mb-2">Multimodal Input</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Process and analyze text, images, and other media types simultaneously to derive richer insights and context-aware responses.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <h3 className="font-semibold text-lg mb-2">Large Context Window</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Maintain coherence over long conversations and analyze extensive documents without losing track of critical details.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <h3 className="font-semibold text-lg mb-2">Structure Outputs</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Generate strictly formatted JSON or other structured data types, perfect for integration into automated pipelines and databases.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Use Cases Section */}
+                        <div className="mb-12">
+                            <h2 className="text-2xl font-bold mb-6">Building with {model.name}</h2>
+                            <div className="space-y-4">
+                                <div className="flex gap-4 items-start">
+                                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400 flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-lg">Long-document Analysis</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Ingest and summarize entire reports, legal contracts, or technical manuals in a single pass using the expanded context window.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                    <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400 flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-lg">Generate Runnable Code</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Transform natural language descriptions into functional, clean code across multiple languages, complete with comments and documentation.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                    <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600 dark:text-green-400 flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-lg">Mixed Media Analysis</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Combine charts, screenshots, and text instructions to perform complex visual reasoning tasks in a single API call.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Deployment/Integration Section (Step-by-Step) */}
                         <div className="mb-12 border-t border-gray-200 dark:border-gray-800 pt-8">
-                            <h2 className="text-2xl font-bold mb-6">API Documentation</h2>
+                            <h2 className="text-2xl font-bold mb-8">Deployment and Integration</h2>
 
-                            <div className="mb-8">
-                                <h3 className="text-lg font-semibold mb-3">Endpoint</h3>
-                                <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg font-mono text-sm mb-2 flex items-center">
-                                    <span className="text-green-600 font-bold mr-2">POST</span>
-                                    <span className="text-gray-800 dark:text-gray-200">https://api.aporto.tech/v1/chat/completions</span>
-                                </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Fully compatible with OpenAI's Chat Completions API.
-                                </p>
-                            </div>
-
-                            <div className="mb-8">
-                                <h3 className="text-lg font-semibold mb-3">Usage Example</h3>
-                                <ModelAPIViewer modelName={model.api_model_name} />
-                            </div>
-
-                            <div className="mb-8">
-                                <h3 className="text-lg font-semibold mb-3">Request Parameters</h3>
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
-                                        <thead>
-                                            <tr>
-                                                <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Parameter</th>
-                                                <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Type</th>
-                                                <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Required</th>
-                                                <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Description</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                                            <tr>
-                                                <td className="px-4 py-2 font-mono">model</td>
-                                                <td className="px-4 py-2">string</td>
-                                                <td className="px-4 py-2 text-red-500">Yes</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-400">ID of the model to use (e.g. <code>{model.api_model_name}</code>)</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="px-4 py-2 font-mono">messages</td>
-                                                <td className="px-4 py-2">array</td>
-                                                <td className="px-4 py-2 text-red-500">Yes</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-400">A list of messages comprising the conversation so far.</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="px-4 py-2 font-mono">temperature</td>
-                                                <td className="px-4 py-2">number</td>
-                                                <td className="px-4 py-2 text-gray-500">No</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-400">Sampling temperature (0 to 2). Higher values like 0.8 make output more random, lower values like 0.2 make it more focused.</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="px-4 py-2 font-mono">stream</td>
-                                                <td className="px-4 py-2">boolean</td>
-                                                <td className="px-4 py-2 text-gray-500">No</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-400">If set, partial message deltas will be sent.</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                            {/* Step 1 */}
+                            <div className="mb-10">
+                                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                    <span className="bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
+                                    Endpoint Configuration
+                                </h3>
+                                <div className="ml-8">
+                                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                        Configure your client to use the AportoTech base URL. This endpoint is fully compatible with OpenAI's client libraries.
+                                    </p>
+                                    <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg font-mono text-sm mb-2 flex items-center">
+                                        <span className="text-blue-600 font-bold mr-2">Base URL:</span>
+                                        <span className="text-gray-800 dark:text-gray-200">https://api.aporto.tech/v1</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="mb-8">
-                                <h3 className="text-lg font-semibold mb-3">Response Format</h3>
-                                <pre className="bg-gray-900 text-gray-300 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                                    {`{
+                            {/* Step 2 */}
+                            <div className="mb-10">
+                                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                    <span className="bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs">2</span>
+                                    Authentication
+                                </h3>
+                                <div className="ml-8">
+                                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                        Authenticate your requests by including your API key in the <code>Authorization</code> header.
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-300 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                                        Authorization: Bearer YOUR_API_KEY
+                                    </pre>
+                                </div>
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className="mb-10">
+                                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                    <span className="bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs">3</span>
+                                    Make a Request
+                                </h3>
+                                <div className="ml-8">
+                                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                        Use the code below to send your first request to <strong>{model.name}</strong>.
+                                    </p>
+                                    <ModelAPIViewer modelName={model.api_model_name} />
+                                </div>
+                            </div>
+
+                            {/* Step 4 */}
+                            <div className="mb-10">
+                                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                    <span className="bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs">4</span>
+                                    Parameters & Response
+                                </h3>
+                                <div className="ml-8">
+                                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                        Review the supported parameters and expected response format for fine-tuning your integration.
+                                    </p>
+
+                                    {/* Parameters Table */}
+                                    <div className="mb-6 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
+                                            <thead className="bg-gray-50 dark:bg-gray-900">
+                                                <tr>
+                                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Parameter</th>
+                                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Type</th>
+                                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Required</th>
+                                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-950">
+                                                <tr>
+                                                    <td className="px-4 py-2 font-mono">model</td>
+                                                    <td className="px-4 py-2">string</td>
+                                                    <td className="px-4 py-2 text-red-500">Yes</td>
+                                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">ID of the model to use (e.g. <code>{model.api_model_name}</code>)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="px-4 py-2 font-mono">messages</td>
+                                                    <td className="px-4 py-2">array</td>
+                                                    <td className="px-4 py-2 text-red-500">Yes</td>
+                                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">A list of messages comprising the conversation so far.</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="px-4 py-2 font-mono">temperature</td>
+                                                    <td className="px-4 py-2">number</td>
+                                                    <td className="px-4 py-2 text-gray-500">No</td>
+                                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">Sampling temperature (0 to 2). Higher values like 0.8 make output more random, lower values like 0.2 make it more focused.</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="px-4 py-2 font-mono">stream</td>
+                                                    <td className="px-4 py-2">boolean</td>
+                                                    <td className="px-4 py-2 text-gray-500">No</td>
+                                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">If set, partial message deltas will be sent.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <h4 className="text-sm font-semibold mb-2">Sample Response</h4>
+                                    <pre className="bg-gray-900 text-gray-300 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                                        {`{
   "id": "chatcmpl-123",
   "object": "chat.completion",
   "created": 1677652288,
@@ -150,7 +266,8 @@ export default async function ModelDetailsPage({ params }: { params: { slug: str
     "total_tokens": 21
   }
 }`}
-                                </pre>
+                                    </pre>
+                                </div>
                             </div>
                         </div>
                     </div>
