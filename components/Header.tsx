@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
-import { AuthModal } from './ui/auth-modal';
 import { HeaderSearch } from './ui/header-search';
 import {
     Activity,
@@ -142,12 +141,20 @@ export default function Header() {
                             {session ? (
                                 <UserDropdown user={session.user} />
                             ) : (
-                                <button
-                                    onClick={() => setIsAuthModalOpen(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
-                                >
-                                    Sign Up
-                                </button>
+                                <div className="flex items-center gap-4">
+                                    <Link
+                                        href="https://api.aporto.tech/client"
+                                        className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+                                    >
+                                        Sign In
+                                    </Link>
+                                    <Link
+                                        href="https://api.aporto.tech/client"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
+                                    >
+                                        Sign Up
+                                    </Link>
+                                </div>
                             )}
                         </nav>
 
@@ -156,22 +163,17 @@ export default function Header() {
                             {session ? (
                                 <UserDropdown user={session.user} />
                             ) : (
-                                <button
-                                    onClick={() => setIsAuthModalOpen(true)}
+                                <Link
+                                    href="https://api.aporto.tech/client"
                                     className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg"
                                 >
                                     Sign Up
-                                </button>
+                                </Link>
                             )}
                         </div>
                     </div>
                 </div>
-            </header>
-
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-            />
+            </header >
         </>
     );
 }

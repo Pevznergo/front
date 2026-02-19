@@ -39,11 +39,21 @@ export default async function ModelDetailsPage({ params }: { params: { slug: str
         )
     }
 
+    const formatPrice = (price: any) => {
+        if (!price) return '0.00';
+        const num = parseFloat(price);
+        return isNaN(num) ? '0.00' : num.toFixed(2);
+    };
+
     return (
         <main className="min-h-screen bg-white dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100">
             <Header />
 
             <div className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
+                {/* ... (existing code up to price section) ... */}
+
+
+
                 <div className="mb-8">
                     <Link href="/models" className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4 inline-block">
                         ← Back to Models
@@ -280,20 +290,20 @@ export default async function ModelDetailsPage({ params }: { params: { slug: str
                                 <div className="mb-4">
                                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Our Price</div>
                                     <div className="text-2xl font-bold text-green-600">
-                                        ${model.cost_our ?? '0.00'}<span className="text-sm font-normal text-gray-500">/1M tokens</span>
+                                        ${formatPrice(model.cost_our)}<span className="text-sm font-normal text-gray-500">/1M tokens</span>
                                     </div>
                                 </div>
 
                                 <div className="mb-4">
                                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Provider Price (Est.)</div>
                                     <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">
-                                        ${model.cost_fal ?? '0.00'}<span className="text-sm font-normal text-gray-500">/1M tokens</span>
+                                        ${formatPrice(model.cost_fal)}<span className="text-sm font-normal text-gray-500">/1M tokens</span>
                                     </div>
                                 </div>
 
-                                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors mt-4">
+                                <a href="https://api.aporto.tech/client" className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors mt-4 text-center">
                                     Try in Chat
-                                </button>
+                                </a>
                             </div>
 
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-100 dark:border-blue-900 text-sm text-blue-800 dark:text-blue-200">
