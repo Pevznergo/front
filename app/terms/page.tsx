@@ -2,6 +2,13 @@
 import Header from '../../components/Header';
 import { SiteFooter } from '../../components/site-footer';
 
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Terms of Service - Aporto',
+    description: 'Terms of Service for AportoTech. Read our terms regarding usage, accounts, and liability.',
+};
+
 export default function TermsPage() {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100">

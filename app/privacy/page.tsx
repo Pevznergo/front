@@ -2,6 +2,13 @@
 import Header from '../../components/Header';
 import { SiteFooter } from '../../components/site-footer';
 
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Privacy Policy - Aporto',
+    description: 'Privacy Policy for AportoTech. Learn how we collect, use, and protect your data.',
+};
+
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100">

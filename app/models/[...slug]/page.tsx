@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db';
+import type { Metadata } from 'next';
 import Header from '../../../components/Header';
 import { SiteFooter } from '../../../components/site-footer';
 import Link from 'next/link';
@@ -6,6 +7,31 @@ import { CopyModelId } from '../../../components/ui/copy-model-id';
 import { ModelAPIViewer } from '../../../components/model-api-viewer';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: { slug: string[] } }): Promise<Metadata> {
+    const { slug } = params;
+    const modelId = slug?.join('/');
+
+    // We can optionally fetch the model name from DB here for a better title
+    let title = `${modelId} - Aporto`;
+    let description = `Use ${modelId} via Aporto API. Unified access to the best AI models.`;
+
+    try {
+        const models = await sql`SELECT name, description FROM models_new WHERE api_model_name = ${modelId}`;
+        if (models.length > 0) {
+            const model = models[0];
+            title = `${model.name} API - Aporto`;
+            description = model.description ? model.description.slice(0, 160) : description;
+        }
+    } catch (e) {
+        console.error("Metadata fetch failed", e);
+    }
+
+    return {
+        title,
+        description,
+    }
+}
 
 export default async function ModelDetailsPage({ params }: { params: { slug: string[] } }) {
     const { slug } = params;

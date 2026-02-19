@@ -3,6 +3,13 @@ import Header from '../../components/Header';
 import { SiteFooter } from '../../components/site-footer';
 import { ModelsList } from '../../components/models-list';
 
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Available AI Models - Aporto',
+    description: 'Browse our collection of state-of-the-art AI models including GPT-4, Claude 3.5, and Gemini 1.5. Compare pricing and features.',
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function ModelsPage() {

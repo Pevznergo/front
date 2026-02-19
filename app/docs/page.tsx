@@ -3,6 +3,13 @@ import { SiteFooter } from '../../components/site-footer';
 
 export const dynamic = 'force-dynamic';
 
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Documentation - Aporto',
+  description: 'Getting started guide for Aporto API. Learn how to integrate, manage API keys, explore models, and understand pricing and limits.',
+};
+
 export default function DocsPage() {
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100">
@@ -13,6 +20,7 @@ export default function DocsPage() {
         <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 border-l-4 border-blue-500 pl-4 italic">
           Welcome to Aporto. This guide walks you through the essential information you need to start integrating Aporto APIs into your product, including models, pricing, authentication, request flow, limits, and support. We aim to be transparent, practical, and developer-friendly. Please read this carefully before going to production.
         </p>
+
 
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
