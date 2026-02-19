@@ -59,10 +59,10 @@ export function HeaderSearch() {
         };
     }, [wrapperRef]);
 
-    const handleSelect = (id: number) => {
+    const handleSelect = (apiModelName: string) => {
         setIsOpen(false);
         setQuery('');
-        router.push(`/models/${id}`);
+        router.push(`/models/${apiModelName}`);
     };
 
     return (
@@ -94,7 +94,7 @@ export function HeaderSearch() {
                         {filteredModels.map((model) => (
                             <li key={model.id}>
                                 <button
-                                    onClick={() => handleSelect(model.id)}
+                                    onClick={() => handleSelect(model.api_model_name)}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                                 >
                                     <div className="font-medium truncate">{model.name}</div>

@@ -127,7 +127,7 @@ export function ModelsList({ initialModels }: ModelsListProps) {
                     const discount = calculateDiscount(model.cost_our, model.cost_fal);
                     return (
                         <div key={model.id} className="group border-b border-gray-100 dark:border-gray-800 pb-6 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 -mx-4 px-4 rounded-xl transition-colors">
-                            <Link href={`/models/${model.id}`} className="block">
+                            <Link href={`/models/${model.api_model_name}`} className="block">
                                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div className="flex-grow">
                                         <div className="flex items-center gap-2 mb-2">
