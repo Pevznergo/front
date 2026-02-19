@@ -1,6 +1,6 @@
 
-import Header from '../components/Header';
-import { SiteFooter } from '../components/site-footer';
+import Header from '../../components/Header';
+import { SiteFooter } from '../../components/site-footer';
 
 export default function PrivacyPage() {
     return (
