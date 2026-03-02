@@ -55,6 +55,15 @@ export async function initDatabase() {
       )
     `
 
+    // Waitlist table (New)
+    await sql`
+      CREATE TABLE IF NOT EXISTS waitlist (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     // Clans Table (New - Integer ID Adaptation)
     await sql`
       CREATE TABLE IF NOT EXISTS clans (

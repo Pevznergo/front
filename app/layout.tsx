@@ -9,15 +9,14 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata = {
   title: {
-    default: "Aporto - Все нейросети в одном чате",
+    default: "Aporto — The Speed of Thought for your AI Stack",
     template: "%s | Aporto"
   },
-  description: "GPT-4o, Claude 3.5, Gemini 1.5 и другие нейросети в одном интерфейсе. Подключитесь через Telegram или WebApp и используйте лучшие ИИ-модели без VPN и сложных подписок.",
+  description: "Sub-millisecond routing, 40% cost reduction, and zero-latency infrastructure. The high-performance API Gateway for all AI applications.",
   openGraph: {
-    title: "Aporto - Все нейросети в одном чате",
-    description: "Попробуйте лучшие нейросети мира (GPT-4, Claude, Gemini) в одном месте. Быстро, удобно, доступно.",
+    title: "Aporto — The Speed of Thought for your AI Stack",
+    description: "Stop waiting for your LLM. Start scaling. 150,000+ requests daily, 5x faster TTFT, 50+ AI providers integrated.",
     type: "website",
-    locale: "ru_RU",
     url: "https://aporto.tech",
   },
 };
@@ -36,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
